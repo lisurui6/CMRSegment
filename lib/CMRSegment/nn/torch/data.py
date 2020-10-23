@@ -128,6 +128,8 @@ class TorchSegmentationDataset(TorchDataset):
             crop = np.pad(crop, ((x1_ - x1, x2 - x2_), (y1_ - y1, y2 - y2_), (0, 0)), 'constant')
         elif crop.ndim == 4:
             crop = np.pad(crop, ((x1_ - x1, x2 - x2_), (y1_ - y1, y2 - y2_), (0, 0), (0, 0)), 'constant')
+        elif crop.ndim == 2:
+            crop = np.pad(crop, ((x1_ - x1, x2 - x2_), (y1_ - y1, y2 - y2_)), 'constant')
         else:
             print('Error: unsupported dimension, crop.ndim = {0}.'.format(crop.ndim))
             exit(0)
