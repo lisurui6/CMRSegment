@@ -5,6 +5,6 @@ RUN apt-get update && \
     vim tmux
 
 RUN pip install --upgrade pip setuptools && \
-    pip install -y nibabel vedo scikit-image tqdm pyhocon
+    pip install nibabel vedo scikit-image tqdm pyhocon
 
 RUN python setup.py install
