@@ -1,5 +1,8 @@
 FROM pytorch/pytorch:1.2-cuda10.0-cudnn7-runtime
 
+COPY . /workspace/CMRSegment
+WORKDIR /workspace/CMRSegment
+
 RUN apt-get update && \
     apt-get install -y \
     vim tmux
@@ -7,4 +10,4 @@ RUN apt-get update && \
 RUN pip install --upgrade pip setuptools && \
     pip install nibabel vedo scikit-image tqdm pyhocon
 
-RUN python setup.py install
+RUN git clone python setup.py install
