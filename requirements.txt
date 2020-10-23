@@ -3,3 +3,6 @@ vedo
 scikit-image
 tqdm
 pyhocon
+SimpleITK
+pandas
+tensorboard
