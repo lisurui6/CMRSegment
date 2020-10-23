@@ -1,0 +1,8 @@
+.idea/
+data/
+PH_atlas/
+models/
+*.pyc
+__pycache__/
+*.gz
+*.png
