@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
 
 with open('requirements.txt') as f:
@@ -10,13 +10,10 @@ setup(
     author="Surui Li",
     author_email="lisurui6@gmail.com",
     description="Segment 3D cardiac MRI cine images, and track their motions.",
-    packages=find_packages(),
+    package_dir={"": "lib"},
+    packages=find_namespace_packages(where="lib"),
     setup_requires=["setuptools >= 40.0.0"],
     install_requires=install_requires,
     package_data={"": ["*.conf"]},
-    entry_points={
-            'console_scripts': [
-                'launch-experiment = CMRSegment.nn.experiment.launcher:main',
-            ]
-        },
+    entry_points={},
 )
