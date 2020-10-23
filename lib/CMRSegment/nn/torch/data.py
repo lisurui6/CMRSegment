@@ -10,6 +10,8 @@ import numpy as np
 import SimpleITK as sitk
 import torch
 from typing import List, Tuple
+from CMRSegment.common.data_table import DataTable
+
 
 
 def construct_training_validation_dataset(data_config: DataConfig) \
@@ -22,17 +24,18 @@ def construct_training_validation_dataset(data_config: DataConfig) \
     label_paths = []
     for dataset in datasets:
         paths = sorted(os.listdir(str(dataset.dir)))
-        for phase in ["ED", "ES"]:
-            for path in paths:
+        for path in paths:
+            for phase in ["ED", "ES"]:
                 path = dataset.dir.joinpath(path)
-                image_paths.append(path.joinpath(dataset.image_label_format.image.format(phase=phase)))
+                image_path = path.joinpath(dataset.image_label_format.image.format(phase=phase))
+                label_path = path.joinpath(dataset.image_label_format.label.format(phase=phase))
+                if image_path.exists() and label_path.exists():
+                    image_paths.append(path.joinpath(dataset.image_label_format.image.format(phase=phase)))
+                    label_paths.append(path.joinpath(dataset.image_label_format.label.format(phase=phase)))
+    c = list(zip(image_paths, label_paths))
+    random.shuffle(c)
+    image_paths, label_paths = zip(*c)
 
-        for phase in ["ED", "ES"]:
-            for path in paths:
-                path = dataset.dir.joinpath(path)
-                label_paths.append(path.joinpath(dataset.image_label_format.label.format(phase=phase)))
-    random.shuffle(image_paths)
-    random.shuffle(label_paths)
     train_image_paths = image_paths[:int((1 - data_config.validation_split) * len(image_paths))]
     val_image_paths = image_paths[int((1 - data_config.validation_split) * len(image_paths)):]
 
@@ -45,15 +48,25 @@ def construct_training_validation_dataset(data_config: DataConfig) \
 
 
 class TorchDataset(Dataset):
+    def __init__(self, image_paths: List[Path], label_paths: List[Path]):
+        assert len(image_paths) == len(label_paths)
+        self.image_paths = image_paths
+        self.label_paths = label_paths
+
+    def __len__(self):
+        return len(self.image_paths)
+
     def sequential_loader(self, batch_size: int) -> DataLoader:
         return DataLoader(self, batch_size=batch_size, sampler=SequentialSampler(self))
 
     def random_loader(self, batch_size: int) -> DataLoader:
         return DataLoader(self, batch_size=batch_size, sampler=RandomSampler(self))
 
-    def export(self):
+    def export(self, output_path: Path):
         """Save paths to csv and config"""
-        pass
+        data_table = DataTable(columns=["image_paths", "label_paths"], data=zip(self.image_paths, self.label_paths))
+        data_table.to_csv(output_path)
+        return output_path
 
     def augment(self):
         pass
@@ -69,15 +82,7 @@ def rescale_intensity(image, thres=(1.0, 99.0)):
     return image2
 
 
-
 class TorchSegmentationDataset(TorchDataset):
-    def __init__(self, image_paths: List[Path], label_paths: List[Path]):
-        self.image_paths = image_paths
-        self.label_paths = label_paths
-
-    def __len__(self):
-        return len(self.image_paths)
-
     def __getitem__(self, index: int):
         image_path = self.image_paths[index]
         image = nib.load(str(image_path.joinpath())).get_data()
@@ -123,10 +128,6 @@ class TorchSegmentationDataset(TorchDataset):
             print('Error: unsupported dimension, crop.ndim = {0}.'.format(crop.ndim))
             exit(0)
         return crop
-
-    def export(self):
-        """Save paths to csv and config"""
-        pass
 
     def augment(self):
         pass
