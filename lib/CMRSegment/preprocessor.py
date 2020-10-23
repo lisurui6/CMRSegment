@@ -28,23 +28,14 @@ class DataPreprocessor:
         subjects = []
         for subject_dir in sorted(os.listdir(str(data_dir))):
             subject_dir = data_dir.joinpath(subject_dir)
-
-            nii_path = list(subject_dir.glob("*.nii"))
-            if not nii_path:
-                print("  original nifit image does not exist, use lvsa.nii.gz")
-                nii_path = list(subject_dir.glob("*.nii.gz"))
-            nii_path = nii_path[0]
-            print("nii path: {}".format(nii_path))
-            subject = Subject(dir=subject_dir, nii_name=nii_path.name)
+            subject = Subject(dir=subject_dir)
             if self.force_restart:
                 subject.clean()
-            if not subject.tmp_nii_path.exists():
-                shutil.copy(str(subject.nii_path), str(subject.tmp_nii_path))
-            if not subject.ed_path.exists() or not subject.es_path.exists():
+            if not subject.ed_path.exists() or not subject.es_path.exists() or not subject.contrasted_nii_path:
                 print(' Detecting ED/ES phases {}...'.format(subject.nii_path))
-                mirtk.auto_contrast(str(subject.tmp_nii_path), str(subject.tmp_nii_path))
+                mirtk.auto_contrast(str(subject.nii_path), str(subject.contrasted_nii_path))
                 mirtk.detect_cardiac_phases(
-                    str(subject.tmp_nii_path), output_ed=str(subject.ed_path), output_es=str(subject.es_path)
+                    str(subject.contrasted_nii_path), output_ed=str(subject.ed_path), output_es=str(subject.es_path)
                 )
                 print('  Found ED/ES phases ...')
 
@@ -61,24 +52,24 @@ class DataPreprocessor:
             return
         print("\n ... Split sequence")
 
-        if self.force_restart or len(list(subject.gray_phases_dir().glob("lvsa_*"))) == 0:
+        if self.force_restart or len(subject.gray_phases) == 0:
             mirtk.split_volume(
-                str(subject.tmp_nii_path), "{}/lvsa_".format(str(subject.gray_phases_dir())), "-sequence"
+                str(subject.contrasted_nii_path), "{}/lvsa_".format(str(subject.gray_phases_dir())), "-sequence"
             )
-        if self.force_restart or len(list(subject.resample_phases_dir().glob("lvsa_*"))) == 0:
-            for fr in tqdm(range(len(os.listdir(str(subject.gray_phases_dir()))))):
+        if self.force_restart or len(subject.resample_phases) == 0:
+            for gray_phase_path in tqdm(subject.gray_phases):
                 mirtk.resample_image(
-                    '{}/lvsa_{}.nii.gz'.format(str(subject.gray_phases_dir()), "{0:0=2d}".format(fr)),
-                    '{}/lvsa_{}.nii.gz'.format(str(subject.resample_phases_dir()), "{0:0=2d}".format(fr)),
+                    str(gray_phase_path),
+                    str(subject.resample_phases_dir().joinpath(gray_phase_path.name)),
                     '-size', 1.25, 1.25, 2,
                 )
 
         print("\n ... Enlarge preprocessing generation")
-        if self.force_restart or len(list(subject.enlarge_phases_dir().glob("lvsa_*"))) == 0:
-            for fr in tqdm(range(len(os.listdir(str(subject.gray_phases_dir()))))):
+        if self.force_restart or len(subject.enlarge_phases) == 0:
+            for resample_phase_path in tqdm(subject.resample_phases):
                 mirtk.enlarge_image(
-                    '{}/lvsa_{}.nii.gz'.format((str(subject.resample_phases_dir())), "{0:0=2d}".format(fr)),
-                    '{}/lvsa_SR_{}.nii.gz'.format(str(subject.enlarge_phases_dir()), "{0:0=2d}".format(fr)),
+                    str(resample_phase_path),
+                    str(subject.enlarge_phases_dir().joinpath(resample_phase_path.name)),
                     z=20, value=0,
                 )
         print('  finish cine preprocessing in subject {0}'.format(subject.name))
@@ -97,12 +88,3 @@ class DataPreprocessor:
         pool1.close()
         pool1.join()
         return subjects
-
-
-# subjects = preprocessing(ROOT_DIR.joinpath("data", "genscan"))
-# subjects = preprocessing(ROOT_DIR.joinpath("data", "sheffield"))
-preprocessor = DataPreprocessor(force_restart=False)
-
-for center in ["singapore_hcm", "singapore_lvsa", "ukbb"]:
-    subjects = preprocessor.run(data_dir=ROOT_DIR.joinpath("data", center))
-

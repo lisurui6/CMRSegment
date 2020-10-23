@@ -6,14 +6,14 @@ import tensorflow as tf
 import numpy as np
 from tqdm import tqdm
 from scipy.ndimage import label
+import shutil
 
 from typing import List
 from CMRSegment.subject import Subject
 from CMRSegment.utils import rescale_intensity
 import mirtk
 from skimage.exposure import match_histograms
-from CMRSegment.segmentor import TF1Segmentor
-
+from CMRSegment.segmentor.tf1 import TF1Segmentor
 
 mirtk.subprocess.showcmd = False
 
@@ -41,7 +41,7 @@ class TF1CineSegmentor(TF1Segmentor):
         pred_segt = pred_segt[x_pre:x_pre + X, y_pre:y_pre + Y, z1_ - z1:z1_ - z1 + Z]
         return pred_segt
 
-    def execute(self, phase_path: Path, output_dir: Path):
+    def execute(self, phase_path: Path, output_path: Path):
         nim = nib.load(str(phase_path))
         image = nim.get_data()
         if image.ndim == 4:
@@ -49,21 +49,21 @@ class TF1CineSegmentor(TF1Segmentor):
         if image.ndim == 2:
             image = np.expand_dims(image, axis=2)
         pred_segt = self.run(image)
-        pred_segt = refined_mask(pred_segt, phase_path, output_dir.joinpath("tmp"))
+        pred_segt = refined_mask(pred_segt, phase_path, output_path.parent.joinpath("tmp"))
         #########################################################################
         # map back to original size
         nim2 = nib.Nifti1Image(pred_segt, nim.affine)
         nim2.header['pixdim'] = nim.header['pixdim']
-        nib.save(nim2, str(output_dir.joinpath(phase_path.name)))
+        nib.save(nim2, str(output_path))
         return image, pred_segt
 
     def apply(self, subject: Subject):
         images, segt_labels = [], []
-        for phase_name in tqdm(os.listdir(subject.enlarge_phases_dir())):
-            phase_path = subject.enlarge_phases_dir().joinpath(phase_name)
-            image, pred_segt = self.execute(phase_path, subject.motions_dir())
+        for phase_path in tqdm(subject.enlarge_phases):
+            image, pred_segt = self.execute(phase_path, subject.motions_dir().joinpath(phase_path.name))
             segt_labels += [pred_segt]
             images += [image]
+        shutil.rmtree(str(subject.motions_dir().joinpath("tmp")), ignore_errors=True)
         nim = nib.load(str(phase_path))
         segt_labels = np.array(segt_labels, dtype=np.int32)  # batch * height * width * channels (=slices)
         segt_labels = np.transpose(segt_labels, (1, 2, 3, 0))
@@ -87,11 +87,12 @@ def refined_mask(pred_segt: np.ndarray, phase_path: Path, tmp_dir: Path):
     nim = nib.load(str(phase_path))
     ###########################################################################
     nim2 = nib.Nifti1Image(pred_segt, nim.affine)
-    print(nim.affine)
     nim2.header['pixdim'] = nim.header['pixdim']
-    nib.save(nim2, str(tmp_dir.joinpath("seg_{}".format(phase_path.name))))
+    tmp_dir.mkdir(exist_ok=True)
+    tmp_path = tmp_dir.joinpath(phase_path.name)
+    nib.save(nim2, str(tmp_path))
     ###########################################################################
-    nim = nib.load(str(tmp_dir.joinpath("seg_{}".format(phase_path.name))))
+    nim = nib.load(str(tmp_path))
     lvsa_data = nim.get_data()
     lvsa_data_bin = np.where(lvsa_data > 0, 1, lvsa_data)
     labelled_mask, num_labels = label(lvsa_data_bin)
@@ -104,39 +105,34 @@ def refined_mask(pred_segt: np.ndarray, phase_path: Path, tmp_dir: Path):
     lv = get_labels(refined_mask, 1)
     myo = get_labels(refined_mask, 2)
     rv = get_labels(refined_mask, 3)
-    kernel = np.ones((5, 5), np.uint8)
     final_mask[lv[:, :, :] == 1] = 1
     final_mask[myo[:, :, :] == 1] = 2
     final_mask[rv[:, :, :] == 1] = 3
     nim2 = nib.Nifti1Image(final_mask[:, :, :], affine=np.eye(4))
     nim2.header['pixdim'] = nim.header['pixdim']
-    nib.save(nim2, str(tmp_dir.joinpath("seg_{}".format(phase_path.name))))
-    mirtk.header_tool(
-        str(tmp_dir.joinpath("seg_{}".format(phase_path.name))),
-        str(tmp_dir.joinpath("seg_{}".format(phase_path.name))),
-        target=str(phase_path),
-    )
-    nim = nib.load(str(tmp_dir.joinpath("seg_{}".format(phase_path.name))))
+    nib.save(nim2, str(tmp_path))
+    mirtk.header_tool(str(tmp_path), str(tmp_path), target=str(phase_path))
+    nim = nib.load(str(tmp_path))
     image = nim.get_data()
     image = np.squeeze(image, axis=-1)
     return image
 
 
-from CMRSegment.preprocessor import DataPreprocessor
-from CMRSegment.common.constants import ROOT_DIR, MODEL_DIR
-preprocessor = DataPreprocessor(force_restart=False)
-model_path = MODEL_DIR.joinpath("3D", "biobank_low2high.ckpt-300")
-reference_center = "genscan"
-subjects = preprocessor.run(data_dir=ROOT_DIR.joinpath("data", reference_center))
-reference_subject = subjects[0]
-reference_ed_nim = nib.load(str(reference_subject.ed_path))
-reference_ed_image = reference_ed_nim.get_data()
-# center = "sheffield"
-# , "ukbb", "sheffield"
-# "singapore_hcm", "singapore_lvsa", "sheffield",
-for center in ["ukbb"]:
-    subjects = preprocessor.run(data_dir=ROOT_DIR.joinpath("data", center))
-    for subject in subjects:
-        # get_segmentation(model_path, subject, reference_ed_image)
-        with TF1CineSegmentor(model_path=model_path) as segmentor:
-            segmentor.apply(subject)
+# from CMRSegment.preprocessor import DataPreprocessor
+# from CMRSegment.common.constants import ROOT_DIR, MODEL_DIR
+# preprocessor = DataPreprocessor(force_restart=False)
+# model_path = MODEL_DIR.joinpath("3D", "biobank_low2high.ckpt-300")
+# reference_center = "genscan"
+# subjects = preprocessor.run(data_dir=ROOT_DIR.joinpath("data", reference_center))
+# reference_subject = subjects[0]
+# reference_ed_nim = nib.load(str(reference_subject.ed_path))
+# reference_ed_image = reference_ed_nim.get_data()
+# # center = "sheffield"
+# # , "ukbb", "sheffield"
+# # "singapore_hcm", "singapore_lvsa", "sheffield",
+# for center in ["ukbb"]:
+#     subjects = preprocessor.run(data_dir=ROOT_DIR.joinpath("data", center))
+#     for subject in subjects:
+#         # get_segmentation(model_path, subject, reference_ed_image)
+#         with TF1CineSegmentor(model_path=model_path) as segmentor:
+#             segmentor.apply(subject)

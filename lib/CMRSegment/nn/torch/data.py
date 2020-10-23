@@ -1,0 +1,132 @@
+import os
+from pathlib import Path
+from CMRSegment.config import DatasetConfig, DataConfig
+import random
+from torch.utils.data.dataset import Dataset
+from torch.utils.data.sampler import SequentialSampler, RandomSampler
+from torch.utils.data import DataLoader
+import nibabel as nib
+import numpy as np
+import SimpleITK as sitk
+import torch
+from typing import List, Tuple
+
+
+def construct_training_validation_dataset(data_config: DataConfig) \
+        -> Tuple["TorchSegmentationDataset", "TorchSegmentationDataset"]:
+    datasets = [
+        DatasetConfig.from_conf(name, mode=data_config.data_mode, mount_prefix=data_config.mount_prefix)
+        for name in data_config.dataset_names
+    ]
+    image_paths = []
+    label_paths = []
+    for dataset in datasets:
+        paths = sorted(os.listdir(str(dataset.dir)))
+        for phase in ["ED", "ES"]:
+            for path in paths:
+                path = dataset.dir.joinpath(path)
+                image_paths.append(path.joinpath(dataset.image_label_format.image.format(phase=phase)))
+
+        for phase in ["ED", "ES"]:
+            for path in paths:
+                path = dataset.dir.joinpath(path)
+                label_paths.append(path.joinpath(dataset.image_label_format.label.format(phase=phase)))
+    random.shuffle(image_paths)
+    random.shuffle(label_paths)
+    train_image_paths = image_paths[:int((1 - data_config.validation_split) * len(image_paths))]
+    val_image_paths = image_paths[int((1 - data_config.validation_split) * len(image_paths)):]
+
+    train_label_paths = label_paths[:int((1 - data_config.validation_split) * len(label_paths))]
+    val_label_paths = label_paths[int((1 - data_config.validation_split) * len(label_paths)):]
+
+    train_set = TorchSegmentationDataset(train_image_paths, train_label_paths)
+    val_set = TorchSegmentationDataset(val_image_paths, val_label_paths)
+    return train_set, val_set
+
+
+class TorchDataset(Dataset):
+    def sequential_loader(self, batch_size: int) -> DataLoader:
+        return DataLoader(self, batch_size=batch_size, sampler=SequentialSampler(self))
+
+    def random_loader(self, batch_size: int) -> DataLoader:
+        return DataLoader(self, batch_size=batch_size, sampler=RandomSampler(self))
+
+    def export(self):
+        """Save paths to csv and config"""
+        pass
+
+    def augment(self):
+        pass
+
+
+def rescale_intensity(image, thres=(1.0, 99.0)):
+    """ Rescale the image intensity to the range of [0, 1] """
+    val_l, val_h = np.percentile(image, thres)
+    image2 = image
+    image2[image < val_l] = val_l
+    image2[image > val_h] = val_h
+    image2 = (image2.astype(np.float32) - val_l) / (val_h - val_l)
+    return image2
+
+
+
+class TorchSegmentationDataset(TorchDataset):
+    def __init__(self, image_paths: List[Path], label_paths: List[Path]):
+        self.image_paths = image_paths
+        self.label_paths = label_paths
+
+    def __len__(self):
+        return len(self.image_paths)
+
+    def __getitem__(self, index: int):
+        image_path = self.image_paths[index]
+        image = nib.load(str(image_path.joinpath())).get_data()
+        if image.ndim == 4:
+            image = np.squeeze(image, axis=-1).astype(np.int16)
+        label = sitk.GetArrayFromImage(sitk.ReadImage(str(self.label_paths[index])))
+        label = np.transpose(label, axes=(2, 1, 0))
+        if label.ndim == 4:
+            label = np.squeeze(label, axis=-1).astype(np.int16)
+        label[label == 4] = 3
+
+        X, Y, Z = image.shape
+        cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
+        image = self.crop_image(image, cx, cy, 192)
+        label = self.crop_image(label, cx, cy, 192)
+        z = np.random.randint(0, min(image.shape[2], label.shape[2]))
+        image = image[:, :, z]
+        image = rescale_intensity(image)
+        label = label[:, :, z]
+        image = np.reshape(image, (1, image.shape[0], image.shape[1]))
+        label = np.reshape(label, (1, label.shape[0], label.shape[1]))
+        image = torch.from_numpy(image).float()
+        label = torch.from_numpy(label).float()
+        return image, label
+
+    @staticmethod
+    def crop_image(image, cx, cy, size):
+        """ Crop a 3D image using a bounding box centred at (cx, cy) with specified size """
+        X, Y = image.shape[:2]
+        r = int(size / 2)
+        x1, x2 = cx - r, cx + r
+        y1, y2 = cy - r, cy + r
+        x1_, x2_ = max(x1, 0), min(x2, X)
+        y1_, y2_ = max(y1, 0), min(y2, Y)
+        # Crop the image
+        crop = image[x1_: x2_, y1_: y2_]
+        # Pad the image if the specified size is larger than the input image size
+        if crop.ndim == 3:
+            crop = np.pad(crop, ((x1_ - x1, x2 - x2_), (y1_ - y1, y2 - y2_), (0, 0)), 'constant')
+        elif crop.ndim == 4:
+            crop = np.pad(crop, ((x1_ - x1, x2 - x2_), (y1_ - y1, y2 - y2_), (0, 0), (0, 0)), 'constant')
+        else:
+            print('Error: unsupported dimension, crop.ndim = {0}.'.format(crop.ndim))
+            exit(0)
+        return crop
+
+    def export(self):
+        """Save paths to csv and config"""
+        pass
+
+    def augment(self):
+        pass
