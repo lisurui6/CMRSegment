@@ -1,6 +1,7 @@
 import torch
 import shutil
 from pathlib import Path
+from argparse import ArgumentParser
 from experiments.fcn_2d.networks import FCN2DSegmentationModel
 from CMRSegment.nn.torch.experiment import Experiment, ExperimentConfig
 from CMRSegment.nn.torch.data import construct_training_validation_dataset
@@ -12,8 +13,20 @@ from pyhocon import ConfigTree, ConfigFactory
 TRAIN_CONF_PATH = Path(__file__).parent.joinpath("train.conf")
 
 
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument("-c", "--conf", dest="conf_path", default=None, type=str)
+    args = parser.parse_args()
+    return args
+
+
 def main():
-    train_conf = ConfigFactory.parse_file(str(TRAIN_CONF_PATH))
+    args = parse_args()
+    if args.conf_path is None:
+        train_conf = ConfigFactory.parse_file(str(TRAIN_CONF_PATH))
+    else:
+        train_conf = ConfigFactory.parse_file(str(Path(args.conf_path)))
+
     if get_conf(train_conf, group="experiment", key="experiment_dir") is not None:
         experiment_dir = Path(get_conf(train_conf, group="experiment", key="experiment_dir"))
     else:
