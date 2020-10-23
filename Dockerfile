@@ -8,6 +8,6 @@ RUN apt-get update && \
     vim tmux
 
 RUN pip install --upgrade pip setuptools && \
-    pip install nibabel vedo scikit-image tqdm pyhocon
+    pip install -r requirements.txt
 
 RUN python setup.py install
