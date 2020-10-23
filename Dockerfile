@@ -10,4 +10,4 @@ RUN apt-get update && \
 RUN pip install --upgrade pip setuptools && \
     pip install nibabel vedo scikit-image tqdm pyhocon
 
-RUN git clone python setup.py install
+RUN python setup.py install
