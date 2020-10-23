@@ -15,3 +15,9 @@ Alternatively, set
 ```
 export PYTHONPATH=$PYTHONPATH:CMAKE_INSTALL_PREFIX/Lib/Python
 ```
+
+
+```
+docker build -t lisurui6/cmr-segment:latest .
+docker push docker.io/lisurui6/cmr-segment:latest
+```

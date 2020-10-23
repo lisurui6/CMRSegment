@@ -92,6 +92,8 @@ class TorchSegmentationDataset(TorchDataset):
         label = np.transpose(label, axes=(2, 1, 0))
         if label.ndim == 4:
             label = np.squeeze(label, axis=-1).astype(np.int16)
+        image = image.astype(np.int16)
+        label = label.astype(np.int16)
         label[label == 4] = 3
 
         X, Y, Z = image.shape
