@@ -96,14 +96,16 @@ class TorchSegmentationDataset(TorchDataset):
         label = label.astype(np.int16)
         label[label == 4] = 3
 
-        X, Y, Z = image.shape
-        cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
-        image = self.crop_image(image, cx, cy, 192)
-        label = self.crop_image(label, cx, cy, 192)
         z = np.random.randint(0, min(image.shape[2], label.shape[2]))
         image = image[:, :, z]
         image = rescale_intensity(image)
         label = label[:, :, z]
+
+        X, Y = image.shape
+        cx, cy = int(X / 2), int(Y / 2)
+        image = self.crop_image(image, cx, cy, 192)
+        label = self.crop_image(label, cx, cy, 192)
+
         image = np.reshape(image, (1, image.shape[0], image.shape[1]))
         label = np.reshape(label, (1, label.shape[0], label.shape[1]))
         image = torch.from_numpy(image).float()
