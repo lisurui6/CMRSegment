@@ -106,3 +106,10 @@ class MSELoss(TorchLoss, torch.nn.MSELoss):
 
 class L1Loss(TorchLoss, torch.nn.L1Loss):
     pass
+
+
+class BCELoss(TorchLoss):
+
+    def forward(self, predicted, targets):
+        BCE_loss = F.binary_cross_entropy_with_logits(predicted, targets, reduction="mean")
+        return BCE_loss
