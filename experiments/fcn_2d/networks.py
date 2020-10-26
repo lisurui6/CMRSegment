@@ -5,7 +5,7 @@ from typing import List
 
 class FCN2DSegmentationModel(torch.nn.Module):
     def __init__(self, in_channels: int, n_classes: int, n_filters: List[int], up_conv_filter: int,
-                 final_conv_filter: int, feature_size: int = 192):
+                 final_conv_filter: int, feature_size: int):
         super().__init__()
         self.block1 = torch.nn.Sequential(
             self.conv2d_bn_relu(in_channels, n_filters[0]),
@@ -39,22 +39,30 @@ class FCN2DSegmentationModel(torch.nn.Module):
 
         self.block2_up = torch.nn.Sequential(
             self.conv2d_bn_relu(n_filters[1], up_conv_filter),
-            self.conv2d_transpose_same_padding(up_conv_filter, up_conv_filter, kernel_size=4, stride=2, output_size=feature_size),
+            self.conv2d_transpose_same_padding(
+                up_conv_filter, up_conv_filter, kernel_size=4, stride=2, output_size=feature_size
+            ),
         )
 
         self.block3_up = torch.nn.Sequential(
             self.conv2d_bn_relu(n_filters[2], up_conv_filter),
-            self.conv2d_transpose_same_padding(up_conv_filter, up_conv_filter, kernel_size=8, stride=4, output_size=feature_size),
+            self.conv2d_transpose_same_padding(
+                up_conv_filter, up_conv_filter, kernel_size=8, stride=4, output_size=feature_size
+            ),
         )
 
         self.block4_up = torch.nn.Sequential(
             self.conv2d_bn_relu(n_filters[3], up_conv_filter),
-            self.conv2d_transpose_same_padding(up_conv_filter, up_conv_filter, kernel_size=15, stride=7, output_size=feature_size),
+            self.conv2d_transpose_same_padding(
+                up_conv_filter, up_conv_filter, kernel_size=15, stride=7, output_size=feature_size
+            ),
         )
 
         self.block5_up = torch.nn.Sequential(
             self.conv2d_bn_relu(n_filters[4], up_conv_filter),
-            self.conv2d_transpose_same_padding(up_conv_filter, up_conv_filter, kernel_size=31, stride=15, output_size=feature_size),
+            self.conv2d_transpose_same_padding(
+                up_conv_filter, up_conv_filter, kernel_size=31, stride=15, output_size=feature_size
+            ),
         )
 
         self.final_block = torch.nn.Sequential(
@@ -62,7 +70,7 @@ class FCN2DSegmentationModel(torch.nn.Module):
             self.conv2d_bn_relu(final_conv_filter, final_conv_filter),
             torch.nn.Conv2d(
                 in_channels=final_conv_filter,
-                out_channels=n_classes * 12,
+                out_channels=n_classes * in_channels,
                 kernel_size=1,
             ),
         )

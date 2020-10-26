@@ -13,9 +13,9 @@ from typing import List, Tuple
 from CMRSegment.common.data_table import DataTable
 
 
-
-def construct_training_validation_dataset(data_config: DataConfig) \
-        -> Tuple["Torch2DSegmentationDataset", "Torch2DSegmentationDataset"]:
+def construct_training_validation_dataset(
+    data_config: DataConfig, feature_size: int, n_slices: int
+) -> Tuple["Torch2DSegmentationDataset", "Torch2DSegmentationDataset"]:
     datasets = [
         DatasetConfig.from_conf(name, mode=data_config.data_mode, mount_prefix=data_config.mount_prefix)
         for name in data_config.dataset_names
@@ -42,8 +42,10 @@ def construct_training_validation_dataset(data_config: DataConfig) \
     train_label_paths = label_paths[:int((1 - data_config.validation_split) * len(label_paths))]
     val_label_paths = label_paths[int((1 - data_config.validation_split) * len(label_paths)):]
 
-    train_set = Torch2DSegmentationDataset(train_image_paths, train_label_paths)
-    val_set = Torch2DSegmentationDataset(val_image_paths, val_label_paths)
+    train_set = Torch2DSegmentationDataset(
+        train_image_paths, train_label_paths, feature_size=feature_size, n_slices=n_slices
+    )
+    val_set = Torch2DSegmentationDataset(val_image_paths, val_label_paths, feature_size=feature_size, n_slices=n_slices)
     return train_set, val_set
 
 
@@ -83,6 +85,11 @@ def rescale_intensity(image, thres=(1.0, 99.0)):
 
 
 class Torch2DSegmentationDataset(TorchDataset):
+    def __init__(self, image_paths: List[Path], label_paths: List[Path], n_slices: int, feature_size: int):
+        super().__init__(image_paths, label_paths)
+        self.n_slices = n_slices
+        self.feature_size = feature_size
+
     def __getitem__(self, index: int):
         image_path = self.image_paths[index]
         image = nib.load(str(image_path.joinpath())).get_data()
@@ -109,13 +116,13 @@ class Torch2DSegmentationDataset(TorchDataset):
         # Normalise the image size
         X, Y, Z = image.shape
         cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
-        image = np.resize(image, (192, 192, 12))
+        image = np.resize(image, (self.feature_size, self.feature_size, self.n_slices))
         image = np.transpose(image, (2, 0, 1))
-        label = np.resize(label, (192, 192, 12))
+        label = np.resize(label, (self.feature_size, self.feature_size, self.n_slices))
 
         labels = []
         for i in range(1, 4):
-            blank_image = np.zeros((192, 192, 12))
+            blank_image = np.zeros((self.feature_size, self.feature_size, self.n_slices))
             blank_image[label == i] = i
             labels.append(blank_image)
         label = np.array(labels)

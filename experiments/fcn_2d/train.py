@@ -45,9 +45,11 @@ def main():
         n_filters=get_conf(train_conf, group="network", key="n_filters"),
         up_conv_filter=get_conf(train_conf, group="network", key="up_conv_filter"),
         final_conv_filter=get_conf(train_conf, group="network", key="final_conv_filter"),
+        feature_size=get_conf(train_conf, group="network", key="feature_size")
     )
     training_set, validation_set = construct_training_validation_dataset(
-        DataConfig.from_conf(TRAIN_CONF_PATH)
+        DataConfig.from_conf(TRAIN_CONF_PATH), feature_size=get_conf(train_conf, group="network", key="feature_size"),
+        n_slices=get_conf(train_conf, group="network", key="in_channels")
     )
     training_set.export(config.experiment_dir.joinpath("training_set.csv"))
     validation_set.export(config.experiment_dir.joinpath("validation_set.csv"))
