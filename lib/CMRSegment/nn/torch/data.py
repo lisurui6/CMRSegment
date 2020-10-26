@@ -15,7 +15,7 @@ from CMRSegment.common.data_table import DataTable
 
 
 def construct_training_validation_dataset(data_config: DataConfig) \
-        -> Tuple["TorchSegmentationDataset", "TorchSegmentationDataset"]:
+        -> Tuple["Torch2DSegmentationDataset", "Torch2DSegmentationDataset"]:
     datasets = [
         DatasetConfig.from_conf(name, mode=data_config.data_mode, mount_prefix=data_config.mount_prefix)
         for name in data_config.dataset_names
@@ -42,8 +42,8 @@ def construct_training_validation_dataset(data_config: DataConfig) \
     train_label_paths = label_paths[:int((1 - data_config.validation_split) * len(label_paths))]
     val_label_paths = label_paths[int((1 - data_config.validation_split) * len(label_paths)):]
 
-    train_set = TorchSegmentationDataset(train_image_paths, train_label_paths)
-    val_set = TorchSegmentationDataset(val_image_paths, val_label_paths)
+    train_set = Torch2DSegmentationDataset(train_image_paths, train_label_paths)
+    val_set = Torch2DSegmentationDataset(val_image_paths, val_label_paths)
     return train_set, val_set
 
 
@@ -82,7 +82,7 @@ def rescale_intensity(image, thres=(1.0, 99.0)):
     return image2
 
 
-class TorchSegmentationDataset(TorchDataset):
+class Torch2DSegmentationDataset(TorchDataset):
     def __getitem__(self, index: int):
         image_path = self.image_paths[index]
         image = nib.load(str(image_path.joinpath())).get_data()
@@ -96,18 +96,35 @@ class TorchSegmentationDataset(TorchDataset):
         label = label.astype(np.int16)
         label[label == 4] = 3
 
-        z = np.random.randint(0, min(image.shape[2], label.shape[2]))
-        image = image[:, :, z]
-        image = rescale_intensity(image)
-        label = label[:, :, z]
+        # z = np.random.randint(0, min(image.shape[2], label.shape[2]))
+        # image = image[:, :, z]
+        # image = rescale_intensity(image)
+        # label = label[:, :, z]
 
-        X, Y = image.shape
-        cx, cy = int(X / 2), int(Y / 2)
-        image = self.crop_image(image, cx, cy, 192)
-        label = self.crop_image(label, cx, cy, 192)
+        # X, Y = image.shape
+        # cx, cy = int(X / 2), int(Y / 2)
+        # image = self.crop_image(image, cx, cy, 192)
+        # label = self.crop_image(label, cx, cy, 192)
 
-        image = np.reshape(image, (1, image.shape[0], image.shape[1]))
-        label = np.reshape(label, (1, label.shape[0], label.shape[1]))
+        # Normalise the image size
+        X, Y, Z = image.shape
+        cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
+        image = np.resize(image, (192, 192, 12))
+        image = np.transpose(image, (2, 0, 1))
+        label = np.resize(label, (192, 192, 12))
+
+        labels = []
+        for i in range(1, 4):
+            blank_image = np.zeros((192, 192, 12))
+            blank_image[label == i] = i
+            labels.append(blank_image)
+        label = np.array(labels)
+        label = np.transpose(label, (0, 3, 1, 2))
+        # image = self.crop_image(image, cx, cy, 192)
+        # label = self.crop_image(label, cx, cy, 192)
+
+        # image = np.reshape(image, (image.shape[0], image.shape[1], image.shape[2]))
+        # label = np.reshape(label, (label.shape[0], label.shape[1], label.shape[2]))
         image = torch.from_numpy(image).float()
         label = torch.from_numpy(label).float()
         return image, label

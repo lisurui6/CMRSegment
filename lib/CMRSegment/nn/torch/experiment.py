@@ -1,5 +1,5 @@
 import torch
-from CMRSegment.nn.torch.data import TorchSegmentationDataset, construct_training_validation_dataset, TorchDataset
+from CMRSegment.nn.torch.data import Torch2DSegmentationDataset, construct_training_validation_dataset, TorchDataset
 from torch.utils.data.sampler import SequentialSampler, RandomSampler
 from torch.utils.data import DataLoader
 
