@@ -1,5 +1,4 @@
 import torch
-import math
 from typing import List
 
 
@@ -7,6 +6,9 @@ class FCN2DSegmentationModel(torch.nn.Module):
     def __init__(self, in_channels: int, n_classes: int, n_filters: List[int], up_conv_filter: int,
                  final_conv_filter: int, feature_size: int):
         super().__init__()
+        self.in_channels = in_channels
+        self.n_classes = n_classes
+        self.feature_size = feature_size
         self.block1 = torch.nn.Sequential(
             self.conv2d_bn_relu(in_channels, n_filters[0]),
             self.conv2d_bn_relu(n_filters[0], n_filters[0]),
@@ -89,7 +91,7 @@ class FCN2DSegmentationModel(torch.nn.Module):
         conv5_up = self.block5_up(conv5)
         x = torch.cat([conv1_up, conv2_up, conv3_up, conv4_up, conv5_up], 1)
         logits = self.final_block(x)
-        logits = logits.reshape((logits.shape[0], 3, 12, logits.shape[2], logits.shape[3]))
+        logits = logits.reshape((logits.shape[0], self.n_classes, self.in_channels, logits.shape[2], logits.shape[3]))
         return logits
 
     @staticmethod
