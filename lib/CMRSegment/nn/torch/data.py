@@ -90,50 +90,41 @@ class Torch2DSegmentationDataset(TorchDataset):
         self.n_slices = n_slices
         self.feature_size = feature_size
 
-    def __getitem__(self, index: int):
-        image_path = self.image_paths[index]
-        image = nib.load(str(image_path.joinpath())).get_data()
+    @staticmethod
+    def read_image(image_path: Path, feature_size: int, n_slices: int) -> torch.Tensor:
+        image = nib.load(str(image_path)).get_data()
         if image.ndim == 4:
             image = np.squeeze(image, axis=-1).astype(np.int16)
-        label = sitk.GetArrayFromImage(sitk.ReadImage(str(self.label_paths[index])))
+        image = image.astype(np.int16)
+        X, Y, Z = image.shape
+        image = np.resize(image, (feature_size, feature_size, n_slices))
+        image = np.transpose(image, (2, 0, 1))
+        image = torch.from_numpy(image).float()
+        return image
+
+    @staticmethod
+    def read_label(label_path: Path, feature_size: int, n_slices: int):
+        label = sitk.GetArrayFromImage(sitk.ReadImage(str(label_path)))
         label = np.transpose(label, axes=(2, 1, 0))
         if label.ndim == 4:
             label = np.squeeze(label, axis=-1).astype(np.int16)
-        image = image.astype(np.int16)
         label = label.astype(np.int16)
         label[label == 4] = 3
-
-        # z = np.random.randint(0, min(image.shape[2], label.shape[2]))
-        # image = image[:, :, z]
-        # image = rescale_intensity(image)
-        # label = label[:, :, z]
-
-        # X, Y = image.shape
-        # cx, cy = int(X / 2), int(Y / 2)
-        # image = self.crop_image(image, cx, cy, 192)
-        # label = self.crop_image(label, cx, cy, 192)
-
-        # Normalise the image size
-        X, Y, Z = image.shape
-        cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
-        image = np.resize(image, (self.feature_size, self.feature_size, self.n_slices))
-        image = np.transpose(image, (2, 0, 1))
-        label = np.resize(label, (self.feature_size, self.feature_size, self.n_slices))
+        label = np.resize(label, (feature_size, feature_size, n_slices))
 
         labels = []
         for i in range(1, 4):
-            blank_image = np.zeros((self.feature_size, self.feature_size, self.n_slices))
+            blank_image = np.zeros((feature_size, feature_size, n_slices))
             blank_image[label == i] = i
             labels.append(blank_image)
         label = np.array(labels)
         label = np.transpose(label, (0, 3, 1, 2))
-        # image = self.crop_image(image, cx, cy, 192)
-        # label = self.crop_image(label, cx, cy, 192)
-
-        # image = np.reshape(image, (image.shape[0], image.shape[1], image.shape[2]))
-        # label = np.reshape(label, (label.shape[0], label.shape[1], label.shape[2]))
-        image = torch.from_numpy(image).float()
         label = torch.from_numpy(label).float()
+        return label
+
+    def __getitem__(self, index: int):
+        image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
+        label = self.read_label(self.label_paths[index], self.feature_size, self.n_slices)
         return image, label
 
     @staticmethod
