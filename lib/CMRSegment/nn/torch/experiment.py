@@ -96,7 +96,9 @@ class Experiment:
 
     def eval(self, *metrics: TorchLoss) -> Tuple[TorchLoss]:
         """Evaluate on validation set with training loss function if none provided"""
-        data_loader = self.validation_set.sequential_loader(self.config.batch_size)
+        data_loader = self.validation_set.sequential_loader(
+            self.config.batch_size, n_workers=self.config.num_workers, pin_memory=self.config.pin_memory
+        )
         self.network.eval()
         if not isinstance(metrics, Iterable) and isinstance(metrics, TorchLoss):
             metrics = [metrics]
