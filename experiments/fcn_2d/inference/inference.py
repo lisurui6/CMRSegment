@@ -54,7 +54,7 @@ def main():
     image = torch.from_numpy(image).float()
     image = prepare_tensors(image, gpu=True, device=args.device)
     predicted = network(image)
-    predicted = predicted.detach().numpy()
+    predicted = predicted.cpu().detach().numpy()
 
     nim = nib.load(str(input_path))
     image = nim.get_data()
