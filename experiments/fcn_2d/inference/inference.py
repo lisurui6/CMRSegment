@@ -29,7 +29,7 @@ def main():
     input_path = Path(args.input_path)
     output_dir = Path(args.output_dir)
     checkpoint = torch.load(str(model_path), map_location=torch.device(args.device))
-    if args.conf_path is not None:
+    if args.network_conf_path is not None:
         train_conf = ConfigFactory.parse_file(str(Path(args.network_conf_path)))
     else:
         train_conf = ConfigFactory.parse_file(str(TRAIN_CONF_PATH))
