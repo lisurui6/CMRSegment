@@ -10,7 +10,7 @@ import nibabel as nib
 import shutil
 
 
-TRAIN_CONF_PATH = Path(__file__).parent.joinpath("train.conf")
+TRAIN_CONF_PATH = Path(__file__).parent.parent.joinpath("train.conf")
 
 
 def parse_args():
@@ -30,7 +30,7 @@ def main():
     output_dir = Path(args.output_dir)
     checkpoint = torch.load(str(model_path), map_location=torch.device(args.device))
     if args.conf_path is not None:
-        train_conf = ConfigFactory.parse_file(str(Path(args.conf_path)))
+        train_conf = ConfigFactory.parse_file(str(Path(args.network_conf_path)))
     else:
         train_conf = ConfigFactory.parse_file(str(TRAIN_CONF_PATH))
     get_conf(train_conf, group="network", key="experiment_dir")
