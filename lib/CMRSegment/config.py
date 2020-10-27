@@ -84,6 +84,8 @@ class ExperimentConfig:
     num_epochs: int = 100
     gpu: bool = False
     device: int = 0
+    num_workers: int = 0
+    pin_memory: bool = False
 
     def __post_init__(self):
         if self.experiment_dir is None:

@@ -37,6 +37,8 @@ def main():
         num_epochs=get_conf(train_conf, group="experiment", key="num_epochs"),
         gpu=get_conf(train_conf, group="experiment", key="gpu"),
         device=get_conf(train_conf, group="experiment", key="device"),
+        num_workers=get_conf(train_conf, group="experiment", key="num_workers"),
+        pin_memory=get_conf(train_conf, group="experiment", key="pin_memory"),
     )
     shutil.copy(str(TRAIN_CONF_PATH), str(config.experiment_dir.joinpath("train.conf")))
     network = FCN2DSegmentationModel(

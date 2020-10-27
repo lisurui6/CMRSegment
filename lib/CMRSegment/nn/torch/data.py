@@ -58,11 +58,15 @@ class TorchDataset(Dataset):
     def __len__(self):
         return len(self.image_paths)
 
-    def sequential_loader(self, batch_size: int) -> DataLoader:
-        return DataLoader(self, batch_size=batch_size, sampler=SequentialSampler(self))
+    def sequential_loader(self, batch_size: int, n_workers: int = 0, pin_memory: bool = False) -> DataLoader:
+        return DataLoader(
+            self, batch_size=batch_size, sampler=SequentialSampler(self), num_workers=n_workers, pin_memory=pin_memory
+        )
 
-    def random_loader(self, batch_size: int) -> DataLoader:
-        return DataLoader(self, batch_size=batch_size, sampler=RandomSampler(self))
+    def random_loader(self, batch_size: int, n_workers: int = 0, pin_memory: bool = False) -> DataLoader:
+        return DataLoader(
+            self, batch_size=batch_size, sampler=RandomSampler(self), num_workers=n_workers, pin_memory=pin_memory
+        )
 
     def export(self, output_path: Path):
         """Save paths to csv and config"""

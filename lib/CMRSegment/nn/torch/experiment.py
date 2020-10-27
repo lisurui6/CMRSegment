@@ -55,7 +55,9 @@ class Experiment:
 
     def train(self):
         self.network.train()
-        train_data_loader = self.training_set.random_loader(self.config.batch_size)
+        train_data_loader = self.training_set.random_loader(
+            self.config.batch_size, n_workers=self.config.num_workers, pin_memory=self.config.pin_memory
+        )
         for epoch in range(self.config.num_epochs):
             self.network.train()
             self.logger.info("Starting epoch {}/{}".format(epoch, self.config.num_epochs))
