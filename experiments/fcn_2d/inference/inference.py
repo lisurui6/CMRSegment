@@ -45,38 +45,59 @@ def main():
     )
     network.load_state_dict(checkpoint)
     network.cuda(device=args.device)
-    image = nib.load(str(input_path)).get_data()
-    if image.ndim == 4:
-        image = np.squeeze(image, axis=-1).astype(np.int16)
-    image = image.astype(np.int16)
-    image = np.transpose(image, (2, 0, 1))
-    # image = Torch2DSegmentationDataset.read_image(
-    #     input_path,
-    #     get_conf(train_conf, group="network", key="feature_size"),
-    #     get_conf(train_conf, group="network", key="in_channels")
-    # )
+    # image = nib.load(str(input_path)).get_data()
+    # if image.ndim == 4:
+    #     image = np.squeeze(image, axis=-1).astype(np.int16)
+    # image = image.astype(np.int16)
+    # image = np.transpose(image, (2, 0, 1))
+    image = Torch2DSegmentationDataset.read_image(
+        input_path,
+        get_conf(train_conf, group="network", key="feature_size"),
+        get_conf(train_conf, group="network", key="in_channels")
+    )
     image = np.expand_dims(image, 0)
     image = torch.from_numpy(image).float()
     image = prepare_tensors(image, gpu=True, device=args.device)
     predicted = network(image)
+    predicted = torch.sigmoid(predicted)
+    predicted = (predicted > 0.5).float()
     predicted = predicted.cpu().detach().numpy()
 
     nim = nib.load(str(input_path))
-    image = nim.get_data()
     # Transpose and crop the segmentation to recover the original size
     predicted = np.squeeze(predicted, axis=0).astype(np.int16)
     print(predicted.shape)
+
     # map back to original size
-    predicted = np.resize(predicted, image.shape)
-    print(predicted.shape)
+    final_predicted = np.zeros((image.shape[1], image.shape[2], image.shape[3]))
+    print(predicted.shape, final_predicted.shape)
+
+    for i in range(predicted.shape[0]):
+        a = predicted[i, :, :, :] > 0.5
+        print(a.shape)
+        final_predicted[predicted[i, :, :, :] > 0.5] = i + 1
+    # image = nim.get_data()
+    final_predicted = np.transpose(final_predicted, [1, 2, 0])
+    print(predicted.shape, final_predicted.shape)
+    # final_predicted = np.resize(final_predicted, (image.shape[0], image.shape[1], image.shape[2]))
+
+    print(predicted.shape, final_predicted.shape)
     # if Z < 64:
     #     pred_segt = pred_segt[x_pre:x_pre + X, y_pre:y_pre + Y, z1_ - z1:z1_ - z1 + Z]
     # else:
     #     pred_segt = pred_segt[x_pre:x_pre + X, y_pre:y_pre + Y, :]
     #     pred_segt = np.pad(pred_segt, ((0, 0), (0, 0), (z_pre, z_post)), 'constant')
 
-    nim2 = nib.Nifti1Image(predicted, nim.affine)
+    nim2 = nib.Nifti1Image(final_predicted, nim.affine)
     nim2.header['pixdim'] = nim.header['pixdim']
     output_dir.mkdir(parents=True, exist_ok=True)
     nib.save(nim2, '{0}/seg.nii.gz'.format(str(output_dir)))
-    shutil.copy(str(input_path), str(output_dir.joinpath("image.nii.gz")))
+
+    image = image.cpu().detach().numpy()
+    image = np.squeeze(image, 0)
+    image = np.transpose(image, [1, 2, 0])
+    print(image.shape)
+    nim2 = nib.Nifti1Image(image, nim.affine)
+    nim2.header['pixdim'] = nim.header['pixdim']
+    nib.save(nim2, '{0}/image.nii.gz'.format(str(output_dir)))
+    # shutil.copy(str(input_path), str(output_dir.joinpath("image.nii.gz")))
