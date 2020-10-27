@@ -60,9 +60,10 @@ def main():
     image = nim.get_data()
     # Transpose and crop the segmentation to recover the original size
     predicted = np.squeeze(predicted, axis=0).astype(np.int16)
-
+    print(predicted.shape)
     # map back to original size
     predicted = np.resize(predicted, image.shape)
+    print(predicted.shape)
     # if Z < 64:
     #     pred_segt = pred_segt[x_pre:x_pre + X, y_pre:y_pre + Y, z1_ - z1:z1_ - z1 + Z]
     # else:

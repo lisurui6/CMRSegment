@@ -97,7 +97,9 @@ class Torch2DSegmentationDataset(TorchDataset):
             image = np.squeeze(image, axis=-1).astype(np.int16)
         image = image.astype(np.int16)
         X, Y, Z = image.shape
-        image = np.resize(image, (feature_size, feature_size, n_slices))
+        cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
+        image = Torch2DSegmentationDataset.crop_3D_image(image, cx, cy, feature_size, cz, n_slices)
+        # image = np.resize(image, (feature_size, feature_size, n_slices))
         image = np.transpose(image, (2, 0, 1))
         return image
 
@@ -109,7 +111,10 @@ class Torch2DSegmentationDataset(TorchDataset):
             label = np.squeeze(label, axis=-1).astype(np.int16)
         label = label.astype(np.int16)
         label[label == 4] = 3
-        label = np.resize(label, (feature_size, feature_size, n_slices))
+        X, Y, Z = label.shape
+        cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
+        label = Torch2DSegmentationDataset.crop_3D_image(label, cx, cy, feature_size, cz, n_slices)
+        # label = np.resize(label, (feature_size, feature_size, n_slices))
 
         labels = []
         for i in range(1, 4):
@@ -152,3 +157,27 @@ class Torch2DSegmentationDataset(TorchDataset):
 
     def augment(self):
         pass
+
+    @staticmethod
+    def crop_3D_image(image, cx, cy, size_xy, cz, size_z):
+        """ Crop a 3D image using a bounding box centred at (cx, cy, cz) with specified size """
+        X, Y, Z = image.shape[:3]
+        rxy = int(size_xy / 2)
+        r_z = int(size_z / 2)
+        x1, x2 = cx - rxy, cx + rxy
+        y1, y2 = cy - rxy, cy + rxy
+        z1, z2 = cz - r_z, cz + r_z
+        x1_, x2_ = max(x1, 0), min(x2, X)
+        y1_, y2_ = max(y1, 0), min(y2, Y)
+        z1_, z2_ = max(z1, 0), min(z2, Z)
+        # Crop the image
+        crop = image[x1_: x2_, y1_: y2_, z1_: z2_]
+        # Pad the image if the specified size is larger than the input image size
+        if crop.ndim == 3:
+            crop = np.pad(crop, ((x1_ - x1, x2 - x2_), (y1_ - y1, y2 - y2_), (z1_ - z1, z2 - z2_)), 'constant')
+        elif crop.ndim == 4:
+            crop = np.pad(crop, ((x1_ - x1, x2 - x2_), (y1_ - y1, y2 - y2_), (z1_ - z1, z2 - z2_), (0, 0)), 'constant')
+        else:
+            print('Error: unsupported dimension, crop.ndim = {0}.'.format(crop.ndim))
+            exit(0)
+        return crop
