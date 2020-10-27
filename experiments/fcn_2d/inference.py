@@ -19,6 +19,7 @@ def parse_args():
     parser.add_argument("-i", "--input-path", dest="input_path", required=True, type=str)
     parser.add_argument("-o", "--output-dir", dest="output_dir", type=str, required=True)
     parser.add_argument("-n", "--network-conf", dest="network_conf_path", default=None, type=str)
+    parser.add_argument("-d", "--device", dest="device", default=0, type=int)
     return parser.parse_args()
 
 
@@ -27,7 +28,7 @@ def main():
     model_path = Path(args.model_path)
     input_path = Path(args.input_path)
     output_dir = Path(args.output_dir)
-    checkpoint = torch.load(str(model_path), map_location=torch.device(0))
+    checkpoint = torch.load(str(model_path), map_location=torch.device(args.device))
     if args.conf_path is not None:
         train_conf = ConfigFactory.parse_file(str(Path(args.conf_path)))
     else:
@@ -42,7 +43,7 @@ def main():
         feature_size=get_conf(train_conf, group="network", key="feature_size")
     )
     network.load_state_dict(checkpoint)
-    network.cuda(device=0)
+    network.cuda(device=args.device)
     image = Torch2DSegmentationDataset.read_image(
         input_path,
         get_conf(train_conf, group="network", key="feature_size"),
