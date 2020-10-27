@@ -49,6 +49,8 @@ def main():
         get_conf(train_conf, group="network", key="feature_size"),
         get_conf(train_conf, group="network", key="in_channels")
     )
+    image = np.expand_dims(image, 0)
+    image = torch.from_numpy(image).float()
     predicted = network(image)
     predicted = predicted.numpy()
 

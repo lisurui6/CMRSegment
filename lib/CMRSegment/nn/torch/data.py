@@ -91,7 +91,7 @@ class Torch2DSegmentationDataset(TorchDataset):
         self.feature_size = feature_size
 
     @staticmethod
-    def read_image(image_path: Path, feature_size: int, n_slices: int) -> torch.Tensor:
+    def read_image(image_path: Path, feature_size: int, n_slices: int) -> np.ndarray:
         image = nib.load(str(image_path)).get_data()
         if image.ndim == 4:
             image = np.squeeze(image, axis=-1).astype(np.int16)
@@ -99,11 +99,10 @@ class Torch2DSegmentationDataset(TorchDataset):
         X, Y, Z = image.shape
         image = np.resize(image, (feature_size, feature_size, n_slices))
         image = np.transpose(image, (2, 0, 1))
-        image = torch.from_numpy(image).float()
         return image
 
     @staticmethod
-    def read_label(label_path: Path, feature_size: int, n_slices: int):
+    def read_label(label_path: Path, feature_size: int, n_slices: int) -> np.ndarray:
         label = sitk.GetArrayFromImage(sitk.ReadImage(str(label_path)))
         label = np.transpose(label, axes=(2, 1, 0))
         if label.ndim == 4:
@@ -119,12 +118,13 @@ class Torch2DSegmentationDataset(TorchDataset):
             labels.append(blank_image)
         label = np.array(labels)
         label = np.transpose(label, (0, 3, 1, 2))
-        label = torch.from_numpy(label).float()
         return label
 
     def __getitem__(self, index: int):
         image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
         label = self.read_label(self.label_paths[index], self.feature_size, self.n_slices)
+        image = torch.from_numpy(image).float()
+        label = torch.from_numpy(label).float()
         return image, label
 
     @staticmethod
