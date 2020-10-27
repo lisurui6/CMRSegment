@@ -53,11 +53,16 @@ def main():
     )
     training_set.export(config.experiment_dir.joinpath("training_set.csv"))
     validation_set.export(config.experiment_dir.joinpath("validation_set.csv"))
-    optimizer = torch.optim.SGD(
-        network.parameters(),
-        lr=get_conf(train_conf, group="optimizer", key="learning_rate"),
-        momentum=get_conf(train_conf, group="optimizer", key="momentum"),
-    )
+    if get_conf(train_conf, group="optimizer", key="type") == "SGD":
+        optimizer = torch.optim.SGD(
+            network.parameters(),
+            lr=get_conf(train_conf, group="optimizer", key="learning_rate"),
+            momentum=get_conf(train_conf, group="optimizer", key="momentum"),
+        )
+    else:
+        optimizer = torch.optim.Adam(
+            network.parameters(), lr=get_conf(train_conf, group="optimizer", key="learning_rate")
+        )
     if get_conf(train_conf, group="loss", key="type") == "FocalLoss":
         loss = FocalLoss(
             alpha=get_conf(train_conf, group="loss", key="alpha"),
