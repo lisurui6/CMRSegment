@@ -8,6 +8,7 @@ from CMRSegment.nn.torch.data import Torch2DSegmentationDataset
 import numpy as np
 import nibabel as nib
 import shutil
+from CMRSegment.nn.torch import prepare_tensors
 
 
 TRAIN_CONF_PATH = Path(__file__).parent.parent.joinpath("train.conf")
@@ -51,6 +52,7 @@ def main():
     )
     image = np.expand_dims(image, 0)
     image = torch.from_numpy(image).float()
+    image = prepare_tensors(image, gpu=True, device=args.device)
     predicted = network(image)
     predicted = predicted.numpy()
 
