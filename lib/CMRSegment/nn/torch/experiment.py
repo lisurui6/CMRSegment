@@ -69,7 +69,9 @@ class Experiment:
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
-                pbar.set_description("{} --- {}".format((idx + 1) / len(train_data_loader), self.loss.description()))
+                pbar.set_description(
+                    "{:.2f} --- {}".format((idx + 1) / len(train_data_loader), self.loss.description())
+                )
             self.logger.info("Epoch finished !")
             metrics = self.eval(self.loss.new(), *self.other_validation_metrics)
             self.logger.info("Validation loss: {}".format(metrics[0].description()))

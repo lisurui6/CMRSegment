@@ -5,7 +5,7 @@ from argparse import ArgumentParser
 from experiments.fcn_2d.networks import FCN2DSegmentationModel
 from CMRSegment.nn.torch.experiment import Experiment, ExperimentConfig
 from CMRSegment.nn.torch.data import construct_training_validation_dataset
-from CMRSegment.nn.torch.loss import FocalLoss, DiceCoeff, BCELoss
+from CMRSegment.nn.torch.loss import FocalLoss, DiceCoeff, BCELoss, DiceCoeffWithLogits
 from CMRSegment.config import DataConfig, get_conf
 from pyhocon import ConfigTree, ConfigFactory
 
@@ -78,7 +78,7 @@ def main():
         validation_set=validation_set,
         optimizer=optimizer,
         loss=loss,
-        other_validation_metrics=[DiceCoeff()],
+        other_validation_metrics=[DiceCoeffWithLogits()],
     )
     experiment.train()
 

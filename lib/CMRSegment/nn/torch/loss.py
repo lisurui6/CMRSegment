@@ -15,7 +15,7 @@ class TorchLoss(torch.nn.Module):
 
     def description(self):
         """Description use for display"""
-        return "{}: {}".format(self.document(), self.avg())
+        return "{}: {:.8f}".format(self.document(), self.avg())
 
     def log(self):
         """Value(s) to store in logging"""
@@ -113,3 +113,9 @@ class BCELoss(TorchLoss):
     def forward(self, predicted, targets):
         BCE_loss = F.binary_cross_entropy_with_logits(predicted, targets, reduction="mean")
         return BCE_loss
+
+
+class DiceCoeffWithLogits(DiceCoeff):
+    def foward(self, logits, target):
+        pred = torch.sigmoid(logits)
+        return super().forward(pred, target)

@@ -95,11 +95,11 @@ class Torch2DSegmentationDataset(TorchDataset):
         image = nib.load(str(image_path)).get_data()
         if image.ndim == 4:
             image = np.squeeze(image, axis=-1).astype(np.int16)
-        image = image.astype(np.int16)
+        image = image.astype(np.float32)
         X, Y, Z = image.shape
         cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
-        image = Torch2DSegmentationDataset.crop_3D_image(image, cx, cy, feature_size, cz, n_slices)
-        # image = np.resize(image, (feature_size, feature_size, n_slices))
+        # image = Torch2DSegmentationDataset.crop_3D_image(image, cx, cy, feature_size, cz, n_slices)
+        image = np.resize(image, (feature_size, feature_size, n_slices))
         image = np.transpose(image, (2, 0, 1))
         return image
 
@@ -109,17 +109,17 @@ class Torch2DSegmentationDataset(TorchDataset):
         label = np.transpose(label, axes=(2, 1, 0))
         if label.ndim == 4:
             label = np.squeeze(label, axis=-1).astype(np.int16)
-        label = label.astype(np.int16)
+        label = label.astype(np.float32)
         label[label == 4] = 3
         X, Y, Z = label.shape
         cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
-        label = Torch2DSegmentationDataset.crop_3D_image(label, cx, cy, feature_size, cz, n_slices)
-        # label = np.resize(label, (feature_size, feature_size, n_slices))
+        # label = Torch2DSegmentationDataset.crop_3D_image(label, cx, cy, feature_size, cz, n_slices)
+        label = np.resize(label, (feature_size, feature_size, n_slices))
 
         labels = []
         for i in range(1, 4):
             blank_image = np.zeros((feature_size, feature_size, n_slices))
-            blank_image[label == i] = i
+            blank_image[label == i] = 1
             labels.append(blank_image)
         label = np.array(labels)
         label = np.transpose(label, (0, 3, 1, 2))

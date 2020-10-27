@@ -45,11 +45,16 @@ def main():
     )
     network.load_state_dict(checkpoint)
     network.cuda(device=args.device)
-    image = Torch2DSegmentationDataset.read_image(
-        input_path,
-        get_conf(train_conf, group="network", key="feature_size"),
-        get_conf(train_conf, group="network", key="in_channels")
-    )
+    image = nib.load(str(input_path)).get_data()
+    if image.ndim == 4:
+        image = np.squeeze(image, axis=-1).astype(np.int16)
+    image = image.astype(np.int16)
+    image = np.transpose(image, (2, 0, 1))
+    # image = Torch2DSegmentationDataset.read_image(
+    #     input_path,
+    #     get_conf(train_conf, group="network", key="feature_size"),
+    #     get_conf(train_conf, group="network", key="in_channels")
+    # )
     image = np.expand_dims(image, 0)
     image = torch.from_numpy(image).float()
     image = prepare_tensors(image, gpu=True, device=args.device)
