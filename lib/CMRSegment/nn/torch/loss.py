@@ -88,7 +88,6 @@ class DiceCoeff(TorchLoss):
     """Dice coeff for individual examples"""
 
     def forward(self, input, target):
-        print(input.shape, target.shape)
         eps = 0.0001
         num = input.size(0)
         m1 = input.view(num, -1).float()  # Flatten
