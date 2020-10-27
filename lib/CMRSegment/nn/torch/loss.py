@@ -118,4 +118,5 @@ class BCELoss(TorchLoss):
 class DiceCoeffWithLogits(DiceCoeff):
     def foward(self, logits, target):
         pred = torch.sigmoid(logits)
+        pred = (pred > 0.5).float()
         return super().forward(pred, target)
