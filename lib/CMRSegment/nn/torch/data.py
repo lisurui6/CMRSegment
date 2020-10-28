@@ -15,7 +15,7 @@ from scipy.ndimage import zoom
 
 
 def construct_training_validation_dataset(
-    data_config: DataConfig, feature_size: int, n_slices: int
+    data_config: DataConfig, feature_size: int, n_slices: int, is_3d: bool =  False
 ) -> Tuple["Torch2DSegmentationDataset", "Torch2DSegmentationDataset"]:
     datasets = [
         DatasetConfig.from_conf(name, mode=data_config.data_mode, mount_prefix=data_config.mount_prefix)
@@ -44,9 +44,11 @@ def construct_training_validation_dataset(
     val_label_paths = label_paths[int((1 - data_config.validation_split) * len(label_paths)):]
 
     train_set = Torch2DSegmentationDataset(
-        train_image_paths, train_label_paths, feature_size=feature_size, n_slices=n_slices
+        train_image_paths, train_label_paths, feature_size=feature_size, n_slices=n_slices, is_3d=is_3d,
     )
-    val_set = Torch2DSegmentationDataset(val_image_paths, val_label_paths, feature_size=feature_size, n_slices=n_slices)
+    val_set = Torch2DSegmentationDataset(
+        val_image_paths, val_label_paths, feature_size=feature_size, n_slices=n_slices, is_3d=is_3d,
+    )
     return train_set, val_set
 
 
@@ -97,10 +99,12 @@ def resize_image(image: np.ndarray, target_shape: Tuple, order: int):
 
 
 class Torch2DSegmentationDataset(TorchDataset):
-    def __init__(self, image_paths: List[Path], label_paths: List[Path], n_slices: int, feature_size: int):
+    def __init__(self, image_paths: List[Path], label_paths: List[Path], n_slices: int, feature_size: int,
+                 is_3d: bool = False):
         super().__init__(image_paths, label_paths)
         self.n_slices = n_slices
         self.feature_size = feature_size
+        self.is_3d = is_3d
 
     @staticmethod
     def read_image(image_path: Path, feature_size: int, n_slices: int) -> np.ndarray:
@@ -139,6 +143,8 @@ class Torch2DSegmentationDataset(TorchDataset):
 
     def __getitem__(self, index: int):
         image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
+        if self.is_3d:
+            image = np.expand_dims(image, 0)
         label = self.read_label(self.label_paths[index], self.feature_size, self.n_slices)
         image = torch.from_numpy(image).float()
         label = torch.from_numpy(label).float()

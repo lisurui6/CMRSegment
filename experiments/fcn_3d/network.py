@@ -28,12 +28,12 @@ def conv_block_2_3d(in_dim, out_dim, activation):
 
 
 class UNet(nn.Module):
-    def __init__(self, in_dim, out_dim, num_filters):
+    def __init__(self, in_channels, n_classes, n_filters):
         super(UNet, self).__init__()
 
-        self.in_dim = in_dim
-        self.out_dim = out_dim
-        self.num_filters = num_filters
+        self.in_dim = in_channels
+        self.out_dim = n_classes
+        self.num_filters = n_filters
         # activation = nn.LeakyReLU(0.2, inplace=True)
         activation = nn.ReLU()
 
@@ -65,30 +65,31 @@ class UNet(nn.Module):
         self.up_5 = conv_block_2_3d(self.num_filters * 3, self.num_filters * 1, activation)
 
         # Output
-        self.out = conv_block_3d(self.num_filters, out_dim, activation)
+        self.out = conv_block_3d(self.num_filters, self.out_dim, activation)
 
     def forward(self, x):
+        # x -> [None, 1, 64, 128, 128]
         # Down sampling
-        down_1 = self.down_1(x)  # -> [1, 4, 128, 128, 128]
-        pool_1 = self.pool_1(down_1)  # -> [1, 4, 64, 64, 64]
+        down_1 = self.down_1(x)       # -> [None, 16, 64, 128, 128]
+        pool_1 = self.pool_1(down_1)  # -> [None, 16, 32, 64, 64]
 
-        down_2 = self.down_2(pool_1)  # -> [1, 8, 64, 64, 64]
-        pool_2 = self.pool_2(down_2)  # -> [1, 8, 32, 32, 32]
+        down_2 = self.down_2(pool_1)  # -> [None, 32, 32, 64, 64]
+        pool_2 = self.pool_2(down_2)  # -> [None, 32, 16, 32, 32]
 
-        down_3 = self.down_3(pool_2)  # -> [1, 16, 32, 32, 32]
-        pool_3 = self.pool_3(down_3)  # -> [1, 16, 16, 16, 16]
+        down_3 = self.down_3(pool_2)  # -> [None, 64, 16, 32, 32]
+        pool_3 = self.pool_3(down_3)  # -> [None, 64, 8, 16, 16]
 
-        down_4 = self.down_4(pool_3)  # -> [1, 32, 16, 16, 16]
-        pool_4 = self.pool_4(down_4)  # -> [1, 32, 8, 8, 8]
+        down_4 = self.down_4(pool_3)  # -> [None, 128, 8, 16, 16]
+        pool_4 = self.pool_4(down_4)  # -> [None, 128, 4, 8, 8]
 
-        down_5 = self.down_5(pool_4)  # -> [1, 64, 8, 8, 8]
-        pool_5 = self.pool_5(down_5)  # -> [1, 64, 4, 4, 4]
+        down_5 = self.down_5(pool_4)  # -> [None, 256, 4, 8, 8]
+        pool_5 = self.pool_5(down_5)  # -> [None, 256, 2, 4, 4]
 
         # Bridge
-        bridge = self.bridge(pool_5)  # -> [1, 128, 4, 4, 4]
+        bridge = self.bridge(pool_5)  # -> [None, 512, 2, 4, 4]
 
         # Up sampling
-        trans_1 = self.trans_1(bridge)  # -> [1, 128, 8, 8, 8]
+        trans_1 = self.trans_1(bridge)  # -> [None, 512, 4, 8, 8]
         concat_1 = torch.cat([trans_1, down_5], dim=1)  # -> [1, 192, 8, 8, 8]
         up_1 = self.up_1(concat_1)  # -> [1, 64, 8, 8, 8]
 
