@@ -69,12 +69,14 @@ def main():
     image = prepare_tensors(image, gpu=True, device=args.device)
     predicted = network(image)
     predicted = torch.sigmoid(predicted)
+    print("sigmoid", torch.mean(predicted).item(), torch.max(predicted).item())
     predicted = (predicted > 0.5).float()
+    print("0.5", torch.mean(predicted).item(), torch.max(predicted).item())
     predicted = predicted.cpu().detach().numpy()
 
     nim = nib.load(str(input_path))
     # Transpose and crop the segmentation to recover the original size
-    predicted = np.squeeze(predicted, axis=0).astype(np.int16)
+    predicted = np.squeeze(predicted, axis=0)
     print(predicted.shape)
 
     # map back to original size
