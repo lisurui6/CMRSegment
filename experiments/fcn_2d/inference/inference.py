@@ -23,6 +23,7 @@ def parse_args():
     parser.add_argument("-n", "--network-conf", dest="network_conf_path", default=None, type=str)
     parser.add_argument("-d", "--device", dest="device", default=0, type=int)
     parser.add_argument("-p", "--phase", dest="phase", default="ED", type=str)
+    parser.add_argument("--crop", dest="crop_image", action="store_true")
     return parser.parse_args()
 
 
@@ -62,7 +63,8 @@ def main():
     image = Torch2DSegmentationDataset.read_image(
         input_path,
         get_conf(train_conf, group="network", key="feature_size"),
-        get_conf(train_conf, group="network", key="in_channels")
+        get_conf(train_conf, group="network", key="in_channels"),
+        crop=args.crop_image,
     )
     image = np.expand_dims(image, 0)
     image = torch.from_numpy(image).float()
@@ -117,6 +119,7 @@ def main():
         input_path.parent.joinpath(dataset_config.image_label_format.label.format(phase=args.phase)),
         feature_size=get_conf(train_conf, group="network", key="feature_size"),
         n_slices=get_conf(train_conf, group="network", key="in_channels"),
+        crop=args.crop_image,
     )
     final_label = np.zeros((image.shape[1], image.shape[2], image.shape[3]))
     for i in range(label.shape[0]):

@@ -107,20 +107,22 @@ class Torch2DSegmentationDataset(TorchDataset):
         self.is_3d = is_3d
 
     @staticmethod
-    def read_image(image_path: Path, feature_size: int, n_slices: int) -> np.ndarray:
+    def read_image(image_path: Path, feature_size: int, n_slices: int, crop: bool = False) -> np.ndarray:
         image = nib.load(str(image_path)).get_data()
         if image.ndim == 4:
             image = np.squeeze(image, axis=-1).astype(np.int16)
         image = image.astype(np.float32)
         X, Y, Z = image.shape
         cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
-        # image = Torch2DSegmentationDataset.crop_3D_image(image, cx, cy, feature_size, cz, n_slices)
-        image = resize_image(image, (feature_size, feature_size, n_slices), 0)
+        if crop:
+            image = Torch2DSegmentationDataset.crop_3D_image(image, cx, cy, feature_size, cz, n_slices)
+        else:
+            image = resize_image(image, (feature_size, feature_size, n_slices), 0)
         image = np.transpose(image, (2, 0, 1))
         return image
 
     @staticmethod
-    def read_label(label_path: Path, feature_size: int, n_slices: int) -> np.ndarray:
+    def read_label(label_path: Path, feature_size: int, n_slices: int, crop: bool = False) -> np.ndarray:
         label = sitk.GetArrayFromImage(sitk.ReadImage(str(label_path)))
         label = np.transpose(label, axes=(2, 1, 0))
         if label.ndim == 4:
@@ -129,8 +131,10 @@ class Torch2DSegmentationDataset(TorchDataset):
         label[label == 4] = 3
         X, Y, Z = label.shape
         cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
-        # label = Torch2DSegmentationDataset.crop_3D_image(label, cx, cy, feature_size, cz, n_slices)
-        label = resize_image(label, (feature_size, feature_size, n_slices), 0)
+        if crop:
+            label = Torch2DSegmentationDataset.crop_3D_image(label, cx, cy, feature_size, cz, n_slices)
+        else:
+            label = resize_image(label, (feature_size, feature_size, n_slices), 0)
 
         labels = []
         for i in range(1, 4):
