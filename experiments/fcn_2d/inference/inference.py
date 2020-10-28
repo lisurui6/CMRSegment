@@ -5,6 +5,7 @@ from pyhocon import ConfigTree, ConfigFactory
 from CMRSegment.config import DataConfig, get_conf
 from experiments.fcn_2d.networks import FCN2DSegmentationModel
 from CMRSegment.nn.torch.data import Torch2DSegmentationDataset
+from CMRSegment.config import DatasetConfig, DataConfig
 import numpy as np
 import nibabel as nib
 import shutil
@@ -17,23 +18,31 @@ TRAIN_CONF_PATH = Path(__file__).parent.parent.joinpath("train.conf")
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument("-m", "--model-path", dest="model_path", required=True, type=str)
-    parser.add_argument("-i", "--input-path", dest="input_path", required=True, type=str)
+    parser.add_argument("-i", "--input-dir", dest="input_dir", required=True, type=str)
     parser.add_argument("-o", "--output-dir", dest="output_dir", type=str, required=True)
     parser.add_argument("-n", "--network-conf", dest="network_conf_path", default=None, type=str)
     parser.add_argument("-d", "--device", dest="device", default=0, type=int)
+    parser.add_argument("-p", "--phase", dest="phase", default="ED", type=str)
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
     model_path = Path(args.model_path)
-    input_path = Path(args.input_path)
-    output_dir = Path(args.output_dir)
-    checkpoint = torch.load(str(model_path), map_location=torch.device(args.device))
     if args.network_conf_path is not None:
         train_conf = ConfigFactory.parse_file(str(Path(args.network_conf_path)))
+        conf_path = Path(args.network_conf_path)
     else:
         train_conf = ConfigFactory.parse_file(str(TRAIN_CONF_PATH))
+        conf_path = TRAIN_CONF_PATH
+    data_config = DataConfig.from_conf(conf_path)
+    dataset_config = DatasetConfig.from_conf(
+        name=data_config.dataset_names[0], mount_prefix=data_config.mount_prefix, mode=data_config.data_mode
+    )
+    input_path = Path(args.input_dir).joinpath(dataset_config.image_label_format.image.format(phase=args.phase))
+    output_dir = Path(args.output_dir)
+    checkpoint = torch.load(str(model_path), map_location=torch.device(args.device))
+
     get_conf(train_conf, group="network", key="experiment_dir")
     network = FCN2DSegmentationModel(
         in_channels=get_conf(train_conf, group="network", key="in_channels"),
@@ -93,11 +102,27 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
     nib.save(nim2, '{0}/seg.nii.gz'.format(str(output_dir)))
 
-    image = image.cpu().detach().numpy()
-    image = np.squeeze(image, 0)
-    image = np.transpose(image, [1, 2, 0])
-    print(image.shape)
-    nim2 = nib.Nifti1Image(image, nim.affine)
+    final_image = image.cpu().detach().numpy()
+    final_image = np.squeeze(final_image, 0)
+    final_image = np.transpose(final_image, [1, 2, 0])
+    print(final_image.shape)
+    nim2 = nib.Nifti1Image(final_image, nim.affine)
     nim2.header['pixdim'] = nim.header['pixdim']
     nib.save(nim2, '{0}/image.nii.gz'.format(str(output_dir)))
     # shutil.copy(str(input_path), str(output_dir.joinpath("image.nii.gz")))
+
+    label = Torch2DSegmentationDataset.read_label(
+        input_path.parent.joinpath(dataset_config.image_label_format.label.format(phase=args.phase)),
+        feature_size=get_conf(train_conf, group="network", key="feature_size"),
+        n_slices=get_conf(train_conf, group="network", key="in_channels"),
+    )
+    final_label = np.zeros((image.shape[1], image.shape[2], image.shape[3]))
+    for i in range(label.shape[0]):
+        final_label[label[i, :, :, :] == 1.0] = i + 1
+
+    final_label = np.transpose(final_label, [1, 2, 0])
+    print(final_label.shape)
+    nim2 = nib.Nifti1Image(final_label, nim.affine)
+    nim2.header['pixdim'] = nim.header['pixdim']
+    output_dir.mkdir(parents=True, exist_ok=True)
+    nib.save(nim2, '{0}/label.nii.gz'.format(str(output_dir)))

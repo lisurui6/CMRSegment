@@ -92,6 +92,8 @@ class FCN2DSegmentationModel(torch.nn.Module):
         x = torch.cat([conv1_up, conv2_up, conv3_up, conv4_up, conv5_up], 1)
         logits = self.final_block(x)
         logits = logits.reshape((logits.shape[0], self.n_classes, self.in_channels, logits.shape[2], logits.shape[3]))
+        # logits = logits.reshape((logits.shape[0], self.in_channels, self.n_classes, logits.shape[2], logits.shape[3]))
+
         return logits
 
     @staticmethod
