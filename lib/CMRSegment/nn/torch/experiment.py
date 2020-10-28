@@ -13,6 +13,7 @@ from torch.utils.tensorboard import SummaryWriter
 import logging
 from argparse import ArgumentParser
 from torch.utils.data.dataset import Dataset
+from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
 
@@ -60,7 +61,7 @@ class Experiment:
         )
         for epoch in range(self.config.num_epochs):
             self.network.train()
-            self.logger.info("Starting epoch {}/{}".format(epoch, self.config.num_epochs))
+            self.logger.info("{}: starting epoch {}/{}".format(datetime.now(), epoch, self.config.num_epochs))
             self.loss.reset()
             pbar = tqdm(enumerate(train_data_loader))
             for idx, (inputs, outputs) in pbar:
