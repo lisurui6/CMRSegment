@@ -90,7 +90,7 @@ def main():
     print(predicted.shape, final_predicted.shape)
     # final_predicted = np.resize(final_predicted, (image.shape[0], image.shape[1], image.shape[2]))
 
-    print(predicted.shape, final_predicted.shape)
+    print(predicted.shape, final_predicted.shape, np.max(final_predicted), np.mean(final_predicted), np.min(final_predicted))
     # if Z < 64:
     #     pred_segt = pred_segt[x_pre:x_pre + X, y_pre:y_pre + Y, z1_ - z1:z1_ - z1 + Z]
     # else:

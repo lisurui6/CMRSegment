@@ -111,7 +111,7 @@ class Torch2DSegmentationDataset(TorchDataset):
         X, Y, Z = image.shape
         cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
         # image = Torch2DSegmentationDataset.crop_3D_image(image, cx, cy, feature_size, cz, n_slices)
-        image = resize_image(image, (feature_size, feature_size, n_slices), 3)
+        image = resize_image(image, (feature_size, feature_size, n_slices), 0)
         image = np.transpose(image, (2, 0, 1))
         return image
 
