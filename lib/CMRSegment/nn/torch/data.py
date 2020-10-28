@@ -11,6 +11,7 @@ import SimpleITK as sitk
 import torch
 from typing import List, Tuple
 from CMRSegment.common.data_table import DataTable
+from scipy.ndimage import zoom
 
 
 def construct_training_validation_dataset(
@@ -88,6 +89,13 @@ def rescale_intensity(image, thres=(1.0, 99.0)):
     return image2
 
 
+def resize_image(image: np.ndarray, target_shape: Tuple, order: int):
+    image_shape = image.shape
+    factors = [float(target_shape[i]) / image_shape[i] for i in range(len(image_shape))]
+    output = zoom(image, factors, order=order)
+    return output
+
+
 class Torch2DSegmentationDataset(TorchDataset):
     def __init__(self, image_paths: List[Path], label_paths: List[Path], n_slices: int, feature_size: int):
         super().__init__(image_paths, label_paths)
@@ -97,14 +105,13 @@ class Torch2DSegmentationDataset(TorchDataset):
     @staticmethod
     def read_image(image_path: Path, feature_size: int, n_slices: int) -> np.ndarray:
         image = nib.load(str(image_path)).get_data()
-        print("read image", image.shape)
         if image.ndim == 4:
             image = np.squeeze(image, axis=-1).astype(np.int16)
         image = image.astype(np.float32)
         X, Y, Z = image.shape
         cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
-        image = Torch2DSegmentationDataset.crop_3D_image(image, cx, cy, feature_size, cz, n_slices)
-        # image = np.resize(image, (feature_size, feature_size, n_slices))
+        # image = Torch2DSegmentationDataset.crop_3D_image(image, cx, cy, feature_size, cz, n_slices)
+        image = resize_image(image, (feature_size, feature_size, n_slices), 3)
         image = np.transpose(image, (2, 0, 1))
         return image
 
@@ -118,8 +125,8 @@ class Torch2DSegmentationDataset(TorchDataset):
         label[label == 4] = 3
         X, Y, Z = label.shape
         cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
-        label = Torch2DSegmentationDataset.crop_3D_image(label, cx, cy, feature_size, cz, n_slices)
-        # label = np.resize(label, (feature_size, feature_size, n_slices))
+        # label = Torch2DSegmentationDataset.crop_3D_image(label, cx, cy, feature_size, cz, n_slices)
+        label = resize_image(label, (feature_size, feature_size, n_slices), 0)
 
         labels = []
         for i in range(1, 4):
