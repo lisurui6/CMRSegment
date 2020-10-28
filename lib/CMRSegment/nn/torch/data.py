@@ -97,6 +97,7 @@ class Torch2DSegmentationDataset(TorchDataset):
     @staticmethod
     def read_image(image_path: Path, feature_size: int, n_slices: int) -> np.ndarray:
         image = nib.load(str(image_path)).get_data()
+        print("read image", image.shape)
         if image.ndim == 4:
             image = np.squeeze(image, axis=-1).astype(np.int16)
         image = image.astype(np.float32)
