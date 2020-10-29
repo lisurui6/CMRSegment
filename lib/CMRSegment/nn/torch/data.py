@@ -15,7 +15,7 @@ from scipy.ndimage import zoom
 
 
 def construct_training_validation_dataset(
-    data_config: DataConfig, feature_size: int, n_slices: int, is_3d: bool =  False
+    data_config: DataConfig, feature_size: int, n_slices: int, is_3d: bool = False
 ) -> Tuple["Torch2DSegmentationDataset", "Torch2DSegmentationDataset"]:
     datasets = [
         DatasetConfig.from_conf(name, mode=data_config.data_mode, mount_prefix=data_config.mount_prefix)
@@ -119,6 +119,7 @@ class Torch2DSegmentationDataset(TorchDataset):
         else:
             image = resize_image(image, (feature_size, feature_size, n_slices), 0)
         image = np.transpose(image, (2, 0, 1))
+        image = rescale_intensity(image, (1.0, 99.0))
         return image
 
     @staticmethod
