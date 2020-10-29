@@ -65,7 +65,7 @@ class UNet(nn.Module):
         self.up_5 = conv_block_2_3d(self.num_filters * 3, self.num_filters * 1, activation)
 
         # Output
-        self.out = conv_block_3d(self.num_filters, self.out_dim, activation)
+        self.out = nn.Conv3d(self.num_filters, self.out_dim, kernel_size=1)
 
     def forward(self, x):
         # x -> [None, 1, 64, 128, 128]
