@@ -94,7 +94,6 @@ class DiceCoeff(TorchLoss):
         m2 = target.view(num, -1).float()  # Flatten
         self.inter = (m1 * m2).sum().float()
         self.union = m1.sum() + m2.sum()
-
         t = (2 * self.inter.float() + eps) / (self.union.float() + eps)
         return t
 
@@ -116,7 +115,7 @@ class BCELoss(TorchLoss):
 
 
 class DiceCoeffWithLogits(DiceCoeff):
-    def foward(self, logits, target):
+    def forward(self, logits, target):
         pred = torch.sigmoid(logits)
         pred = (pred > 0.5).float()
         return super().forward(pred, target)
