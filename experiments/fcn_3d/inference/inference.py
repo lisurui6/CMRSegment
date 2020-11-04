@@ -37,7 +37,7 @@ def main():
         conf_path = TRAIN_CONF_PATH
     data_config = DataConfig.from_conf(conf_path)
     dataset_config = DatasetConfig.from_conf(
-        name=data_config.dataset_names[0], mount_prefix=data_config.mount_prefix, mode=data_config.data_mode
+        name=data_config.training_datasets[0], mount_prefix=data_config.mount_prefix, mode=data_config.data_mode
     )
     input_path = Path(args.input_dir).joinpath(dataset_config.image_label_format.image.format(phase=args.phase))
     output_dir = Path(args.output_dir)
@@ -56,15 +56,30 @@ def main():
     #     image = np.squeeze(image, axis=-1).astype(np.int16)
     # image = image.astype(np.int16)
     # image = np.transpose(image, (2, 0, 1))
-    image = Torch2DSegmentationDataset.read_image(
-        input_path,
-        get_conf(train_conf, group="network", key="feature_size"),
-        get_conf(train_conf, group="network", key="n_slices")
+    dataset = Torch2DSegmentationDataset(
+        name=dataset_config.name,
+        image_paths=[input_path],
+        label_paths=[input_path.parent.joinpath(dataset_config.image_label_format.label.format(phase=args.phase))],
+        feature_size=get_conf(train_conf, group="network", key="feature_size"),
+        n_slices=get_conf(train_conf, group="network", key="n_slices"),
     )
-    image = np.expand_dims(image, 0)
-    image = np.expand_dims(image, 0)
-    image = torch.from_numpy(image).float()
-    image = prepare_tensors(image, gpu=True, device=args.device)
+
+    image = dataset.get_image_tensor_from_index(0)
+    image = torch.unsqueeze(image, 0)
+    image = prepare_tensors(image, True, args.device)
+
+    label = dataset.get_label_tensor_from_index(0)
+    inference(
+        image=image,
+        label=label,
+        image_path=input_path,
+        network=network,
+        output_dir=output_dir,
+    )
+
+
+def inference(image: torch.Tensor, label: torch.Tensor, image_path: Path, network: torch.nn.Module, output_dir: Path):
+
     predicted = network(image)
     predicted = torch.sigmoid(predicted)
     print("sigmoid", torch.mean(predicted).item(), torch.max(predicted).item())
@@ -72,7 +87,7 @@ def main():
     print("0.5", torch.mean(predicted).item(), torch.max(predicted).item())
     predicted = predicted.cpu().detach().numpy()
 
-    nim = nib.load(str(input_path))
+    nim = nib.load(str(image_path))
     # Transpose and crop the segmentation to recover the original size
     predicted = np.squeeze(predicted, axis=0)
     print(predicted.shape)
@@ -90,7 +105,8 @@ def main():
     print(predicted.shape, final_predicted.shape)
     # final_predicted = np.resize(final_predicted, (image.shape[0], image.shape[1], image.shape[2]))
 
-    print(predicted.shape, final_predicted.shape, np.max(final_predicted), np.mean(final_predicted), np.min(final_predicted))
+    print(predicted.shape, final_predicted.shape, np.max(final_predicted), np.mean(final_predicted),
+          np.min(final_predicted))
     # if Z < 64:
     #     pred_segt = pred_segt[x_pre:x_pre + X, y_pre:y_pre + Y, z1_ - z1:z1_ - z1 + Z]
     # else:
@@ -112,12 +128,8 @@ def main():
     nib.save(nim2, '{0}/image.nii.gz'.format(str(output_dir)))
     # shutil.copy(str(input_path), str(output_dir.joinpath("image.nii.gz")))
 
-    label = Torch2DSegmentationDataset.read_label(
-        input_path.parent.joinpath(dataset_config.image_label_format.label.format(phase=args.phase)),
-        feature_size=get_conf(train_conf, group="network", key="feature_size"),
-        n_slices=get_conf(train_conf, group="network", key="n_slices"),
-    )
     final_label = np.zeros((image.shape[2], image.shape[3], image.shape[4]))
+    label = label.cpu().detach().numpy()
     for i in range(label.shape[0]):
         final_label[label[i, :, :, :] == 1.0] = i + 1
 

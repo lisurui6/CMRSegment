@@ -169,6 +169,18 @@ class Torch2DSegmentationDataset(TorchDataset):
         label = np.transpose(label, (0, 3, 1, 2))
         return label
 
+    def get_image_tensor_from_index(self, index: int) -> torch.Tensor:
+        image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
+        if self.is_3d:
+            image = np.expand_dims(image, 0)
+        image = torch.from_numpy(image).float()
+        return image
+
+    def get_label_tensor_from_index(self, index: int):
+        label = self.read_label(self.label_paths[index], self.feature_size, self.n_slices)
+        label = torch.from_numpy(label).float()
+        return label
+
     def __getitem__(self, index: int):
         image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
         if self.is_3d:

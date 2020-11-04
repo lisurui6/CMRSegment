@@ -8,7 +8,7 @@ from CMRSegment.nn.torch.data import construct_training_validation_dataset
 from CMRSegment.nn.torch.loss import FocalLoss, DiceCoeff, BCELoss, DiceCoeffWithLogits
 from CMRSegment.config import DataConfig, get_conf
 from pyhocon import ConfigTree, ConfigFactory
-
+from experiments.fcn_3d.inference.inference import inference
 
 TRAIN_CONF_PATH = Path(__file__).parent.joinpath("train.conf")
 
@@ -39,6 +39,7 @@ def main():
         device=get_conf(train_conf, group="experiment", key="device"),
         num_workers=get_conf(train_conf, group="experiment", key="num_workers"),
         pin_memory=get_conf(train_conf, group="experiment", key="pin_memory"),
+        n_inference=get_conf(train_conf, group="experiment", key="n_inference"),
     )
     shutil.copy(str(TRAIN_CONF_PATH), str(config.experiment_dir.joinpath("train.conf")))
     network = UNet(
@@ -83,6 +84,7 @@ def main():
         optimizer=optimizer,
         loss=loss,
         other_validation_metrics=[DiceCoeffWithLogits()],
+        inference_func=inference
     )
     experiment.train()
 

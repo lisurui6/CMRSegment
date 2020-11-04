@@ -94,6 +94,7 @@ class ExperimentConfig:
     device: int = 0
     num_workers: int = 0
     pin_memory: bool = False
+    n_inference: int = 10
 
     def __post_init__(self):
         if self.experiment_dir is None:

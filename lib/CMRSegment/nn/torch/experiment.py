@@ -10,12 +10,13 @@ from CMRSegment.nn.torch.loss import TorchLoss
 from torch.optim.optimizer import Optimizer
 from CMRSegment.config import ExperimentConfig
 from tqdm import tqdm
-from typing import Iterable, Union, Tuple, List
+from typing import Iterable, Union, Tuple, List, Callable
 from torch.utils.tensorboard import SummaryWriter
 import logging
 from argparse import ArgumentParser
 from torch.utils.data.dataset import Dataset
 from datetime import datetime
+import numpy as np
 
 logging.basicConfig(level=logging.INFO)
 
@@ -32,6 +33,7 @@ class Experiment:
         optimizer: Optimizer,
         other_validation_metrics: List = None,
         tensor_board: SummaryWriter = None,
+        inference_func: Callable = None,
         logger=None,
     ):
         self.config = config
@@ -44,6 +46,7 @@ class Experiment:
         self.other_validation_metrics = other_validation_metrics if other_validation_metrics is not None else []
         self.tensor_board = tensor_board or SummaryWriter(str(self.config.experiment_dir.joinpath("tb_runs")))
         self.logger = logger or logging.getLogger("CMRSegment.nn.torch.Experiment")
+        self.inference_func = inference_func
         self.set_device()
 
     def set_device(self):
@@ -122,6 +125,8 @@ class Experiment:
             output_path = checkpoint_dir.joinpath("CP_{}.pth".format(epoch))
             torch.save(self.network.state_dict(), str(output_path))
             self.logger.info("Checkpoint {} saved at {}!".format(epoch, str(output_path)))
+            if self.inference_func is not None:
+                self.inference(epoch)
 
     def eval(self, *metrics: TorchLoss, datasets: List[TorchDataset]) -> Tuple[TorchLoss]:
         """Evaluate on validation set with training loss function if none provided"""
@@ -145,6 +150,25 @@ class Experiment:
                 outputs = prepare_tensors(outputs, self.config.gpu, self.config.device)
                 metric.cumulate(preds, outputs)
         return metrics
+
+    def inference(self, epoch: int):
+        output_dir = self.config.experiment_dir.joinpath("inference").joinpath("CP_{}".format(epoch))
+        for val in self.validation_sets:
+            for idx in np.random.choice(self.config.n_inference, len(val.image_paths)):
+                image_path = val.image_paths[idx]
+                label_path = val.label_paths[idx]
+                output_dir.joinpath(val.name, image_path.parent.stem).mkdir(exist_ok=True, parents=True)
+                self.inference_func(
+                    image_path, label_path, self.network, output_dir.joinpath(val.name, image_path.parent.stem)
+                )
+        for val in self.extra_validation_sets:
+            for idx in np.random.choice(self.config.n_inference, len(val.image_paths)):
+                image_path = val.image_paths[idx]
+                label_path = val.label_paths[idx]
+                output_dir.joinpath(val.name, image_path.parent.stem).mkdir(exist_ok=True, parents=True)
+                self.inference_func(
+                    image_path, label_path, self.network, output_dir.joinpath(val.name, image_path.parent.stem)
+                )
 
     @staticmethod
     def parser() -> ArgumentParser:
