@@ -1,9 +1,11 @@
 import torch
 from CMRSegment.nn.torch.data import Torch2DSegmentationDataset, construct_training_validation_dataset, TorchDataset
+from CMRSegment.nn.torch.data import MultiDataLoader
 from torch.utils.data.sampler import SequentialSampler, RandomSampler
 from torch.utils.data import DataLoader
 
 from CMRSegment.nn.torch import prepare_tensors
+
 from CMRSegment.nn.torch.loss import TorchLoss
 from torch.optim.optimizer import Optimizer
 from CMRSegment.config import ExperimentConfig
@@ -23,8 +25,9 @@ class Experiment:
         self,
         config: ExperimentConfig,
         network: torch.nn.Module,
-        training_set: TorchDataset,
-        validation_set: TorchDataset,
+        training_sets: List[TorchDataset],
+        validation_sets: List[TorchDataset],
+        extra_validation_sets: List[TorchDataset],
         loss: TorchLoss,
         optimizer: Optimizer,
         other_validation_metrics: List = None,
@@ -33,8 +36,9 @@ class Experiment:
     ):
         self.config = config
         self.network = network
-        self.training_set = training_set
-        self.validation_set = validation_set
+        self.training_sets = training_sets
+        self.validation_sets = validation_sets
+        self.extra_validation_sets = extra_validation_sets
         self.optimizer = optimizer
         self.loss = loss
         self.other_validation_metrics = other_validation_metrics if other_validation_metrics is not None else []
@@ -56,8 +60,12 @@ class Experiment:
 
     def train(self):
         self.network.train()
-        train_data_loader = self.training_set.random_loader(
-            self.config.batch_size, n_workers=self.config.num_workers, pin_memory=self.config.pin_memory
+        train_data_loader = MultiDataLoader(
+            *self.training_sets,
+            batch_size=self.config.batch_size,
+            sampler_cls="random",
+            num_workers=self.config.num_workers,
+            pin_memory=self.config.pin_memory
         )
         for epoch in range(self.config.num_epochs):
             self.network.train()
@@ -76,18 +84,38 @@ class Experiment:
                     "{:.2f} --- {}".format((idx + 1) / len(train_data_loader), self.loss.description())
                 )
             self.logger.info("Epoch finished !")
-            metrics = self.eval(self.loss.new(), *self.other_validation_metrics)
-            self.logger.info("Validation loss: {}".format(metrics[0].description()))
-            if metrics[1:]:
+            val_metrics = self.eval(self.loss.new(), *self.other_validation_metrics, datasets=self.validation_sets)
+            self.logger.info("Validation loss: {}".format(val_metrics[0].description()))
+            if val_metrics[1:]:
                 self.logger.info("Other metrics on validation set.")
-                for metric in metrics[1:]:
+                for metric in val_metrics[1:]:
                     self.logger.info("{}".format(metric.description()))
             self.tensor_board.add_scalar("loss/training/{}".format(self.loss.document()), self.loss.log(), epoch)
             self.tensor_board.add_scalar(
-                "loss/validation/loss_{}".format(metrics[0].document()), metrics[0].log(), epoch
+                "loss/validation/loss_{}".format(val_metrics[0].document()), val_metrics[0].log(), epoch
             )
-            for metric in metrics[1:]:
-                self.tensor_board.add_scalar("other_metrics/{}".format(metric.document()), metric.avg(), epoch)
+            for metric in val_metrics[1:]:
+                self.tensor_board.add_scalar(
+                    "other_metrics/validation/{}".format(metric.document()), metric.avg(), epoch
+                )
+
+            # eval extra validation sets
+            if self.extra_validation_sets:
+                val_metrics = self.eval(
+                    self.loss.new(), *self.other_validation_metrics, datasets=self.extra_validation_sets
+                )
+                self.logger.info("Extra Validation loss: {}".format(val_metrics[0].description()))
+                if val_metrics[1:]:
+                    self.logger.info("Other metrics on extra validation set.")
+                    for metric in val_metrics[1:]:
+                        self.logger.info("{}".format(metric.description()))
+                self.tensor_board.add_scalar(
+                    "loss/extra_validation/loss_{}".format(val_metrics[0].document()), val_metrics[0].log(), epoch
+                )
+                for metric in val_metrics[1:]:
+                    self.tensor_board.add_scalar(
+                        "other_metrics/extra_validation/{}".format(metric.document()), metric.avg(), epoch
+                    )
 
             checkpoint_dir = self.config.experiment_dir.joinpath("checkpoints")
             checkpoint_dir.mkdir(parents=True, exist_ok=True)
@@ -95,17 +123,21 @@ class Experiment:
             torch.save(self.network.state_dict(), str(output_path))
             self.logger.info("Checkpoint {} saved at {}!".format(epoch, str(output_path)))
 
-    def eval(self, *metrics: TorchLoss) -> Tuple[TorchLoss]:
+    def eval(self, *metrics: TorchLoss, datasets: List[TorchDataset]) -> Tuple[TorchLoss]:
         """Evaluate on validation set with training loss function if none provided"""
-        data_loader = self.validation_set.sequential_loader(
-            self.config.batch_size, n_workers=self.config.num_workers, pin_memory=self.config.pin_memory
+        val_data_loader = MultiDataLoader(
+            *datasets,
+            batch_size=self.config.batch_size,
+            sampler_cls="sequential",
+            num_workers=self.config.num_workers,
+            pin_memory=self.config.pin_memory
         )
         self.network.eval()
         if not isinstance(metrics, Iterable) and isinstance(metrics, TorchLoss):
             metrics = [metrics]
         for metric in metrics:
             metric.reset()
-        for idx, (inputs, outputs) in enumerate(data_loader):
+        for idx, (inputs, outputs) in enumerate(val_data_loader):
             inputs = prepare_tensors(inputs, self.config.gpu, self.config.device)
             preds = self.network(inputs)
             for metric in metrics:

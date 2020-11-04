@@ -16,47 +16,70 @@ from scipy.ndimage import zoom
 
 def construct_training_validation_dataset(
     data_config: DataConfig, feature_size: int, n_slices: int, is_3d: bool = False
-) -> Tuple["Torch2DSegmentationDataset", "Torch2DSegmentationDataset"]:
-    datasets = [
+) -> Tuple[List["Torch2DSegmentationDataset"], List["Torch2DSegmentationDataset"], List["Torch2DSegmentationDataset"]]:
+    training_set_configs = [
         DatasetConfig.from_conf(name, mode=data_config.data_mode, mount_prefix=data_config.mount_prefix)
-        for name in data_config.dataset_names
+        for name in data_config.training_datasets
     ]
+
+    extra_val_set_configs = [
+        DatasetConfig.from_conf(name, mode=data_config.data_mode, mount_prefix=data_config.mount_prefix)
+        for name in data_config.extra_validation_datasets
+    ]
+    training_sets = []
+    validation_sets = []
+    for config in training_set_configs:
+        train, val = train_val_dataset_from_config(config, data_config.validation_split, feature_size, n_slices, is_3d)
+        training_sets.append(train)
+        validation_sets.append(val)
+    extra_val_sets = []
+
+    for config in extra_val_set_configs:
+        __, val = train_val_dataset_from_config(config, data_config.validation_split, feature_size, n_slices, is_3d)
+        extra_val_sets.append(val)
+    return training_sets, validation_sets, extra_val_sets
+
+
+def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_split: float, feature_size: int,
+                                  n_slices: int, is_3d: bool):
     image_paths = []
     label_paths = []
-    for dataset in datasets:
-        paths = sorted(os.listdir(str(dataset.dir)))
-        for path in paths:
-            for phase in ["ED", "ES"]:
-                path = dataset.dir.joinpath(path)
-                image_path = path.joinpath(dataset.image_label_format.image.format(phase=phase))
-                label_path = path.joinpath(dataset.image_label_format.label.format(phase=phase))
-                if image_path.exists() and label_path.exists():
-                    image_paths.append(path.joinpath(dataset.image_label_format.image.format(phase=phase)))
-                    label_paths.append(path.joinpath(dataset.image_label_format.label.format(phase=phase)))
+    paths = sorted(os.listdir(str(dataset_config.dir)))
+    for path in paths:
+        for phase in ["ED", "ES"]:
+            path = dataset_config.dir.joinpath(path)
+            image_path = path.joinpath(dataset_config.image_label_format.image.format(phase=phase))
+            label_path = path.joinpath(dataset_config.image_label_format.label.format(phase=phase))
+            if image_path.exists() and label_path.exists():
+                image_paths.append(path.joinpath(dataset_config.image_label_format.image.format(phase=phase)))
+                label_paths.append(path.joinpath(dataset_config.image_label_format.label.format(phase=phase)))
     c = list(zip(image_paths, label_paths))
     random.shuffle(c)
     image_paths, label_paths = zip(*c)
 
-    train_image_paths = image_paths[:int((1 - data_config.validation_split) * len(image_paths))]
-    val_image_paths = image_paths[int((1 - data_config.validation_split) * len(image_paths)):]
+    train_image_paths = image_paths[:int((1 - validation_split) * len(image_paths))]
+    val_image_paths = image_paths[int((1 - validation_split) * len(image_paths)):]
 
-    train_label_paths = label_paths[:int((1 - data_config.validation_split) * len(label_paths))]
-    val_label_paths = label_paths[int((1 - data_config.validation_split) * len(label_paths)):]
+    train_label_paths = label_paths[:int((1 - validation_split) * len(label_paths))]
+    val_label_paths = label_paths[int((1 - validation_split) * len(label_paths)):]
 
     train_set = Torch2DSegmentationDataset(
-        train_image_paths, train_label_paths, feature_size=feature_size, n_slices=n_slices, is_3d=is_3d,
+        dataset_config.name, train_image_paths, train_label_paths, feature_size=feature_size,
+        n_slices=n_slices, is_3d=is_3d,
     )
     val_set = Torch2DSegmentationDataset(
-        val_image_paths, val_label_paths, feature_size=feature_size, n_slices=n_slices, is_3d=is_3d,
+        dataset_config.name, val_image_paths, val_label_paths, feature_size=feature_size,
+        n_slices=n_slices, is_3d=is_3d,
     )
     return train_set, val_set
 
 
 class TorchDataset(Dataset):
-    def __init__(self, image_paths: List[Path], label_paths: List[Path]):
+    def __init__(self, name: str, image_paths: List[Path], label_paths: List[Path]):
         assert len(image_paths) == len(label_paths)
         self.image_paths = image_paths
         self.label_paths = label_paths
+        self.name = name
 
     def __len__(self):
         return len(self.image_paths)
@@ -99,9 +122,9 @@ def resize_image(image: np.ndarray, target_shape: Tuple, order: int):
 
 
 class Torch2DSegmentationDataset(TorchDataset):
-    def __init__(self, image_paths: List[Path], label_paths: List[Path], n_slices: int, feature_size: int,
+    def __init__(self, name: str, image_paths: List[Path], label_paths: List[Path], n_slices: int, feature_size: int,
                  is_3d: bool = False):
-        super().__init__(image_paths, label_paths)
+        super().__init__(name, image_paths, label_paths)
         self.n_slices = n_slices
         self.feature_size = feature_size
         self.is_3d = is_3d
@@ -204,3 +227,43 @@ class Torch2DSegmentationDataset(TorchDataset):
             print('Error: unsupported dimension, crop.ndim = {0}.'.format(crop.ndim))
             exit(0)
         return crop
+
+
+class MultiDataLoader:
+    def __init__(self, *datasets: Dataset, batch_size: int, sampler_cls: str, num_workers: int = 0,
+                 pin_memory: bool = False):
+        if sampler_cls == "random":
+            sampler_cls = RandomSampler
+        else:
+            sampler_cls = SequentialSampler
+        self.loaders = [
+            DataLoader(
+                dataset,
+                batch_size=batch_size,
+                sampler=sampler_cls(dataset),
+                num_workers=num_workers,
+                pin_memory=pin_memory,
+            ) for dataset in datasets
+        ]
+        self.loader_iters = []
+
+    def __iter__(self):
+        iters = []
+        for loader in self.loaders:
+            iters.append(iter(loader))
+        self.loader_iters = iters
+        return self
+
+    def __next__(self):
+        all_inputs = []
+        all_outputs = []
+        for loader_iter in self.loader_iters:
+            inputs, outputs = next(loader_iter)
+            all_inputs.append(inputs)
+            all_outputs.append(outputs)
+        all_inputs = torch.cat(all_inputs, dim=0)
+        all_outputs = torch.cat(all_outputs, dim=0)
+        return all_inputs, all_outputs
+
+    def __len__(self):
+        return len(self.loaders[0])

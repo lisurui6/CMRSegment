@@ -57,21 +57,29 @@ class DatasetConfig:
 @dataclasses.dataclass
 class DataConfig:
     mount_prefix: Path
-    dataset_names: List[str]
+    training_datasets: List[str]
+    extra_validation_datasets: List[str] = None
     data_mode: str = "2D"
     validation_split: float = 0.2
+
+    def __post_init__(self):
+        if self.extra_validation_datasets is None:
+            self.extra_validation_datasets = []
 
     @classmethod
     def from_conf(cls, conf_path: Path):
         """From train.conf"""
         conf = ConfigFactory.parse_file(str(conf_path))
         mount_prefix = Path(get_conf(conf, group="data", key="mount_prefix"))
-        dataset_names = get_conf(conf, group="data", key="dataset_names")
+        training_datasets = get_conf(conf, group="data", key="training_datasets")
+        extra_validation_datasets = get_conf(conf, group="data", key="extra_validation_datasets")
+
         data_mode = get_conf(conf, group="data", key="data_mode")
         validation_split = get_conf(conf, group="data", key="validation_split")
         return cls(
             mount_prefix=mount_prefix,
-            dataset_names=dataset_names,
+            training_datasets=training_datasets,
+            extra_validation_datasets=extra_validation_datasets,
             data_mode=data_mode,
             validation_split=validation_split
         )

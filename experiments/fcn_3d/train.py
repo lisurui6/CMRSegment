@@ -46,12 +46,16 @@ def main():
         n_classes=get_conf(train_conf, group="network", key="n_classes"),
         n_filters=get_conf(train_conf, group="network", key="n_filters"),
     )
-    training_set, validation_set = construct_training_validation_dataset(
+    training_sets, validation_sets, extra_validation_sets = construct_training_validation_dataset(
         DataConfig.from_conf(TRAIN_CONF_PATH), feature_size=get_conf(train_conf, group="network", key="feature_size"),
         n_slices=get_conf(train_conf, group="network", key="n_slices"), is_3d=True
     )
-    training_set.export(config.experiment_dir.joinpath("training_set.csv"))
-    validation_set.export(config.experiment_dir.joinpath("validation_set.csv"))
+    for train in training_sets:
+        train.export(config.experiment_dir.joinpath("training_set_{}.csv".format(train.name)))
+    for val in validation_sets:
+        val.export(config.experiment_dir.joinpath("validation_set_{}.csv".format(val.name)))
+    for val in extra_validation_sets:
+        val.export(config.experiment_dir.joinpath("extra_validation_set_{}.csv".format(val.name)))
     if get_conf(train_conf, group="optimizer", key="type") == "SGD":
         optimizer = torch.optim.SGD(
             network.parameters(),
@@ -73,8 +77,9 @@ def main():
     experiment = Experiment(
         config=config,
         network=network,
-        training_set=training_set,
-        validation_set=validation_set,
+        training_sets=training_sets,
+        validation_sets=validation_sets,
+        extra_validation_sets=extra_validation_sets,
         optimizer=optimizer,
         loss=loss,
         other_validation_metrics=[DiceCoeffWithLogits()],
