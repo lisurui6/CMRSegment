@@ -35,13 +35,15 @@ def construct_training_validation_dataset(
     extra_val_sets = []
 
     for config in extra_val_set_configs:
-        __, val = train_val_dataset_from_config(config, data_config.validation_split, feature_size, n_slices, is_3d)
+        __, val = train_val_dataset_from_config(
+            config, data_config.validation_split, feature_size, n_slices, is_3d, only_val=True
+        )
         extra_val_sets.append(val)
     return training_sets, validation_sets, extra_val_sets
 
 
 def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_split: float, feature_size: int,
-                                  n_slices: int, is_3d: bool):
+                                  n_slices: int, is_3d: bool, only_val: bool = False):
     image_paths = []
     label_paths = []
     paths = sorted(os.listdir(str(dataset_config.dir)))
@@ -56,6 +58,7 @@ def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_spli
     c = list(zip(image_paths, label_paths))
     random.shuffle(c)
     image_paths, label_paths = zip(*c)
+    print("Dataset {} has {} images.".format(dataset_config.name, len(image_paths)))
 
     train_image_paths = image_paths[:int((1 - validation_split) * len(image_paths))]
     val_image_paths = image_paths[int((1 - validation_split) * len(image_paths)):]
@@ -63,10 +66,13 @@ def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_spli
     train_label_paths = label_paths[:int((1 - validation_split) * len(label_paths))]
     val_label_paths = label_paths[int((1 - validation_split) * len(label_paths)):]
 
-    train_set = Torch2DSegmentationDataset(
-        dataset_config.name, train_image_paths, train_label_paths, feature_size=feature_size,
-        n_slices=n_slices, is_3d=is_3d,
-    )
+    if not only_val:
+        train_set = Torch2DSegmentationDataset(
+            dataset_config.name, train_image_paths, train_label_paths, feature_size=feature_size,
+            n_slices=n_slices, is_3d=is_3d,
+        )
+    else:
+        train_set = None
     val_set = Torch2DSegmentationDataset(
         dataset_config.name, val_image_paths, val_label_paths, feature_size=feature_size,
         n_slices=n_slices, is_3d=is_3d,
