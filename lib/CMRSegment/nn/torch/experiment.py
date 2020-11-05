@@ -160,6 +160,8 @@ class Experiment:
                 output_dir.joinpath(val.name, image_path.parent.stem).mkdir(exist_ok=True, parents=True)
                 image = val.get_image_tensor_from_index(idx)
                 label = val.get_label_tensor_from_index(idx)
+                image = torch.unsqueeze(image, 0)
+                image = prepare_tensors(image, self.config.gpu, self.config.device)
 
                 self.inference_func(
                     image, label, image_path, self.network, output_dir.joinpath(val.name, image_path.parent.stem)
@@ -171,6 +173,8 @@ class Experiment:
                 output_dir.joinpath(val.name, image_path.parent.stem).mkdir(exist_ok=True, parents=True)
                 image = val.get_image_tensor_from_index(idx)
                 label = val.get_label_tensor_from_index(idx)
+                image = torch.unsqueeze(image, 0)
+                image = prepare_tensors(image, self.config.gpu, self.config.device)
 
                 self.inference_func(
                     image, label, image_path, self.network, output_dir.joinpath(val.name, image_path.parent.stem)
