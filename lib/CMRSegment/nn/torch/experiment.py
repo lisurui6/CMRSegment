@@ -154,7 +154,8 @@ class Experiment:
     def inference(self, epoch: int):
         output_dir = self.config.experiment_dir.joinpath("inference").joinpath("CP_{}".format(epoch))
         for val in self.validation_sets:
-            for idx in np.random.choice(self.config.n_inference, len(val.image_paths)):
+            indices = np.random.choice(len(val.image_paths), self.config.n_inference)
+            for idx in indices:
                 image_path = val.image_paths[idx]
                 label_path = val.label_paths[idx]
                 output_dir.joinpath(val.name, image_path.parent.stem).mkdir(exist_ok=True, parents=True)
@@ -168,7 +169,8 @@ class Experiment:
                     image, label, image_path, self.network, output_dir.joinpath(val.name, image_path.parent.stem)
                 )
         for val in self.extra_validation_sets:
-            for idx in np.random.choice(self.config.n_inference, len(val.image_paths)):
+            indices = np.random.choice(len(val.image_paths), self.config.n_inference)
+            for idx in indices:
                 image_path = val.image_paths[idx]
                 label_path = val.label_paths[idx]
                 output_dir.joinpath(val.name, image_path.parent.stem).mkdir(exist_ok=True, parents=True)
