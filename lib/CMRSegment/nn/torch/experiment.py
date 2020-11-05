@@ -158,16 +158,22 @@ class Experiment:
                 image_path = val.image_paths[idx]
                 label_path = val.label_paths[idx]
                 output_dir.joinpath(val.name, image_path.parent.stem).mkdir(exist_ok=True, parents=True)
+                image = val.get_image_tensor_from_index(idx)
+                label = val.get_label_tensor_from_index(idx)
+
                 self.inference_func(
-                    image_path, label_path, self.network, output_dir.joinpath(val.name, image_path.parent.stem)
+                    image, label, image_path, self.network, output_dir.joinpath(val.name, image_path.parent.stem)
                 )
         for val in self.extra_validation_sets:
             for idx in np.random.choice(self.config.n_inference, len(val.image_paths)):
                 image_path = val.image_paths[idx]
                 label_path = val.label_paths[idx]
                 output_dir.joinpath(val.name, image_path.parent.stem).mkdir(exist_ok=True, parents=True)
+                image = val.get_image_tensor_from_index(idx)
+                label = val.get_label_tensor_from_index(idx)
+
                 self.inference_func(
-                    image_path, label_path, self.network, output_dir.joinpath(val.name, image_path.parent.stem)
+                    image, label, image_path, self.network, output_dir.joinpath(val.name, image_path.parent.stem)
                 )
 
     @staticmethod
