@@ -162,6 +162,7 @@ class Experiment:
                 label = val.get_label_tensor_from_index(idx)
                 image = torch.unsqueeze(image, 0)
                 image = prepare_tensors(image, self.config.gpu, self.config.device)
+                self.logger.info("Inferencing for {} dataset, image {}.".format(val.name, idx))
 
                 self.inference_func(
                     image, label, image_path, self.network, output_dir.joinpath(val.name, image_path.parent.stem)
@@ -175,6 +176,7 @@ class Experiment:
                 label = val.get_label_tensor_from_index(idx)
                 image = torch.unsqueeze(image, 0)
                 image = prepare_tensors(image, self.config.gpu, self.config.device)
+                self.logger.info("Inferencing for {} dataset, image {}.".format(val.name, idx))
 
                 self.inference_func(
                     image, label, image_path, self.network, output_dir.joinpath(val.name, image_path.parent.stem)
