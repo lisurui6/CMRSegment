@@ -90,7 +90,7 @@ class DataConfig:
 
         data_mode = get_conf(conf, group="data", key="data_mode")
         validation_split = get_conf(conf, group="data", key="validation_split")
-        renew_dataframe = get_conf(conf, group="data", key="validation_split", default=False)
+        renew_dataframe = get_conf(conf, group="data", key="renew_dataframe", default=False)
         return cls(
             mount_prefix=mount_prefix,
             training_datasets=training_datasets,
