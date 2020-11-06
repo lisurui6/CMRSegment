@@ -48,6 +48,8 @@ def construct_training_validation_dataset(
 
 def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_split: float, feature_size: int,
                                   n_slices: int, is_3d: bool, only_val: bool = False, renew_dataframe: bool = False):
+    if dataset_config.dataframe_path.exists():
+        print("Dataframe {} exists.".format(dataset_config.dataframe_path))
     if not dataset_config.dataframe_path.exists() or renew_dataframe:
         generate_dataframe(dataset_config)
     image_paths, label_paths = read_dataframe(dataset_config.dataframe_path)
@@ -296,7 +298,7 @@ def generate_dataframe(dataset_config: DatasetConfig):
     image_paths = []
     label_paths = []
     paths = sorted(os.listdir(str(dataset_config.dir)))
-    print("{} paths found. ".format(paths))
+    print("{} paths found. ".format(len(paths)))
     for path in paths:
         for phase in ["ED", "ES"]:
             path = dataset_config.dir.joinpath(path)
