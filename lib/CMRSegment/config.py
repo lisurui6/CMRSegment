@@ -33,6 +33,12 @@ class DatasetConfig:
     @classmethod
     def from_conf(cls, name: str, mode: str, mount_prefix: Path):
         """From data.conf"""
+        name_size = name.split(":")
+        if len(name_size) > 1:
+            size = int(name_size[1])
+        else:
+            size = None
+        name = name_size[0]
         dir = mount_prefix.joinpath(get_conf(DATA_CONF, group=name, key="dir"))
         if mode == "2D":
             format = ImageLabelFormat(
@@ -51,11 +57,7 @@ class DatasetConfig:
                 raise ValueError()
         else:
             raise ValueError()
-        size = name.split(":")
-        if len(size) > 1:
-            size = int(size[1])
-        else:
-            size = None
+
         return cls(
             name=name,
             dir=dir,
