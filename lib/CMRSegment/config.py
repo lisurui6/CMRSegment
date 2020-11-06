@@ -10,10 +10,10 @@ DATA_CONF_PATH = ROOT_DIR.joinpath("data.conf")
 DATA_CONF = ConfigFactory.parse_file(str(DATA_CONF_PATH))
 
 
-def get_conf(conf: ConfigTree, group: str = "", key: str = ""):
+def get_conf(conf: ConfigTree, group: str = "", key: str = "", default=None):
     if group:
         key = ".".join([group, key])
-    return conf.get(key, None)
+    return conf.get(key, default)
 
 
 @dataclasses.dataclass
@@ -27,6 +27,8 @@ class DatasetConfig:
     name: str
     dir: Path
     image_label_format: ImageLabelFormat
+    dataframe_path: Path
+    size: int = None
 
     @classmethod
     def from_conf(cls, name: str, mode: str, mount_prefix: Path):
@@ -37,20 +39,29 @@ class DatasetConfig:
             image=get_conf(DATA_CONF, group=name, key="2D.image_format"),
             label=get_conf(DATA_CONF, group=name, key="2D.label_format")
             )
+            dataframe_path = get_conf(DATA_CONF, group=name, key="2D.dataframe", default=dir.joinpath("2D.csv"))
         elif mode == "3D":
             if get_conf(DATA_CONF, group=name, key="3D") is not None:
                 format = ImageLabelFormat(
                     image=get_conf(DATA_CONF, group=name, key="3D.image_format"),
                     label=get_conf(DATA_CONF, group=name, key="3D.label_format"),
                 )
+                dataframe_path = get_conf(DATA_CONF, group=name, key="3D.dataframe", default=dir.joinpath("3D.csv"))
             else:
                 raise ValueError()
         else:
             raise ValueError()
+        size = name.split(":")
+        if len(size) > 1:
+            size = int(size[1])
+        else:
+            size = None
         return cls(
             name=name,
             dir=dir,
-            image_label_format=format
+            image_label_format=format,
+            dataframe_path=dataframe_path,
+            size=size
         )
 
 
@@ -61,6 +72,7 @@ class DataConfig:
     extra_validation_datasets: List[str] = None
     data_mode: str = "2D"
     validation_split: float = 0.2
+    renew_dataframe: bool = False
 
     def __post_init__(self):
         if self.extra_validation_datasets is None:
@@ -76,12 +88,14 @@ class DataConfig:
 
         data_mode = get_conf(conf, group="data", key="data_mode")
         validation_split = get_conf(conf, group="data", key="validation_split")
+        renew_dataframe = get_conf(conf, group="data", key="validation_split", default=False)
         return cls(
             mount_prefix=mount_prefix,
             training_datasets=training_datasets,
             extra_validation_datasets=extra_validation_datasets,
             data_mode=data_mode,
-            validation_split=validation_split
+            validation_split=validation_split,
+            renew_dataframe=renew_dataframe,
         )
 
 

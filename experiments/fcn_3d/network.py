@@ -2,18 +2,12 @@ import torch
 import torch.nn as nn
 
 
-def conv_block_3d(in_dim, out_dim, activation):
-    return nn.Sequential(
-        nn.Conv3d(in_dim, out_dim, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm3d(out_dim),
-        activation, )
-
-
 def conv_trans_block_3d(in_dim, out_dim, activation):
     return nn.Sequential(
         nn.ConvTranspose3d(in_dim, out_dim, kernel_size=3, stride=2, padding=1, output_padding=1),
         nn.BatchNorm3d(out_dim),
-        activation, )
+        activation(),
+    )
 
 
 def max_pooling_3d():
@@ -22,9 +16,13 @@ def max_pooling_3d():
 
 def conv_block_2_3d(in_dim, out_dim, activation):
     return nn.Sequential(
-        conv_block_3d(in_dim, out_dim, activation),
+        # conv_block_3d(in_dim, out_dim, activation),
+        nn.Conv3d(in_dim, out_dim, kernel_size=3, stride=1, padding=1),
+        nn.BatchNorm3d(out_dim),
+        activation(),
         nn.Conv3d(out_dim, out_dim, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm3d(out_dim), )
+        nn.BatchNorm3d(out_dim),
+    )
 
 
 class UNet(nn.Module):
@@ -35,7 +33,7 @@ class UNet(nn.Module):
         self.out_dim = n_classes
         self.num_filters = n_filters
         # activation = nn.LeakyReLU(0.2, inplace=True)
-        activation = nn.ReLU()
+        activation = nn.ReLU
 
         # Down sampling
         self.down_1 = conv_block_2_3d(self.in_dim, self.num_filters, activation)

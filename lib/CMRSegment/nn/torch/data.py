@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from CMRSegment.config import DatasetConfig, DataConfig
+from CMRSegment.config import DatasetConfig, DataConfig, DATA_CONF
 import random
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.sampler import SequentialSampler, RandomSampler
@@ -29,50 +29,55 @@ def construct_training_validation_dataset(
     training_sets = []
     validation_sets = []
     for config in training_set_configs:
-        train, val = train_val_dataset_from_config(config, data_config.validation_split, feature_size, n_slices, is_3d)
+        train, val = train_val_dataset_from_config(
+            config, data_config.validation_split, feature_size, n_slices, is_3d,
+            renew_dataframe=data_config.renew_dataframe,
+        )
         training_sets.append(train)
         validation_sets.append(val)
     extra_val_sets = []
 
     for config in extra_val_set_configs:
         __, val = train_val_dataset_from_config(
-            config, data_config.validation_split, feature_size, n_slices, is_3d, only_val=True
+            config, data_config.validation_split, feature_size, n_slices, is_3d, only_val=True,
+            renew_dataframe=data_config.renew_dataframe,
         )
         extra_val_sets.append(val)
     return training_sets, validation_sets, extra_val_sets
 
 
 def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_split: float, feature_size: int,
-                                  n_slices: int, is_3d: bool, only_val: bool = False):
-    image_paths = []
-    label_paths = []
-    paths = sorted(os.listdir(str(dataset_config.dir)))
-    for path in paths:
-        for phase in ["ED", "ES"]:
-            path = dataset_config.dir.joinpath(path)
-            image_path = path.joinpath(dataset_config.image_label_format.image.format(phase=phase))
-            label_path = path.joinpath(dataset_config.image_label_format.label.format(phase=phase))
-            if image_path.exists() and label_path.exists():
-                image_paths.append(path.joinpath(dataset_config.image_label_format.image.format(phase=phase)))
-                label_paths.append(path.joinpath(dataset_config.image_label_format.label.format(phase=phase)))
+                                  n_slices: int, is_3d: bool, only_val: bool = False, renew_dataframe: bool = False):
+    if not dataset_config.dataframe_path.exists() or renew_dataframe:
+        generate_dataframe(dataset_config)
+    image_paths, label_paths = read_dataframe(dataset_config.dataframe_path)
     c = list(zip(image_paths, label_paths))
     random.shuffle(c)
     image_paths, label_paths = zip(*c)
     print("Dataset {} has {} images.".format(dataset_config.name, len(image_paths)))
-
-    train_image_paths = image_paths[:int((1 - validation_split) * len(image_paths))]
-    val_image_paths = image_paths[int((1 - validation_split) * len(image_paths)):]
-
-    train_label_paths = label_paths[:int((1 - validation_split) * len(label_paths))]
-    val_label_paths = label_paths[int((1 - validation_split) * len(label_paths)):]
+    if dataset_config.size is None:
+        size = len(image_paths)
+    else:
+        size = dataset_config.size
 
     if not only_val:
+        train_image_paths = image_paths[:int((1 - validation_split) * size)]
+        val_image_paths = image_paths[int((1 - validation_split) * size):]
+
+        train_label_paths = label_paths[:int((1 - validation_split) * size)]
+        val_label_paths = label_paths[int((1 - validation_split) * size):]
+        print("Selecting {} trainig images, {} validation images.".format(len(train_image_paths), len(val_image_paths)))
         train_set = Torch2DSegmentationDataset(
             dataset_config.name, train_image_paths, train_label_paths, feature_size=feature_size,
             n_slices=n_slices, is_3d=is_3d,
         )
+
     else:
         train_set = None
+        val_image_paths = image_paths[size:]
+        val_label_paths = label_paths[size:]
+        print("Selecting {} validation images.".format(len(val_image_paths)))
+
     val_set = Torch2DSegmentationDataset(
         dataset_config.name, val_image_paths, val_label_paths, feature_size=feature_size,
         n_slices=n_slices, is_3d=is_3d,
@@ -102,7 +107,7 @@ class TorchDataset(Dataset):
 
     def export(self, output_path: Path):
         """Save paths to csv and config"""
-        data_table = DataTable(columns=["image_paths", "label_paths"], data=zip(self.image_paths, self.label_paths))
+        data_table = DataTable(columns=["image_path", "label_path"], data=zip(self.image_paths, self.label_paths))
         data_table.to_csv(output_path)
         return output_path
 
@@ -285,3 +290,28 @@ class MultiDataLoader:
 
     def __len__(self):
         return len(self.loaders[0])
+
+
+def generate_dataframe(dataset_config: DatasetConfig):
+    image_paths = []
+    label_paths = []
+    paths = sorted(os.listdir(str(dataset_config.dir)))
+    for path in paths:
+        for phase in ["ED", "ES"]:
+            path = dataset_config.dir.joinpath(path)
+            image_path = path.joinpath(dataset_config.image_label_format.image.format(phase=phase))
+            label_path = path.joinpath(dataset_config.image_label_format.label.format(phase=phase))
+            if image_path.exists() and label_path.exists():
+                image_paths.append(path.joinpath(dataset_config.image_label_format.image.format(phase=phase)))
+                label_paths.append(path.joinpath(dataset_config.image_label_format.label.format(phase=phase)))
+    c = list(zip(image_paths, label_paths))
+    data_table = DataTable(columns=["image_path", "label_path"], data=zip(image_paths, label_paths))
+    data_table.to_csv(dataset_config.dataframe_path)
+    return dataset_config.dataframe_path
+
+
+def read_dataframe(dataframe_path: Path):
+    data_table = DataTable.from_csv(dataframe_path)
+    image_paths = data_table.select_column("image_path")
+    label_paths = data_table.select_column("label_path")
+    return image_paths, label_paths
