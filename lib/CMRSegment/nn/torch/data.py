@@ -74,8 +74,8 @@ def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_spli
 
     else:
         train_set = None
-        val_image_paths = image_paths[size:]
-        val_label_paths = label_paths[size:]
+        val_image_paths = image_paths[:size]
+        val_label_paths = label_paths[:size]
         print("Selecting {} validation images.".format(len(val_image_paths)))
 
     val_set = Torch2DSegmentationDataset(
@@ -296,6 +296,7 @@ def generate_dataframe(dataset_config: DatasetConfig):
     image_paths = []
     label_paths = []
     paths = sorted(os.listdir(str(dataset_config.dir)))
+    print("{} paths found. ".format(paths))
     for path in paths:
         for phase in ["ED", "ES"]:
             path = dataset_config.dir.joinpath(path)
@@ -304,7 +305,6 @@ def generate_dataframe(dataset_config: DatasetConfig):
             if image_path.exists() and label_path.exists():
                 image_paths.append(path.joinpath(dataset_config.image_label_format.image.format(phase=phase)))
                 label_paths.append(path.joinpath(dataset_config.image_label_format.label.format(phase=phase)))
-    c = list(zip(image_paths, label_paths))
     data_table = DataTable(columns=["image_path", "label_path"], data=zip(image_paths, label_paths))
     data_table.to_csv(dataset_config.dataframe_path)
     return dataset_config.dataframe_path
