@@ -104,21 +104,26 @@ class Experiment:
 
             # eval extra validation sets
             if self.extra_validation_sets:
-                val_metrics = self.eval(
-                    self.loss.new(), *self.other_validation_metrics, datasets=self.extra_validation_sets
-                )
-                self.logger.info("Extra Validation loss: {}".format(val_metrics[0].description()))
-                if val_metrics[1:]:
-                    self.logger.info("Other metrics on extra validation set.")
-                    for metric in val_metrics[1:]:
-                        self.logger.info("{}".format(metric.description()))
-                self.tensor_board.add_scalar(
-                    "loss/extra_validation/loss_{}".format(val_metrics[0].document()), val_metrics[0].log(), epoch
-                )
-                for metric in val_metrics[1:]:
-                    self.tensor_board.add_scalar(
-                        "other_metrics/extra_validation/{}".format(metric.document()), metric.avg(), epoch
+                for val in self.extra_validation_sets:
+                    val_metrics = self.eval(
+                        self.loss.new(), *self.other_validation_metrics, datasets=[val]
                     )
+                    self.logger.info(
+                        "Extra Validation loss on dataset {}: {}".format(val.name, val_metrics[0].description())
+                    )
+                    if val_metrics[1:]:
+                        self.logger.info("Other metrics on extra validation set.")
+                        for metric in val_metrics[1:]:
+                            self.logger.info("{}".format(metric.description()))
+                    self.tensor_board.add_scalar(
+                        "loss/extra_validation_{}/loss_{}".format(val.name, val_metrics[0].document()),
+                        val_metrics[0].log(), epoch
+                    )
+                    for metric in val_metrics[1:]:
+                        self.tensor_board.add_scalar(
+                            "other_metrics/extra_validation_{}/{}".format(val.name, metric.document()),
+                            metric.avg(), epoch
+                        )
 
             checkpoint_dir = self.config.experiment_dir.joinpath("checkpoints")
             checkpoint_dir.mkdir(parents=True, exist_ok=True)

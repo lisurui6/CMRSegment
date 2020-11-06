@@ -316,4 +316,6 @@ def read_dataframe(dataframe_path: Path):
     data_table = DataTable.from_csv(dataframe_path)
     image_paths = data_table.select_column("image_path")
     label_paths = data_table.select_column("label_path")
+    image_paths = [Path(path) for path in image_paths]
+    label_paths = [Path(path) for path in label_paths]
     return image_paths, label_paths
