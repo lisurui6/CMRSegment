@@ -4,7 +4,7 @@ from pyhocon import ConfigTree, ConfigFactory
 from CMRSegment.common.constants import ROOT_DIR
 from tempfile import gettempdir
 from datetime import datetime
-from typing import List
+from typing import List, Tuple
 
 DATA_CONF_PATH = ROOT_DIR.joinpath("data.conf")
 DATA_CONF = ConfigFactory.parse_file(str(DATA_CONF_PATH))
@@ -75,6 +75,7 @@ class DataConfig:
     data_mode: str = "2D"
     validation_split: float = 0.2
     renew_dataframe: bool = False
+    augmentation_prob: float = 0.5
 
     def __post_init__(self):
         if self.extra_validation_datasets is None:
@@ -91,6 +92,8 @@ class DataConfig:
         data_mode = get_conf(conf, group="data", key="data_mode")
         validation_split = get_conf(conf, group="data", key="validation_split")
         renew_dataframe = get_conf(conf, group="data", key="renew_dataframe", default=False)
+        augmentation_prob = get_conf(conf, group="data", key="augmentation_prob")
+
         return cls(
             mount_prefix=mount_prefix,
             training_datasets=training_datasets,
@@ -98,6 +101,7 @@ class DataConfig:
             data_mode=data_mode,
             validation_split=validation_split,
             renew_dataframe=renew_dataframe,
+            augmentation_prob=augmentation_prob,
         )
 
 
@@ -111,6 +115,7 @@ class ExperimentConfig:
     num_workers: int = 0
     pin_memory: bool = False
     n_inference: int = 10
+    seed: int = 1024
 
     def __post_init__(self):
         if self.experiment_dir is None:
@@ -122,3 +127,36 @@ class ExperimentConfig:
     @classmethod
     def from_conf(cls, user_conf_path: Path):
         pass
+
+
+@dataclasses.dataclass
+class AugmentationConfig:
+    rotation_angles: Tuple[float] = (30, 30, 30)
+    scaling_factors: Tuple[float] = (0.2, 0.2, 0.2)
+    crop_factors: Tuple[float] = (0.9, 0.8, 0.8)
+    flip: float = 0.5
+
+    channel_shift: bool = True
+    brightness: float = 0.2
+    contrast: float = 0.2
+    gamma: float = 0.2
+
+    @classmethod
+    def from_conf(cls, conf_path: Path):
+        conf = ConfigFactory.parse_file(str(conf_path))
+        rotation_angles = get_conf(conf, group="augmentation", key="rotation_angles")
+        scaling_factors = get_conf(conf, group="augmentation", key="scaling_factors")
+        flip = get_conf(conf, group="augmentation", key="flip")
+        channel_shift = get_conf(conf, group="augmentation", key="channel_shift")
+        brightness = get_conf(conf, group="augmentation", key="brightness")
+        contrast = get_conf(conf, group="augmentation", key="contrast")
+        gamma = get_conf(conf, group="augmentation", key="gamma")
+        return cls(
+            rotation_angles=rotation_angles,
+            scaling_factors=scaling_factors,
+            flip=flip,
+            channel_shift=channel_shift,
+            brightness=brightness,
+            contrast=contrast,
+            gamma=gamma,
+        )

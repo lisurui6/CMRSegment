@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from CMRSegment.config import DatasetConfig, DataConfig, DATA_CONF
+from CMRSegment.config import DatasetConfig, DataConfig, DATA_CONF, AugmentationConfig
 import random
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.sampler import SequentialSampler, RandomSampler
@@ -12,10 +12,12 @@ import torch
 from typing import List, Tuple
 from CMRSegment.common.data_table import DataTable
 from scipy.ndimage import zoom
+from CMRSegment.nn.torch.augmentation import augment
 
 
 def construct_training_validation_dataset(
-    data_config: DataConfig, feature_size: int, n_slices: int, is_3d: bool = False
+    data_config: DataConfig, feature_size: int, n_slices: int, output_dir: Path, is_3d: bool = False,
+    augmentation_config: AugmentationConfig = None, seed: int = None,
 ) -> Tuple[List["Torch2DSegmentationDataset"], List["Torch2DSegmentationDataset"], List["Torch2DSegmentationDataset"]]:
     training_set_configs = [
         DatasetConfig.from_conf(name, mode=data_config.data_mode, mount_prefix=data_config.mount_prefix)
@@ -30,8 +32,16 @@ def construct_training_validation_dataset(
     validation_sets = []
     for config in training_set_configs:
         train, val = train_val_dataset_from_config(
-            config, data_config.validation_split, feature_size, n_slices, is_3d,
+            dataset_config=config,
+            augmentation_config=augmentation_config,
+            augmentation_prob=data_config.augmentation_prob,
+            validation_split=data_config.validation_split,
+            feature_size=feature_size,
+            n_slices=n_slices,
+            is_3d=is_3d,
             renew_dataframe=data_config.renew_dataframe,
+            seed=seed,
+            output_dir=output_dir,
         )
         training_sets.append(train)
         validation_sets.append(val)
@@ -39,15 +49,24 @@ def construct_training_validation_dataset(
 
     for config in extra_val_set_configs:
         __, val = train_val_dataset_from_config(
-            config, data_config.validation_split, feature_size, n_slices, is_3d, only_val=True,
+            dataset_config=config,
+            validation_split=data_config.validation_split,
+            feature_size=feature_size,
+            n_slices=n_slices,
+            is_3d=is_3d,
+            only_val=True,
             renew_dataframe=data_config.renew_dataframe,
+            seed=seed,
+            output_dir=output_dir,
         )
         extra_val_sets.append(val)
     return training_sets, validation_sets, extra_val_sets
 
 
 def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_split: float, feature_size: int,
-                                  n_slices: int, is_3d: bool, only_val: bool = False, renew_dataframe: bool = False):
+                                  n_slices: int, is_3d: bool, output_dir: Path, only_val: bool = False,
+                                  renew_dataframe: bool = False, seed: int = None,
+                                  augmentation_config: AugmentationConfig = None, augmentation_prob: float = 0):
     if dataset_config.dataframe_path.exists():
         print("Dataframe {} exists.".format(dataset_config.dataframe_path))
     if not dataset_config.dataframe_path.exists() or renew_dataframe:
@@ -70,8 +89,13 @@ def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_spli
         val_label_paths = label_paths[int((1 - validation_split) * size):]
         print("Selecting {} trainig images, {} validation images.".format(len(train_image_paths), len(val_image_paths)))
         train_set = Torch2DSegmentationDataset(
-            dataset_config.name, train_image_paths, train_label_paths, feature_size=feature_size,
-            n_slices=n_slices, is_3d=is_3d,
+            name=dataset_config.name,
+            image_paths=train_image_paths,
+            label_paths=train_label_paths,
+            augmentation_prob=augmentation_prob,
+            augmentation_config=augmentation_config,
+            feature_size=feature_size, n_slices=n_slices, is_3d=is_3d, seed=seed,
+            output_dir=output_dir.joinpath("train"),
         )
 
     else:
@@ -81,8 +105,11 @@ def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_spli
         print("Selecting {} validation images.".format(len(val_image_paths)))
 
     val_set = Torch2DSegmentationDataset(
-        dataset_config.name, val_image_paths, val_label_paths, feature_size=feature_size,
-        n_slices=n_slices, is_3d=is_3d,
+        name=dataset_config.name,
+        image_paths=val_image_paths,
+        label_paths=val_label_paths,
+        feature_size=feature_size, n_slices=n_slices, is_3d=is_3d, seed=seed,
+        output_dir=output_dir.joinpath("val"),
     )
     return train_set, val_set
 
@@ -113,9 +140,6 @@ class TorchDataset(Dataset):
         data_table.to_csv(output_path)
         return output_path
 
-    def augment(self):
-        pass
-
 
 def rescale_intensity(image, thres=(1.0, 99.0)):
     """ Rescale the image intensity to the range of [0, 1] """
@@ -135,12 +159,18 @@ def resize_image(image: np.ndarray, target_shape: Tuple, order: int):
 
 
 class Torch2DSegmentationDataset(TorchDataset):
-    def __init__(self, name: str, image_paths: List[Path], label_paths: List[Path], n_slices: int, feature_size: int,
-                 is_3d: bool = False):
+    def __init__(self, name: str, image_paths: List[Path], label_paths: List[Path],
+                 n_slices: int, feature_size: int, augmentation_prob: float = 0,
+                 augmentation_config: AugmentationConfig = None, is_3d: bool = False, seed: int = None,
+                 output_dir: Path = None):
         super().__init__(name, image_paths, label_paths)
         self.n_slices = n_slices
         self.feature_size = feature_size
         self.is_3d = is_3d
+        self.augmentation_prob = augmentation_prob
+        self.augmentation_config = augmentation_config
+        self.seed = seed
+        self.output_dir = output_dir
 
     @staticmethod
     def read_image(image_path: Path, feature_size: int, n_slices: int, crop: bool = False) -> np.ndarray:
@@ -196,12 +226,38 @@ class Torch2DSegmentationDataset(TorchDataset):
 
     def __getitem__(self, index: int):
         image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
+
+        label = self.read_label(self.label_paths[index], self.feature_size, self.n_slices)
+        if self.augmentation_prob > 0 and self.augmentation_config is not None:
+            if np.random.uniform(0, 1) >= self.augmentation_prob:
+                augment(
+                    image, label, self.augmentation_config,
+                    (self.n_slices, self.feature_size, self.feature_size),
+                    seed=self.seed
+                )
+        self.save(image, label, index)
         if self.is_3d:
             image = np.expand_dims(image, 0)
-        label = self.read_label(self.label_paths[index], self.feature_size, self.n_slices)
         image = torch.from_numpy(image).float()
         label = torch.from_numpy(label).float()
         return image, label
+
+    def save(self, image: np.ndarray, label: np.ndarray, index: int):
+        if index % 100 == 0:
+            nim = nib.load(str(self.image_paths[index]))
+            image = np.transpose(image, [1, 2, 0])
+            nim2 = nib.Nifti1Image(image, nim.affine)
+            nim2.header['pixdim'] = nim.header['pixdim']
+            output_dir = self.output_dir.joinpath(self.name, "image_{}.nii.gz".format(index))
+            output_dir.mkdir(parents=True, exist_ok=True)
+            nib.save(nim2, str(output_dir))
+
+            label = np.transpose(label, [1, 2, 0])
+            nim2 = nib.Nifti1Image(label, nim.affine)
+            nim2.header['pixdim'] = nim.header['pixdim']
+            output_dir = self.output_dir.joinpath(self.name, "label_{}.nii.gz".format(index))
+            output_dir.mkdir(parents=True, exist_ok=True)
+            nib.save(nim2, str(output_dir))
 
     @staticmethod
     def crop_image(image, cx, cy, size):
@@ -225,9 +281,6 @@ class Torch2DSegmentationDataset(TorchDataset):
             print('Error: unsupported dimension, crop.ndim = {0}.'.format(crop.ndim))
             exit(0)
         return crop
-
-    def augment(self):
-        pass
 
     @staticmethod
     def crop_3D_image(image, cx, cy, size_xy, cz, size_z):

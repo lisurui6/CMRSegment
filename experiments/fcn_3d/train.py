@@ -6,7 +6,7 @@ from experiments.fcn_3d.network import UNet
 from CMRSegment.nn.torch.experiment import Experiment, ExperimentConfig
 from CMRSegment.nn.torch.data import construct_training_validation_dataset
 from CMRSegment.nn.torch.loss import FocalLoss, DiceCoeff, BCELoss, DiceCoeffWithLogits
-from CMRSegment.config import DataConfig, get_conf
+from CMRSegment.config import DataConfig, get_conf, AugmentationConfig
 from pyhocon import ConfigTree, ConfigFactory
 from experiments.fcn_3d.inference.inference import inference
 
@@ -24,8 +24,10 @@ def main():
     args = parse_args()
     if args.conf_path is None:
         train_conf = ConfigFactory.parse_file(str(TRAIN_CONF_PATH))
+        conf_path = TRAIN_CONF_PATH
     else:
         train_conf = ConfigFactory.parse_file(str(Path(args.conf_path)))
+        conf_path = Path(args.conf_path)
 
     if get_conf(train_conf, group="experiment", key="experiment_dir") is not None:
         experiment_dir = Path(get_conf(train_conf, group="experiment", key="experiment_dir"))
@@ -40,16 +42,19 @@ def main():
         num_workers=get_conf(train_conf, group="experiment", key="num_workers"),
         pin_memory=get_conf(train_conf, group="experiment", key="pin_memory"),
         n_inference=get_conf(train_conf, group="experiment", key="n_inference"),
+        seed=get_conf(train_conf, group="experiment", key="seed"),
     )
-    shutil.copy(str(TRAIN_CONF_PATH), str(config.experiment_dir.joinpath("train.conf")))
+    augmentation_config = AugmentationConfig.from_conf(conf_path)
+    shutil.copy(str(conf_path), str(config.experiment_dir.joinpath("train.conf")))
     network = UNet(
         in_channels=get_conf(train_conf, group="network", key="in_channels"),
         n_classes=get_conf(train_conf, group="network", key="n_classes"),
         n_filters=get_conf(train_conf, group="network", key="n_filters"),
     )
     training_sets, validation_sets, extra_validation_sets = construct_training_validation_dataset(
-        DataConfig.from_conf(TRAIN_CONF_PATH), feature_size=get_conf(train_conf, group="network", key="feature_size"),
-        n_slices=get_conf(train_conf, group="network", key="n_slices"), is_3d=True
+        DataConfig.from_conf(conf_path), feature_size=get_conf(train_conf, group="network", key="feature_size"),
+        n_slices=get_conf(train_conf, group="network", key="n_slices"), is_3d=True, seed=config.seed,
+        augmentation_config=augmentation_config, output_dir=config.experiment_dir,
     )
     for train in training_sets:
         train.export(config.experiment_dir.joinpath("training_set_{}.csv".format(train.name)))
