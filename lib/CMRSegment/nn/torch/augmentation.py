@@ -80,7 +80,8 @@ def random_contrast(image, delta):
 
 def adjust_gamma(image, delta):
     gamma = np.random.uniform(1 - delta, 1 + delta)
-    image = 1 * image ** gamma
+    # image = 1 * image ** gamma
+    image = np.power(image, gamma)
     return image
 
 

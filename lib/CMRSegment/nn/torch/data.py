@@ -252,8 +252,11 @@ class Torch2DSegmentationDataset(TorchDataset):
             output_path.parent.mkdir(parents=True, exist_ok=True)
             nib.save(nim2, str(output_path))
 
-            label = np.transpose(label, [1, 2, 0])
-            nim2 = nib.Nifti1Image(label, nim.affine)
+            final_label = np.zeros((image.shape[2], image.shape[3], image.shape[4]))
+            for i in range(label.shape[0]):
+                final_label[label[i, :, :, :] == 1.0] = i + 1
+            final_label = np.transpose(final_label, [1, 2, 0])
+            nim2 = nib.Nifti1Image(final_label, nim.affine)
             nim2.header['pixdim'] = nim.header['pixdim']
             output_path = self.output_dir.joinpath(self.name, "label_{}.nii.gz".format(index))
             output_path.parent.mkdir(parents=True, exist_ok=True)
