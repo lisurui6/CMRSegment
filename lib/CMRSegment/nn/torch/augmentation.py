@@ -98,7 +98,10 @@ def augment(image: np.ndarray, label: np.ndarray, config: AugmentationConfig, ou
         seed = np.random.randint(0, 10000000)
     np.random.seed(seed)
     image = zoom(image, (1.5, 1.5, 1.5), order=1)
-    label = zoom(label, (1.5, 1.5, 1.5), order=0)
+    labels = []
+    for i in range(label.shape[0]):
+        labels.append(zoom(label[i, :, :, :], (1.5, 1.5, 1.5), order=0))
+    label = np.concatenate(labels, axis=0)
     image, label = random_flip(image, label, config.flip)
     # image, label = random_rotation(image, label, config.rotation_angles)
     image, label = random_scaling(image, label, config.scaling_factors)
