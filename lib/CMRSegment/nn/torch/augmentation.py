@@ -105,7 +105,7 @@ def augment(image: np.ndarray, label: np.ndarray, config: AugmentationConfig, ou
         seed = np.random.randint(0, 10000000)
     np.random.seed(seed)
     image, label = random_flip(image, label, config.flip)
-    image, label = random_rotation(image, label, config.rotation_angles)
+    # image, label = random_rotation(image, label, config.rotation_angles)
     image, label = random_scaling(image, label, config.scaling_factors)
     image, label = random_crop(image, label, output_size=output_size)
     if config.channel_shift:
