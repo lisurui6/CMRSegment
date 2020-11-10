@@ -66,6 +66,8 @@ def random_scaling(image: np.ndarray, label: np.ndarray, delta_factors: Tuple[fl
     factors = []
     for idx, delta in enumerate(delta_factors):
         factors.append(np.random.uniform(1 - delta, 1 + delta))
+    print(image.shape, label.shape)
+    print(factors)
     image = zoom(image, factors, order=1)
     label = zoom(label, factors, order=0)
     return image, label
