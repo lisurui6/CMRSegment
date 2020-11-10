@@ -252,7 +252,7 @@ class Torch2DSegmentationDataset(TorchDataset):
             output_path.parent.mkdir(parents=True, exist_ok=True)
             nib.save(nim2, str(output_path))
 
-            final_label = np.zeros((image.shape[0], image.shape[1], image.shape[2]))
+            final_label = np.zeros((label.shape[1], label.shape[2], label.shape[3]))
             for i in range(label.shape[0]):
                 final_label[label[i, :, :, :] == 1.0] = i + 1
             final_label = np.transpose(final_label, [1, 2, 0])
