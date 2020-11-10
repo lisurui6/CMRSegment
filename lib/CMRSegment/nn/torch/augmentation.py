@@ -73,7 +73,14 @@ def random_scaling(image: np.ndarray, label: np.ndarray, delta_factors: Tuple[fl
     print(factors)
     image = zoom(image, factors, order=1)
     for i in range(label.shape[0]):
-        label[i, :, :, :] = zoom(label[i, :, :, :], factors, order=0)
+        zoomed_label = zoom(label[i, :, :, :], factors, order=0)
+        label[i, :, :, :] = zoom(
+            zoomed_label,
+            (float(image.shape[0]) / zoomed_label.shape[0],
+             float(image.shape[1]) / zoomed_label.shape[1],
+             float(image.shape[2]) / zoomed_label.shape[2]),
+            order=0
+        )
     return image, label
 
 
@@ -110,7 +117,7 @@ def augment(image: np.ndarray, label: np.ndarray, config: AugmentationConfig, ou
     """image = (slice, weight, height), label = (class, slice, weight, height)"""
     if seed is None:
         seed = np.random.randint(0, 10000000)
-    # np.random.seed(seed)
+    np.random.seed(seed)
     image, label = random_flip(image, label, config.flip)
     # image, label = random_rotation(image, label, config.rotation_angles)
     image, label = random_scaling(image, label, config.scaling_factors)
