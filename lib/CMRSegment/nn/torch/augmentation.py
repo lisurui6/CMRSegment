@@ -34,10 +34,13 @@ def random_crop(image: np.ndarray, label: np.ndarray, output_size: Tuple[int, in
     k = np.random.randint(0, height - h)
 
     cropped_image = image[i: i + s, j: j + w, k: k + h]
-    cropped_label = label[i: i + s, j: j + w, k: k + h]
+    cropped_label = label[:, i: i + s, j: j + w, k: k + h]
 
-    cropped_image = zoom(cropped_image, image.shape, order=1)
-    cropped_label = zoom(cropped_label, label.shape, order=0)
+    factors = (float(slice) / s, float(weight) / w, float(height) / h)
+    cropped_image = zoom(cropped_image, factors, order=1)
+
+    for i in range(cropped_label.shape[0]):
+        cropped_label[i, :, :, :] = zoom(cropped_label[i, :, :, :], factors, order=0)
 
     return cropped_image, cropped_label
 
@@ -46,7 +49,7 @@ def random_flip(image: np.ndarray, label: np.ndarray, flip_prob: float):
     for axis in range(0, 3):
         if np.random.rand() >= flip_prob:
             image = np.flip(image, axis=axis)
-            label = np.flip(label, axis=axis)
+            label = np.flip(label, axis=axis + 1)
     return image, label
 
 
@@ -69,7 +72,8 @@ def random_scaling(image: np.ndarray, label: np.ndarray, delta_factors: Tuple[fl
     print(image.shape, label.shape)
     print(factors)
     image = zoom(image, factors, order=1)
-    label = zoom(label, factors, order=0)
+    for i in range(label.shape[0]):
+        label[i, :, :, :] = zoom(label[i, :, :, :], factors, order=0)
     return image, label
 
 
@@ -103,13 +107,14 @@ def random_channel_shift(image, brightness, contrast, gamma):
 
 
 def augment(image: np.ndarray, label: np.ndarray, config: AugmentationConfig, output_size, seed: int = None):
+    """image = (slice, weight, height), label = (class, slice, weight, height)"""
     if seed is None:
         seed = np.random.randint(0, 10000000)
-    np.random.seed(seed)
+    # np.random.seed(seed)
     image, label = random_flip(image, label, config.flip)
     # image, label = random_rotation(image, label, config.rotation_angles)
     image, label = random_scaling(image, label, config.scaling_factors)
-    image, label = random_crop(image, label, output_size=output_size)
+    image, label = random_crop(image, label, crop_factors=config.crop_factors)
     if config.channel_shift:
         image = random_channel_shift(image, config.brightness, config.contrast, config.gamma)
     return image, label
