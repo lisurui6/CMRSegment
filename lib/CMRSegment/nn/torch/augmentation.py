@@ -14,20 +14,15 @@ def resize_image(image: np.ndarray, target_shape: Tuple, order: int):
     return output
 
 
-def random_crop(image: np.ndarray, label: np.ndarray, output_size: Tuple[int, int, int],
-                crop_factors: Tuple[float, float, float] = None):
+def random_crop(image: np.ndarray, label: np.ndarray, crop_factors: Tuple[float, float, float]):
     """
     image size = (slice, weight, height)
     crop_factors = (0.9, 0.8, 0.8)
     """
     slice, weight, height = image.shape
-    if output_size is None:
-        assert crop_factors is not None
-        s = round(crop_factors[0] * slice)
-        w = round(crop_factors[1] * weight)
-        h = round(crop_factors[2] * height)
-    else:
-        s, w, h = output_size
+    s = round(crop_factors[0] * slice)
+    w = round(crop_factors[1] * weight)
+    h = round(crop_factors[2] * height)
 
     i = np.random.randint(0, slice - s)
     j = np.random.randint(0, weight - w)
@@ -36,11 +31,9 @@ def random_crop(image: np.ndarray, label: np.ndarray, output_size: Tuple[int, in
     cropped_image = image[i: i + s, j: j + w, k: k + h]
     cropped_label = label[:, i: i + s, j: j + w, k: k + h]
 
-    factors = (float(slice) / s, float(weight) / w, float(height) / h)
-    cropped_image = zoom(cropped_image, factors, order=1)
-
+    image = resize_image(cropped_image, image.shape, order=0)
     for i in range(cropped_label.shape[0]):
-        cropped_label[i, :, :, :] = zoom(cropped_label[i, :, :, :], factors, order=0)
+        label[i, :, :, :] = resize_image(cropped_label[i, :, :, :], image.shape, order=0)
 
     return cropped_image, cropped_label
 
@@ -74,13 +67,7 @@ def random_scaling(image: np.ndarray, label: np.ndarray, delta_factors: Tuple[fl
     image = zoom(image, factors, order=1)
     for i in range(label.shape[0]):
         zoomed_label = zoom(label[i, :, :, :], factors, order=0)
-        label[i, :, :, :] = zoom(
-            zoomed_label,
-            (float(image.shape[0]) / zoomed_label.shape[0],
-             float(image.shape[1]) / zoomed_label.shape[1],
-             float(image.shape[2]) / zoomed_label.shape[2]),
-            order=0
-        )
+        label[i, :, :, :] = resize_image(zoomed_label, image.shape, order=0)
     return image, label
 
 
