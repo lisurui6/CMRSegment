@@ -248,16 +248,16 @@ class Torch2DSegmentationDataset(TorchDataset):
             image = np.transpose(image, [1, 2, 0])
             nim2 = nib.Nifti1Image(image, nim.affine)
             nim2.header['pixdim'] = nim.header['pixdim']
-            output_dir = self.output_dir.joinpath(self.name, "image_{}.nii.gz".format(index))
-            output_dir.mkdir(parents=True, exist_ok=True)
-            nib.save(nim2, str(output_dir))
+            output_path = self.output_dir.joinpath(self.name, "image_{}.nii.gz".format(index))
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            nib.save(nim2, str(output_path))
 
             label = np.transpose(label, [1, 2, 0])
             nim2 = nib.Nifti1Image(label, nim.affine)
             nim2.header['pixdim'] = nim.header['pixdim']
-            output_dir = self.output_dir.joinpath(self.name, "label_{}.nii.gz".format(index))
-            output_dir.mkdir(parents=True, exist_ok=True)
-            nib.save(nim2, str(output_dir))
+            output_path = self.output_dir.joinpath(self.name, "label_{}.nii.gz".format(index))
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            nib.save(nim2, str(output_path))
 
     @staticmethod
     def crop_image(image, cx, cy, size):
