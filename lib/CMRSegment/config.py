@@ -132,7 +132,7 @@ class ExperimentConfig:
 @dataclasses.dataclass
 class AugmentationConfig:
     rotation_angles: Tuple[float] = (30, 30, 30)
-    scaling_factors: Tuple[float] = (0.2, 0.2, 0.2)
+    scaling_factors: Tuple[float] = (0.2, 0.2)
     flip: float = 0.5
 
     channel_shift: bool = True

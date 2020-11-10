@@ -52,7 +52,7 @@ def random_rotation(image: np.ndarray, label: np.ndarray, angles: Tuple[float]):
 
 def random_scaling(image: np.ndarray, label: np.ndarray, delta_factors: Tuple[float]):
     """delta_factor = (0.2, 0.2, 0.2), which leads to scale factors of (1+-0.2, 1+-0.2, 1+-0.2)"""
-    factors = []
+    factors = [1]
     for idx, delta in enumerate(delta_factors):
         factors.append(np.random.uniform(1 - delta, 1 + delta))
     image = zoom(image, factors, order=1)
@@ -98,10 +98,10 @@ def augment(image: np.ndarray, label: np.ndarray, config: AugmentationConfig, ou
     if seed is None:
         seed = np.random.randint(0, 10000000)
     np.random.seed(seed)
-    image = zoom(image, (1.5, 1.5, 1.5), order=1)
+    image = zoom(image, (1, 1.5, 1.5), order=1)
     labels = []
     for i in range(label.shape[0]):
-        labels.append(zoom(label[i, :, :, :], (1.5, 1.5, 1.5), order=0))
+        labels.append(zoom(label[i, :, :, :], (1, 1.5, 1.5), order=0))
     label = np.stack(labels, axis=0)
     image, label = random_flip(image, label, config.flip)
     # image, label = random_rotation(image, label, config.rotation_angles)
