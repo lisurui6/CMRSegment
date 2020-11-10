@@ -59,7 +59,7 @@ def random_scaling(image: np.ndarray, label: np.ndarray, delta_factors: Tuple[fl
     labels = []
     for i in range(label.shape[0]):
         labels.append(zoom(label[i, :, :, :], factors, order=0))
-    label = np.concatenate(labels, axis=0)
+    label = np.stack(labels, axis=0)
     return image, label
 
 
@@ -101,7 +101,7 @@ def augment(image: np.ndarray, label: np.ndarray, config: AugmentationConfig, ou
     labels = []
     for i in range(label.shape[0]):
         labels.append(zoom(label[i, :, :, :], (1.5, 1.5, 1.5), order=0))
-    label = np.concatenate(labels, axis=0)
+    label = np.stack(labels, axis=0)
     image, label = random_flip(image, label, config.flip)
     # image, label = random_rotation(image, label, config.rotation_angles)
     image, label = random_scaling(image, label, config.scaling_factors)
