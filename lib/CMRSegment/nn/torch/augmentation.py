@@ -14,15 +14,12 @@ def resize_image(image: np.ndarray, target_shape: Tuple, order: int):
     return output
 
 
-def random_crop(image: np.ndarray, label: np.ndarray, crop_factors: Tuple[float, float, float]):
+def random_crop(image: np.ndarray, label: np.ndarray, output_size: Tuple):
     """
     image size = (slice, weight, height)
-    crop_factors = (0.9, 0.8, 0.8)
     """
     slice, weight, height = image.shape
-    s = round(crop_factors[0] * slice)
-    w = round(crop_factors[1] * weight)
-    h = round(crop_factors[2] * height)
+    s, w, h = output_size
 
     i = np.random.randint(0, slice - s)
     j = np.random.randint(0, weight - w)
@@ -30,10 +27,6 @@ def random_crop(image: np.ndarray, label: np.ndarray, crop_factors: Tuple[float,
 
     cropped_image = image[i: i + s, j: j + w, k: k + h]
     cropped_label = label[:, i: i + s, j: j + w, k: k + h]
-
-    image = resize_image(cropped_image, image.shape, order=0)
-    for i in range(cropped_label.shape[0]):
-        label[i, :, :, :] = resize_image(cropped_label[i, :, :, :], image.shape, order=0)
 
     return cropped_image, cropped_label
 
@@ -62,12 +55,11 @@ def random_scaling(image: np.ndarray, label: np.ndarray, delta_factors: Tuple[fl
     factors = []
     for idx, delta in enumerate(delta_factors):
         factors.append(np.random.uniform(1 - delta, 1 + delta))
-    print(image.shape, label.shape)
-    print(factors)
     image = zoom(image, factors, order=1)
+    labels = []
     for i in range(label.shape[0]):
-        zoomed_label = zoom(label[i, :, :, :], factors, order=0)
-        label[i, :, :, :] = resize_image(zoomed_label, image.shape, order=0)
+        labels.append(zoom(label[i, :, :, :], factors, order=0))
+    label = np.concatenate(labels, axis=0)
     return image, label
 
 
@@ -105,10 +97,12 @@ def augment(image: np.ndarray, label: np.ndarray, config: AugmentationConfig, ou
     if seed is None:
         seed = np.random.randint(0, 10000000)
     np.random.seed(seed)
+    image = zoom(image, (1.5, 1.5, 1.5), order=1)
+    label = zoom(label, (1.5, 1.5, 1.5), order=0)
     image, label = random_flip(image, label, config.flip)
     # image, label = random_rotation(image, label, config.rotation_angles)
     image, label = random_scaling(image, label, config.scaling_factors)
-    image, label = random_crop(image, label, crop_factors=config.crop_factors)
+    image, label = random_crop(image, label, output_size)
     if config.channel_shift:
         image = random_channel_shift(image, config.brightness, config.contrast, config.gamma)
     return image, label

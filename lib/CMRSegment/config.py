@@ -133,7 +133,6 @@ class ExperimentConfig:
 class AugmentationConfig:
     rotation_angles: Tuple[float] = (30, 30, 30)
     scaling_factors: Tuple[float] = (0.2, 0.2, 0.2)
-    crop_factors: Tuple[float] = (0.9, 0.8, 0.8)
     flip: float = 0.5
 
     channel_shift: bool = True
