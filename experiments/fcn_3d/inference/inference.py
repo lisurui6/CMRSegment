@@ -62,6 +62,7 @@ def main():
         label_paths=[input_path.parent.joinpath(dataset_config.image_label_format.label.format(phase=args.phase))],
         feature_size=get_conf(train_conf, group="network", key="feature_size"),
         n_slices=get_conf(train_conf, group="network", key="n_slices"),
+        is_3d=True,
     )
 
     image = dataset.get_image_tensor_from_index(0)
