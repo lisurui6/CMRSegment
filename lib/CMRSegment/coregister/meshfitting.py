@@ -5,6 +5,7 @@ from CMRSegment.subject import Subject
 import mirtk
 from pathlib import Path
 from CMRSegment.common.plot import plot_nii_gz
+import shutil
 
 mirtk.subprocess.showcmd = True
 
@@ -27,8 +28,8 @@ def meshGeneration(subject: Subject, template_dir: Path):
         mirtk.calculate_element_wise(
             str(segmented_path),
             "-label", 3, 4,
-            "-set", 255, "-pad", 0,
-            "-output", str(subject.tmps_dir().joinpath("vtk_RV_{}.nii.gz".format(phase))),
+            set=255, pad=0,
+            output=str(subject.tmps_dir().joinpath("vtk_RV_{}.nii.gz".format(phase))),
         )
         mirtk.extract_surface(
             str(subject.tmps_dir().joinpath("vtk_RV_{}.nii.gz".format(phase))),
@@ -37,7 +38,8 @@ def meshGeneration(subject: Subject, template_dir: Path):
         )
         mirtk.calculate_element_wise(
             str(segmented_path),
-            "-label", 3, 4, set=255, pad=0,
+            "-label", 3, 4,
+            set=255, pad=0,
             output=str(subject.tmps_dir().joinpath("vtk_RVepi_{}.nii.gz".format(phase))),
         )
         mirtk.extract_surface(
@@ -98,7 +100,6 @@ def meshGeneration(subject: Subject, template_dir: Path):
     ###############################################################################
 
     print("\n ... Mesh Generation - step [2] -")
-    docker = False
     for fr in ['ED', 'ES']:
 
         mirtk.register_points(
@@ -142,7 +143,7 @@ def meshGeneration(subject: Subject, template_dir: Path):
             str(subject.vtks_dir().joinpath("N_RV_{}.vtk".format(fr))),
             dofin=str(subject.tmps_dir().joinpath("rv_{}_rreg.dof.gz".format(fr))),
         )
-        
+
         # os.system('ptransformation '
         #           '{0}/RVepi_{2}.vtk '
         #           '{0}/N_RVepi_{2}.vtk '
@@ -217,7 +218,6 @@ def meshGeneration(subject: Subject, template_dir: Path):
         #           '-dofout {1}/rv_{3}_areg.dof.gz '
         #           '-parin {2}/segareg.txt >/dev/nul '
         #           .format(template_dir, tmps_dir, param_dir, fr))
-        plot_nii_gz(template_dir.joinpath("vtk_RV_{}.nii.gz".format(fr)))
 
         mirtk.smooth_image(
             str(template_dir.joinpath("vtk_RV_{}.nii.gz".format(fr))),
@@ -238,7 +238,6 @@ def meshGeneration(subject: Subject, template_dir: Path):
         #           '-dofout {1}/lv_{3}_areg.dof.gz '
         #           '-parin {2}/segareg.txt >/dev/nul '
         #           .format(template_dir, tmps_dir, param_dir, fr))
-        plot_nii_gz(template_dir.joinpath("vtk_LV_{}.nii.gz".format(fr)))
         mirtk.register(
             str(template_dir.joinpath("vtk_LV_{}.nii.gz".format(fr))),
             str(subject.tmps_dir().joinpath("N_vtk_LV_{}.nii.gz".format(fr))),
@@ -254,14 +253,13 @@ def meshGeneration(subject: Subject, template_dir: Path):
         #           '-dofout {1}/rv_{3}_nreg.dof.gz '
         #           '-parin {2}/segreg.txt >/dev/nul '
         #           .format(template_dir, tmps_dir, param_dir, fr))
-        plot_nii_gz(template_dir.joinpath("vtk_RV_{}.nii.gz".format(fr)))
 
         mirtk.register(
             str(template_dir.joinpath("vtk_RV_{}.nii.gz".format(fr))),
             str(subject.tmps_dir().joinpath("N_vtk_RV_{}.nii.gz".format(fr))),
             model="FFD",
             dofin=str(subject.tmps_dir().joinpath("rv_{}_areg.dof.gz".format(fr))),
-            dofout=str(subject.tmps_dir().joinpath("rv_{}_areg.dof.gz".format(fr))),
+            dofout=str(subject.tmps_dir().joinpath("rv_{}_nreg.dof.gz".format(fr))),
             parin=str(template_dir.joinpath("segreg.txt")),
         )
         # os.system('snreg '
@@ -273,20 +271,21 @@ def meshGeneration(subject: Subject, template_dir: Path):
         #           .format(template_dir, vtks_dir, tmps_dir, fr))
         mirtk.register(
             str(template_dir.joinpath("RV_{}.vtk".format(fr))),
-            str(subject.tmps_dir().joinpath("N_RV_{}.vtk".format(fr))),
-            "-symmetric",
+            str(subject.vtks_dir().joinpath("N_RV_{}.vtk".format(fr))),
+            # "-symmetric",
+            "-par", "Point set distance correspondence", "CP",
             ds=8,
             model="FFD",
             dofin=str(subject.tmps_dir().joinpath("rv_{}_nreg.dof.gz".format(fr))),
             dofout=str(subject.tmps_dir().joinpath("rv{}ds8.dof.gz".format(fr))),
         )
-        # os.system('nreg '
-        #           '{0}/vtk_LV_{3}.nii.gz '
-        #           '{1}/N_vtk_LV_{3}.nii.gz '
-        #           '-dofin {1}/lv_{3}_areg.dof.gz '
-        #           '-dofout {1}/lv_{3}_nreg.dof.gz '
-        #           '-parin {2}/segreg.txt >/dev/nul '
-        #           .format(template_dir, tmps_dir, param_dir, fr))
+        # # os.system('nreg '
+        # #           '{0}/vtk_LV_{3}.nii.gz '
+        # #           '{1}/N_vtk_LV_{3}.nii.gz '
+        # #           '-dofin {1}/lv_{3}_areg.dof.gz '
+        # #           '-dofout {1}/lv_{3}_nreg.dof.gz '
+        # #           '-parin {2}/segreg.txt >/dev/nul '
+        # #           .format(template_dir, tmps_dir, param_dir, fr))
         mirtk.register(
             str(template_dir.joinpath("vtk_LV_{}.nii.gz".format(fr))),
             str(subject.tmps_dir().joinpath("N_vtk_LV_{}.nii.gz".format(fr))),
@@ -316,101 +315,196 @@ def meshGeneration(subject: Subject, template_dir: Path):
             dofout=str(subject.tmps_dir().joinpath("lv{}final.dof.gz".format(fr))),
             ds=4,
         )
-        # same number of points    
-        os.system('cardiacsurfacemap '
-                  '{0}/LVendo_{3}.vtk '
-                  '{1}/N_LVendo_{3}.vtk '
-                  '{2}/lv{3}final.dof.gz '
-                  '{1}/F_LVendo_{3}.vtk >/dev/nul '
-                  .format(template_dir, vtks_dir, tmps_dir, fr))
+        # same number of points
+        # os.system('cardiacsurfacemap '
+        #           '{0}/LVendo_{3}.vtk '
+        #           '{1}/N_LVendo_{3}.vtk '
+        #           '{2}/lv{3}final.dof.gz '
+        #           '{1}/F_LVendo_{3}.vtk >/dev/nul '
+        #           .format(template_dir, vtks_dir, tmps_dir, fr))
 
-        mirtk.register_points(
-
+        mirtk.match_points(
+            str(template_dir.joinpath("LVendo_{}.vtk".format(fr))),
+            str(subject.vtks_dir().joinpath("N_LVendo_{}.vtk".format(fr))),
+            dofin=str(subject.tmps_dir().joinpath("lv{}final.dof.gz".format(fr))),
+            output=str(subject.vtks_dir().joinpath("F_LVendo_{}.vtk".format(fr))),
         )
-    
-        os.system('cardiacsurfacemap '
-                  '{0}/LVepi_{3}.vtk '
-                  '{1}/N_LVepi_{3}.vtk '
-                  '{2}/lv{3}final.dof.gz '
-                  '{1}/F_LVepi_{3}.vtk >/dev/nul '
-                  .format(template_dir, vtks_dir, tmps_dir, fr))
-    
-        os.system('ptransformation '
-                  '{0}/LVmyo_{3}.vtk '
-                  '{1}/F_LVmyo_{3}.vtk '
-                  '-dofin {2}/lv{3}final.dof.gz >/dev/nul '
-                  .format(template_dir, vtks_dir, tmps_dir, fr))
-        
-        os.system('cardiacsurfacemap '
-                  '{0}/RV_{3}.vtk '
-                  '{1}/N_RV_{3}.vtk '
-                  '{2}/rv{3}ds8.dof.gz '
-                  '{1}/C_RV_{3}.vtk >/dev/nul '
-                  .format(template_dir, vtks_dir, tmps_dir, fr))
-     
+
+        # os.system('cardiacsurfacemap '
+        #           '{0}/LVepi_{3}.vtk '
+        #           '{1}/N_LVepi_{3}.vtk '
+        #           '{2}/lv{3}final.dof.gz '
+        #           '{1}/F_LVepi_{3}.vtk >/dev/nul '
+        #           .format(template_dir, vtks_dir, tmps_dir, fr))
+        mirtk.match_points(
+            str(template_dir.joinpath("LVepi_{}.vtk".format(fr))),
+            str(subject.vtks_dir().joinpath("N_LVepi_{}.vtk".format(fr))),
+            dofin=str(subject.tmps_dir().joinpath("lv{}final.dof.gz".format(fr))),
+            output=str(subject.vtks_dir().joinpath("F_LVepi_{}.vtk".format(fr))),
+        )
+        # os.system('ptransformation '
+        #           '{0}/LVmyo_{3}.vtk '
+        #           '{1}/F_LVmyo_{3}.vtk '
+        #           '-dofin {2}/lv{3}final.dof.gz >/dev/nul '
+        #           .format(template_dir, vtks_dir, tmps_dir, fr))
+        mirtk.transform_points(
+            str(template_dir.joinpath("LVmyo_{}.vtk".format(fr))),
+            str(subject.vtks_dir().joinpath("F_LVmyo_{}.vtk".format(fr))),
+            dofin=str(subject.tmps_dir().joinpath("lv{}final.dof.gz".format(fr))),
+        )
+
+        # os.system('cardiacsurfacemap '
+        #           '{0}/RV_{3}.vtk '
+        #           '{1}/N_RV_{3}.vtk '
+        #           '{2}/rv{3}ds8.dof.gz '
+        #           '{1}/C_RV_{3}.vtk >/dev/nul '
+        #           .format(template_dir, vtks_dir, tmps_dir, fr))
+        mirtk.match_points(
+            str(template_dir.joinpath("RV_{}.vtk".format(fr))),
+            str(subject.vtks_dir().joinpath("N_RV_{}.vtk".format(fr))),
+            dofin=str(subject.tmps_dir().joinpath("rv{}ds8.dof.gz".format(fr))),
+            output=str(subject.vtks_dir().joinpath("C_RV_{}.vtk".format(fr))),
+        )
         ###########################################################################
-        os.system('cp {0}/F_LVendo_{1}.vtk {0}/S_LVendo_{1}.vtk'.format(vtks_dir, fr))
-        os.system('cp {0}/F_LVepi_{1}.vtk {0}/S_LVepi_{1}.vtk'.format(vtks_dir, fr))
-        os.system('cp {0}/F_LVmyo_{1}.vtk {0}/S_LVmyo_{1}.vtk'.format(vtks_dir, fr))
-        os.system('cp {0}/F_LVmyo_{1}.vtk {0}/C_LVmyo_{1}.vtk'.format(vtks_dir, fr))
-        os.system('cp {0}/F_LVmyo_{1}.vtk {0}/W_LVmyo_{1}.vtk'.format(vtks_dir, fr))
-        os.system('cp {0}/C_RV_{1}.vtk {0}/S_RV_{1}.vtk'.format(vtks_dir, fr))
-        os.system('cp {0}/C_RV_{1}.vtk {0}/W_RV_{1}.vtk'.format(vtks_dir, fr))
-        
+        # os.system('cp {0}/F_LVendo_{1}.vtk {0}/S_LVendo_{1}.vtk'.format(vtks_dir, fr))
+        # os.system('cp {0}/F_LVepi_{1}.vtk {0}/S_LVepi_{1}.vtk'.format(vtks_dir, fr))
+        # os.system('cp {0}/F_LVmyo_{1}.vtk {0}/S_LVmyo_{1}.vtk'.format(vtks_dir, fr))
+        # os.system('cp {0}/F_LVmyo_{1}.vtk {0}/C_LVmyo_{1}.vtk'.format(vtks_dir, fr))
+        # os.system('cp {0}/F_LVmyo_{1}.vtk {0}/W_LVmyo_{1}.vtk'.format(vtks_dir, fr))
+        # os.system('cp {0}/C_RV_{1}.vtk {0}/S_RV_{1}.vtk'.format(vtks_dir, fr))
+        # os.system('cp {0}/C_RV_{1}.vtk {0}/W_RV_{1}.vtk'.format(vtks_dir, fr))
+
+        shutil.copy(
+            str(subject.vtks_dir().joinpath("F_LVendo_{}.vtk".format(fr))),
+            subject.vtks_dir().joinpath("S_LVendo_{}.vtk".format(fr))
+        )
+        shutil.copy(
+            str(subject.vtks_dir().joinpath("F_LVepi_{}.vtk".format(fr))),
+            subject.vtks_dir().joinpath("S_LVepi_{}.vtk".format(fr))
+        )
+        shutil.copy(
+            str(subject.vtks_dir().joinpath("F_LVmyo_{}.vtk".format(fr))),
+            subject.vtks_dir().joinpath("S_LVmyo_{}.vtk".format(fr))
+        )
+        shutil.copy(
+            str(subject.vtks_dir().joinpath("F_LVmyo_{}.vtk".format(fr))),
+            subject.vtks_dir().joinpath("C_LVmyo_{}.vtk".format(fr))
+        )
+
+        shutil.copy(
+            str(subject.vtks_dir().joinpath("F_LVmyo_{}.vtk".format(fr))),
+            subject.vtks_dir().joinpath("W_LVmyo_{}.vtk".format(fr))
+        )
+        shutil.copy(
+            str(subject.vtks_dir().joinpath("C_RV_{}.vtk".format(fr))),
+            subject.vtks_dir().joinpath("S_RV_{}.vtk".format(fr))
+        )
+        shutil.copy(
+            str(subject.vtks_dir().joinpath("C_RV_{}.vtk".format(fr))),
+            subject.vtks_dir().joinpath("W_RV_{}.vtk".format(fr))
+        )
 
         print("\n ... Mesh Generation - step [3] -")
-        
+
         ###########################################################################
         # compute the quantities of the heart with respect to template
-        os.system('cardiacwallthickness '
-                  '{0}/F_LVendo_{1}.vtk '
-                  '{0}/F_LVepi_{1}.vtk '
-                  '-myocardium '
-                  '{0}/W_LVmyo_{1}.vtk >/dev/nul '
-                  .format(vtks_dir, fr))
-    
-        os.system('cardiacenlargedistance '
-                  '{0}/S_LVendo_{2}.vtk '
-                  '{0}/S_LVepi_{2}.vtk '
-                  '{1}/LVendo_{2}.vtk '
-                  '{1}/LVepi_{2}.vtk '
-                  '-myocardium '
-                  '{0}/S_LVmyo_{2}.vtk >/dev/nul '
-                  .format(vtks_dir, template_dir, fr))
+        # os.system('cardiacwallthickness '
+        #           '{0}/F_LVendo_{1}.vtk '
+        #           '{0}/F_LVepi_{1}.vtk '
+        #           '-myocardium '
+        #           '{0}/W_LVmyo_{1}.vtk >/dev/nul '
+        #           .format(vtks_dir, fr))
+
+        mirtk.evaluate_distance(
+            str(subject.vtks_dir().joinpath("F_LVendo_{}.vtk".format(fr))),
+            str(subject.vtks_dir().joinpath("F_LVepi_{}.vtk".format(fr))),
+            name="WallThickness",
+        )
+
+        # os.system('cardiacenlargedistance '
+        #           '{0}/S_LVendo_{2}.vtk '
+        #           '{0}/S_LVepi_{2}.vtk '
+        #           '{1}/LVendo_{2}.vtk '
+        #           '{1}/LVepi_{2}.vtk '
+        #           '-myocardium '
+        #           '{0}/S_LVmyo_{2}.vtk >/dev/nul '
+        #           .format(vtks_dir, template_dir, fr))
+        mirtk.evaluate_distance(
+            str(subject.vtks_dir().joinpath("S_LVendo_{}.vtk".format(fr))),
+            str(template_dir.joinpath("LVendo_{}.vtk".format(fr))),
+            name="WallThickness",
+        )
+        mirtk.evaluate_distance(
+            str(subject.vtks_dir().joinpath("S_LVepi_{}.vtk".format(fr))),
+            str(template_dir.joinpath("LVepi_{}.vtk".format(fr))),
+            name="WallThickness",
+        )
         
-        os.system('DiscreteCurvatureEstimator '
-                  '{0}/C_LVmyo_{1}.vtk '
-                  '{0}/FC_LVmyo_{1}.vtk >/dev/nul '
-                  .format(vtks_dir, fr))
+        # os.system('DiscreteCurvatureEstimator '
+        #           '{0}/C_LVmyo_{1}.vtk '
+        #           '{0}/FC_LVmyo_{1}.vtk >/dev/nul '
+        #           .format(vtks_dir, fr))
+        #
+        # os.system('cardiaccurvature '
+        #           '{0}/FC_LVmyo_{1}.vtk '
+        #           '{0}/C_LVmyo_{1}.vtk >/dev/nul '
+        #           '-smooth 64'
+        #           .format(vtks_dir, fr))
+        # mirtk.decimate_surface(
+        #     str(subject.vtks_dir().joinpath("C_LVmyo_{}.vtk".format(fr))),
+        #     str(subject.vtks_dir().joinpath("FC_LVmyo_{}.vtk".format(fr))),
+        # )
+        mirtk.calculate_surface_attributes(
+            str(subject.vtks_dir().joinpath("C_LVmyo_{}.vtk".format(fr))),
+            str(subject.vtks_dir().joinpath("C_LVmyo_{}.vtk".format(fr))),
+            smooth_iterations=64,
+        )
         
-        os.system('cardiaccurvature '
-                  '{0}/FC_LVmyo_{1}.vtk '
-                  '{0}/C_LVmyo_{1}.vtk >/dev/nul '
-                  '-smooth 64'
-                  .format(vtks_dir, fr))
-        
-        os.system('DiscreteCurvatureEstimator '
-                  '{0}/C_RV_{1}.vtk '
-                  '{0}/FC_RV_{1}.vtk >/dev/nul '
-                  .format(vtks_dir, fr))
-        
-        os.system('cardiaccurvature '
-                  '{0}/FC_RV_{1}.vtk '
-                  '{0}/C_RV_{1}.vtk '
-                  '-smooth 64 >/dev/nul '
-                  .format(vtks_dir, fr))
-        
-        os.system('sevaluation '
-                  '{0}/S_RV_{2}.vtk '
-                  '{1}/RV_{2}.vtk '
-                  '-scalar '
-                  '-signed >/dev/nul '
-                  .format(vtks_dir, template_dir, fr))
-        
-        os.system('cardiacwallthickness '
-                  '{0}/W_RV_{1}.vtk '
-                  '{0}/N_RVepi_{1}.vtk >/dev/nul '
-                  .format(vtks_dir, fr))
+        # os.system('DiscreteCurvatureEstimator '
+        #           '{0}/C_RV_{1}.vtk '
+        #           '{0}/FC_RV_{1}.vtk >/dev/nul '
+        #           .format(vtks_dir, fr))
+        #
+        # os.system('cardiaccurvature '
+        #           '{0}/FC_RV_{1}.vtk '
+        #           '{0}/C_RV_{1}.vtk '
+        #           '-smooth 64 >/dev/nul '
+        #           .format(vtks_dir, fr))
+
+        # mirtk.decimate_surface(
+        #     str(subject.vtks_dir().joinpath("C_RV_{}.vtk".format(fr))),
+        #     str(subject.vtks_dir().joinpath("FC_RV_{}.vtk".format(fr))),
+        # )
+        mirtk.calculate_surface_attributes(
+            str(subject.vtks_dir().joinpath("C_RV_{}.vtk".format(fr))),
+            str(subject.vtks_dir().joinpath("C_RV_{}.vtk".format(fr))),
+            smooth_iterations=64,
+        )
+
+        # os.system('sevaluation '
+        #           '{0}/S_RV_{2}.vtk '
+        #           '{1}/RV_{2}.vtk '
+        #           '-scalar '
+        #           '-signed >/dev/nul '
+        #           .format(vtks_dir, template_dir, fr))
+
+        mirtk.evaluate_distance(
+            str(subject.vtks_dir().joinpath("S_RV_{}.vtk".format(fr))),
+            str(template_dir.joinpath("RV_{}.vtk".format(fr))),
+            "-normal",
+            name="WallThickness",
+        )
+
+        # os.system('cardiacwallthickness '
+        #           '{0}/W_RV_{1}.vtk '
+        #           '{0}/N_RVepi_{1}.vtk >/dev/nul '
+        #           .format(vtks_dir, fr))
+
+        mirtk.evaluate_distance(
+            str(subject.vtks_dir().joinpath("W_RV_{}.vtk".format(fr))),
+            str(subject.vtks_dir().joinpath("N_RVepi_{}.vtk".format(fr))),
+            name="WallThickness",
+        )
         
         ###########################################################################
 #        os.system('vtk2txt {0}/C_RV_{1}.vtk {2}/rv_{1}_curvature.txt'.format(vtks_dir, fr, subject_dir))
@@ -421,22 +515,39 @@ def meshGeneration(subject: Subject, template_dir: Path):
 #        os.system('vtk2txt {0}/S_LVmyo_{1}.vtk {2}/lv_myo{1}_signeddistances.txt'.format(vtks_dir, fr, subject_dir))
         if fr == 'ED':
             fr_ = 'ed'
-            os.system('vtk2txt {0}/C_RV_{1}.vtk {2}/rv_{3}_curvature.txt'.format(vtks_dir, fr, subject_dir, fr_))
-            os.system('vtk2txt {0}/W_RV_{1}.vtk {2}/rv_{3}_wallthickness.txt'.format(vtks_dir, fr, subject_dir, fr_))
-            os.system('vtk2txt {0}/S_RV_{1}.vtk {2}/rv_{3}_signeddistances.txt'.format(vtks_dir, fr, subject_dir, fr_))
-            ############################################################################################################
-            os.system('vtk2txt {0}/W_LVmyo_{1}.vtk {2}/lv_myo{3}_wallthickness.txt'.format(vtks_dir, fr, subject_dir, fr_))
-            os.system('vtk2txt {0}/C_LVmyo_{1}.vtk {2}/lv_myo{3}_curvature.txt'.format(vtks_dir, fr, subject_dir, fr_))
-            os.system('vtk2txt {0}/S_LVmyo_{1}.vtk {2}/lv_myo{3}_signeddistances.txt'.format(vtks_dir, fr, subject_dir, fr_))
         if fr == 'ES':
             fr_ = 'es'
-            os.system('vtk2txt {0}/C_RV_{1}.vtk {2}/rv_{3}_curvature.txt'.format(vtks_dir, fr, subject_dir, fr_))
-            os.system('vtk2txt {0}/W_RV_{1}.vtk {2}/rv_{3}_wallthickness.txt'.format(vtks_dir, fr, subject_dir, fr_))
-            os.system('vtk2txt {0}/S_RV_{1}.vtk {2}/rv_{3}_signeddistances.txt'.format(vtks_dir, fr, subject_dir, fr_))
-            ############################################################################################################
-            os.system('vtk2txt {0}/W_LVmyo_{1}.vtk {2}/lv_myo{3}_wallthickness.txt'.format(vtks_dir, fr, subject_dir, fr_))
-            os.system('vtk2txt {0}/C_LVmyo_{1}.vtk {2}/lv_myo{3}_curvature.txt'.format(vtks_dir, fr, subject_dir, fr_))
-            os.system('vtk2txt {0}/S_LVmyo_{1}.vtk {2}/lv_myo{3}_signeddistances.txt'.format(vtks_dir, fr, subject_dir, fr_))
+        # os.system('vtk2txt {0}/C_RV_{1}.vtk {2}/rv_{3}_curvature.txt'.format(vtks_dir, fr, subject_dir, fr_))
+        # os.system('vtk2txt {0}/W_RV_{1}.vtk {2}/rv_{3}_wallthickness.txt'.format(vtks_dir, fr, subject_dir, fr_))
+        # os.system('vtk2txt {0}/S_RV_{1}.vtk {2}/rv_{3}_signeddistances.txt'.format(vtks_dir, fr, subject_dir, fr_))
+        mirtk.convert_pointset(
+            str(subject.vtks_dir().joinpath("C_RV_{}.vtk".format(fr))),
+            str(subject.dir.joinpath("rv_{}_curvature.txt".format(fr_))),
+        )
+        mirtk.convert_pointset(
+            str(subject.vtks_dir().joinpath("W_RV_{}.vtk".format(fr))),
+            str(subject.dir.joinpath("rv_{}_wallthickness.txt".format(fr_))),
+        )
+        mirtk.convert_pointset(
+            str(subject.vtks_dir().joinpath("S_RV_{}.vtk".format(fr))),
+            str(subject.dir.joinpath("rv_{}_signeddistances.txt".format(fr_))),
+        )
+        ############################################################################################################
+        # os.system('vtk2txt {0}/W_LVmyo_{1}.vtk {2}/lv_myo{3}_wallthickness.txt'.format(vtks_dir, fr, subject_dir, fr_))
+        # os.system('vtk2txt {0}/C_LVmyo_{1}.vtk {2}/lv_myo{3}_curvature.txt'.format(vtks_dir, fr, subject_dir, fr_))
+        # os.system('vtk2txt {0}/S_LVmyo_{1}.vtk {2}/lv_myo{3}_signeddistances.txt'.format(vtks_dir, fr, subject_dir, fr_))
+        mirtk.convert_pointset(
+            str(subject.vtks_dir().joinpath("W_LVmyo_{}.vtk".format(fr))),
+            str(subject.dir.joinpath("lv_myo{}_wallthickness.txt".format(fr_))),
+        )
+        mirtk.convert_pointset(
+            str(subject.vtks_dir().joinpath("C_LVmyo_{}.vtk".format(fr))),
+            str(subject.dir.joinpath("lv_myo{}_curvature.txt".format(fr_))),
+        )
+        mirtk.convert_pointset(
+            str(subject.vtks_dir().joinpath("S_LVmyo_{}.vtk".format(fr))),
+            str(subject.dir.joinpath("lv_myo{}_signeddistances.txt".format(fr_))),
+        )
 
 
 def apply_PC(subject, data_dir, param_dir, template_dir, mirtk):
