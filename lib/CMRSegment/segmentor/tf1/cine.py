@@ -9,7 +9,7 @@ from scipy.ndimage import label
 import shutil
 
 from typing import List
-from CMRSegment.subject import Subject
+from CMRSegment.subject import Subject, Image, Segmentation
 from CMRSegment.utils import rescale_intensity
 import mirtk
 from skimage.exposure import match_histograms
@@ -55,26 +55,22 @@ class TF1CineSegmentor(TF1Segmentor):
         nim2 = nib.Nifti1Image(pred_segt, nim.affine)
         nim2.header['pixdim'] = nim.header['pixdim']
         nib.save(nim2, str(output_path))
+        shutil.rmtree(str(output_path.parent.joinpath("tmp")), ignore_errors=True)
         return image, pred_segt
 
-    def apply(self, subject: Subject):
-        images, segt_labels = [], []
-        for phase_path in tqdm(subject.enlarge_phases):
-            image, pred_segt = self.execute(phase_path, subject.motions_dir().joinpath(phase_path.name))
-            segt_labels += [pred_segt]
-            images += [image]
-        shutil.rmtree(str(subject.motions_dir().joinpath("tmp")), ignore_errors=True)
-        nim = nib.load(str(phase_path))
-        segt_labels = np.array(segt_labels, dtype=np.int32)  # batch * height * width * channels (=slices)
+    def save_cine(self, segmentations: List[Segmentation], output_dir: Path):
+        nim = nib.load(str(segmentations[-1].path))
+        # batch * height * width * channels (=slices)
+        segt_labels = np.array([seg.predicted for seg in segmentations], dtype=np.int32)
         segt_labels = np.transpose(segt_labels, (1, 2, 3, 0))
-        images = np.array(images, dtype=np.float32)  # b
+        images = np.array([seg.image for seg in segmentations], dtype=np.float32)  # b
         images = np.transpose(images, (1, 2, 3, 0))
         nim2 = nib.Nifti1Image(segt_labels, nim.affine)
         nim2.header['pixdim'] = nim.header['pixdim']
-        nib.save(nim2, str(subject.rview_dir().joinpath("4Dseg.nii.gz")))
+        nib.save(nim2, str(output_dir.joinpath("4Dseg.nii.gz")))
         nim2 = nib.Nifti1Image(images, nim.affine)
         nim2.header['pixdim'] = nim.header['pixdim']
-        nib.save(nim2, str(subject.rview_dir().joinpath("4Dimg.nii.gz")))
+        nib.save(nim2, str(output_dir.joinpath("4Dimg.nii.gz")))
 
 
 def get_labels(seg, label):

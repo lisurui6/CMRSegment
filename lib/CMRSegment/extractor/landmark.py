@@ -73,3 +73,4 @@ def extract_landmarks(subject: Subject, labels: List = None):
         writer.Write()
     else:
         print("\n ... Error in labels")
+    return subject.landmark_path

@@ -1,12 +1,12 @@
 import dataclasses
 from pathlib import Path
 from pyhocon import ConfigTree, ConfigFactory
-from CMRSegment.common.constants import ROOT_DIR
+from CMRSegment.common.constants import LIB_DIR
 from tempfile import gettempdir
 from datetime import datetime
 from typing import List, Tuple
 
-DATA_CONF_PATH = ROOT_DIR.joinpath("data.conf")
+DATA_CONF_PATH = LIB_DIR.joinpath("CMRSegment", "data.conf")
 DATA_CONF = ConfigFactory.parse_file(str(DATA_CONF_PATH))
 
 

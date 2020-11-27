@@ -1,6 +1,28 @@
 import numpy as np
 import nibabel as nib
 from skimage.exposure import match_histograms
+import mirtk
+from pathlib import Path
+
+
+def extract_rv_label(segmentation_path: Path, output_path: Path):
+    mirtk.calculate_element_wise(
+        str(segmentation_path),
+        "-label", 3, 4,
+        set=255, pad=0,
+        output=str(output_path),
+    )
+    return output_path
+
+
+def extract_lv_label(segmentation_path, output_path: Path):
+    mirtk.calculate_element_wise(
+        str(segmentation_path),
+        "-label", 3, 4,
+        set=255, pad=0,
+        output=str(output_path),
+    )
+    return output_path
 
 
 def rescale_intensity(image, thres=(1.0, 99.0)):

@@ -2,8 +2,9 @@ from pathlib import Path
 
 import numpy as np
 import tensorflow as tf
+from typing import List
 
-from CMRSegment.subject import Subject
+from CMRSegment.subject import Subject, Image, Segmentation
 
 
 class TF1Segmentor:
@@ -28,9 +29,10 @@ class TF1Segmentor:
         """Call sess.run()"""
         raise NotImplementedError("Must be implemented by subclasses.")
 
-    def apply(self, subject: Subject):
+    def apply(self, image: Image) -> Segmentation:
         """Segment the subject (multiple phases)"""
-        raise NotImplementedError("Must be implemented by subclasses.")
+        np_image, predicted = self.execute(image.path, image.segmented)
+        return Segmentation(phase=image.phase, path=image.segmented, image=np_image, predicted=predicted)
 
     def execute(self, phase_path: Path, output_dir: Path):
         """Segment a 3D volume cardiac phase from phase_path, save to output_dir"""

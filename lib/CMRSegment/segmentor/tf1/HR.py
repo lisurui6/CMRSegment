@@ -2,7 +2,7 @@ import numpy as np
 import nibabel as nib
 import math
 from CMRSegment.utils import rescale_intensity, ED_ES_histogram_matching
-from CMRSegment.subject import Subject
+from CMRSegment.subject import Subject, Image, Segmentation
 from pathlib import Path
 from CMRSegment.segmentor.tf1 import TF1Segmentor
 from scipy.ndimage import label
@@ -47,17 +47,13 @@ class TF13DSegmentor(TF1Segmentor):
         nib.save(nim2, str(output_path))
         refined_mask(output_path)
         mirtk.header_tool(str(output_path), str(output_path), target=str(phase_path))
+        return image, pred_segt
 
-    def apply(self, subject: Subject):
-        for segmented_path, resampled_path, enlarged_path, phase_path in zip(
-            [subject.segmented_ed_path, subject.segmented_es_path],
-            [subject.resampled_ed_path, subject.resampled_es_path],
-            [subject.enlarged_ed_path, subject.enlarged_es_path],
-            [subject.ed_path, subject.es_path],
-        ):
-            mirtk.resample_image(str(phase_path), str(resampled_path), '-size', 1.25, 1.25, 2)
-            mirtk.enlarge_image(str(resampled_path), str(enlarged_path), z=20, value=0)
-            self.execute(enlarged_path, segmented_path)
+    def apply(self, image: Image) -> Segmentation:
+        mirtk.resample_image(str(image.path), str(image.resampled), '-size', 1.25, 1.25, 2)
+        mirtk.enlarge_image(str(image.resampled), str(image.enlarged), z=20, value=0)
+        image.path = image.enlarged
+        return super().apply(image)
 
 
 def get_labels(seg, label):

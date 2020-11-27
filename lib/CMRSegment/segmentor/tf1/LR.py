@@ -5,9 +5,10 @@ import numpy as np
 import nibabel as nib
 import math
 from CMRSegment.utils import rescale_intensity, ED_ES_histogram_matching
-from CMRSegment.subject import Subject
+from CMRSegment.subject import Subject, Image, Segmentation
 from pathlib import Path
 from CMRSegment.segmentor.tf1 import TF1Segmentor
+from typing import List
 
 
 class TF12DSegmentor(TF1Segmentor):
@@ -49,12 +50,6 @@ class TF12DSegmentor(TF1Segmentor):
         nim2.header["pixdim"] = nim.header["pixdim"]
         nib.save(nim2, str(output_path))
         return image, pred
-
-    def apply(self, subject: Subject):
-        for segmented_path, phase_path in zip(
-            [subject.segmented_LR_ed_path, subject.segmented_LR_es_path], [subject.ed_path, subject.es_path]
-        ):
-            self.execute(phase_path, segmented_path)
 
 
 #

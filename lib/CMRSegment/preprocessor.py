@@ -1,7 +1,7 @@
 import os
 import glob
 from pathlib import Path
-from CMRSegment.common.constants import ROOT_DIR
+from CMRSegment.common.constants import LIB_DIR
 import shutil
 import subprocess
 import nibabel as nib

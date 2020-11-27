@@ -21,10 +21,9 @@ def meshGeneration(subject: Subject, template_dir: Path):
    
     print("\n ... Mesh Generation - step [1] -")
     for phase, segmented_path, segmented_LR_path in zip(
-        ["ED", "ES"],
-        [subject.segmented_ed_path, subject.segmented_es_path],
-        [subject.segmented_LR_ed_path, subject.segmented_LR_es_path]
+        ["ED", "ES"], subject.segmented_ed_es, subject.segmented_LR_ed_es
     ):
+        # extract meshes of lvendo, lvepi, lvmyo, rv and rveip at ED and ES, respectively
         mirtk.calculate_element_wise(
             str(segmented_path),
             "-label", 3, 4,
@@ -83,13 +82,7 @@ def meshGeneration(subject: Subject, template_dir: Path):
             isovalue=120, blur=2,
         )
 
-    ###############################################################################
     # use landmark to initialise the registration
-    # os.system('prreg '
-    #           '{0} '
-    #           '{1}/landmarks2.vtk '
-    #           '-dofout {2}/landmarks.dof.gz >/dev/nul '
-    #           .format(subject.landmark_path, template_dir, subject.dofs_dir()))
     mirtk.register(
         str(subject.landmark_path),
         str(template_dir.joinpath("landmarks2.vtk")),

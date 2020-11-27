@@ -1,369 +1,337 @@
 import mirtk
 import shutil
 from pathlib import Path
-from CMRSegment.subject import Subject
+from typing import Tuple, List
+from CMRSegment.subject import Subject, Mesh, Segmentation, Template, Phase
+from CMRSegment.utils import extract_lv_label, extract_rv_label
 
 
 class Coregister:
-    def __init__(self):
-        pass
+    def __init__(self, template_dir: Path, segareg_path: Path, segreg_path: Path, spnreg_path: Path):
+        self.template = Template(dir=template_dir)
+        self.segareg_path = segareg_path
+        self.segreg_path = segreg_path
+        self.spnreg_path = spnreg_path
 
-    def run(self, subject: Subject, template_dir: Path):
+    def run(self, mesh: Mesh, segmentation: Segmentation, landmark_path: Path, output_dir: Path):
         print("\n ... Mesh Generation - step [1] -")
-        for phase, segmented_path, segmented_LR_path in zip(
-                ["ED", "ES"],
-                [subject.segmented_ed_path, subject.segmented_es_path],
-                [subject.segmented_LR_ed_path, subject.segmented_LR_es_path]
-        ):
-            self.extract_meshes(segmented_path, phase, subject)
-            self.initialize_registration(subject, template_dir)
-            print("\n ... Mesh Generation - step [2] -")
-            for fr in ['ED', 'ES']:
-                self.register(subject, template_dir, fr)
-                print("\n ... Mesh Generation - step [3] -")
-                self.compute(subject, template_dir, fr)
+        landmark_dofs = self.initialize_registration(landmark_path, output_dir)
+        temp_dir = output_dir.joinpath("temp")
+        temp_dir.mkdir(exist_ok=True, parents=True)
+        rv_label = extract_rv_label(
+            segmentation_path=segmentation.path,
+            output_path=temp_dir.joinpath(f"vtk_RV_{mesh.phase}.nii.gz")
+        )
+        lv_label = extract_lv_label(
+            segmentation_path=segmentation.path,
+            output_path=temp_dir.joinpath(f"vtk_LV_{mesh.phase}.nii.gz")
+        )
+        print("\n ... Mesh Generation - step [2] -")
+        nonrigid_transformed_mesh = self.register(
+            mesh=mesh,
+            landmark_dofs=landmark_dofs,
+            rv_label=rv_label,
+            lv_label=lv_label,
+            output_dir=output_dir,
+        )
+        print("\n ... Mesh Generation - step [3] -")
+        self.compute_wall_thickness(nonrigid_transformed_mesh, output_dir)
+        self.compute_curvature(nonrigid_transformed_mesh, output_dir)
 
-    @staticmethod
-    def extract_meshes(segmented_path: Path, phase: str, subject: Subject):
-        """Extract meshes of lvendo, lvepi, lvmyo, rv and rveip at ED and ES, respectively"""
-        mirtk.calculate_element_wise(
-            str(segmented_path),
-            "-label", 3, 4,
-            set=255, pad=0,
-            output=str(subject.tmps_dir().joinpath("vtk_RV_{}.nii.gz".format(phase))),
-        )
-        mirtk.extract_surface(
-            str(subject.tmps_dir().joinpath("vtk_RV_{}.nii.gz".format(phase))),
-            str(subject.vtks_dir().joinpath("RV_{}.vtk".format(phase))),
-            isovalue=120, blur=2,
-        )
-        mirtk.calculate_element_wise(
-            str(segmented_path),
-            "-label", 3, 4,
-            set=255, pad=0,
-            output=str(subject.tmps_dir().joinpath("vtk_RVepi_{}.nii.gz".format(phase))),
-        )
-        mirtk.extract_surface(
-            str(subject.tmps_dir().joinpath("vtk_RVepi_{}.nii.gz".format(phase))),
-            str(subject.vtks_dir().joinpath("RVepi_{}.vtk".format(phase))),
-            isovalue=120, blur=2,
-        )
-        mirtk.calculate_element_wise(
-            str(segmented_path),
-            "-map", 3, 0, 4, 0,
-            output=str(subject.tmps_dir().joinpath("vtk_LV_{}.nii.gz".format(phase))),
-        )
-        mirtk.calculate_element_wise(
-            str(segmented_path),
-            "-label", 1, set=255, pad=0,
-            output=str(subject.tmps_dir().joinpath("vtk_LVendo_{}.nii.gz".format(phase))),
-        )
-        mirtk.extract_surface(
-            str(subject.tmps_dir().joinpath("vtk_LVendo_{}.nii.gz".format(phase))),
-            str(subject.vtks_dir().joinpath("LVendo_{}.vtk".format(phase))),
-            isovalue=120, blur=2,
-        )
-        mirtk.calculate_element_wise(
-            str(segmented_path),
-            "-label", 1, 2, set=255, pad=0,
-            output=str(subject.tmps_dir().joinpath("vtk_LVepi_{}.nii.gz".format(phase))),
-        )
-        mirtk.extract_surface(
-            str(subject.tmps_dir().joinpath("vtk_LVepi_{}.nii.gz".format(phase))),
-            str(subject.vtks_dir().joinpath("LVepi_{}.vtk".format(phase))),
-            isovalue=120, blur=2,
-        )
-        mirtk.calculate_element_wise(
-            str(segmented_path),
-            "-label", 2, set=255, pad=0,
-            output=str(subject.tmps_dir().joinpath("vtk_LVmyo_{}.nii.gz".format(phase))),
-        )
-        mirtk.extract_surface(
-            str(subject.tmps_dir().joinpath("vtk_LVmyo_{}.nii.gz".format(phase))),
-            str(subject.vtks_dir().joinpath("LVmyo_{}.vtk".format(phase))),
-            isovalue=120, blur=2,
-        )
-
-    @staticmethod
-    def initialize_registration(subject: Subject, template_dir: Path):
+    def initialize_registration(self, landmark_path: Path, output_dir: Path):
         """Use landmark to initialise the registration"""
-        mirtk.register(
-            str(subject.landmark_path),
-            str(template_dir.joinpath("landmarks2.vtk")),
-            model="Rigid",
-            dofout=str(subject.dofs_dir().joinpath("landmarks.dof.gz")),
-        )
+        if not output_dir.joinpath("landmarks.dof.gz").exists():
+            mirtk.register(
+                str(landmark_path),
+                str(self.template.landmark),
+                model="Rigid",
+                dofout=str(output_dir.joinpath("landmarks.dof.gz")),
+            )
+        return output_dir.joinpath("landmarks.dof.gz")
 
-    @staticmethod
-    def register(subject, template_dir, fr):
-        mirtk.register_points(
-            "-t", str(subject.vtks_dir().joinpath("RV_{}.vtk".format(fr))),
-            "-s", str(template_dir.joinpath("RV_{}.vtk".format(fr))),
-            "-t", str(subject.vtks_dir().joinpath("LVendo_{}.vtk".format(fr))),
-            "-s", str(template_dir.joinpath("LVendo_{}.vtk".format(fr))),
-            "-t", str(subject.vtks_dir().joinpath("LVepi_{}.vtk".format(fr))),
-            "-s", str(template_dir.joinpath("LVepi_{}.vtk".format(fr))),
-            "-symmetric",
-            dofin=str(subject.dofs_dir().joinpath("landmarks.dof.gz")),
-            dofout=str(subject.tmps_dir().joinpath("{}.dof.gz".format(fr)))
-        )
+    def rigid_registration(self, mesh: Mesh, landmark_dofs: Path, output_dir: Path):
+        fr = mesh.phase
+        temp_dir = output_dir.joinpath("temp")
+        temp_dir.mkdir(exist_ok=True, parents=True)
+        if not temp_dir.joinpath("{}.dof.gz".format(fr)).exists():
+            mirtk.register_points(
+                "-t", str(mesh.rv),
+                "-s", str(self.template.rv(fr)),
+                "-t", str(mesh.lv_endo),
+                "-s", str(self.template.lv_endo(fr)),
+                "-t", str(mesh.lv_epi),
+                "-s", str(self.template.lv_epi(fr)),
+                "-symmetric",
+                dofin=str(landmark_dofs),
+                dofout=str(temp_dir.joinpath("{}.dof.gz".format(fr)))
+            )
 
-        mirtk.register_points(
-            "-t", str(subject.vtks_dir().joinpath("LVendo_{}.vtk".format(fr))),
-            "-s", str(template_dir.joinpath("LVendo_{}.vtk".format(fr))),
-            "-t", str(subject.vtks_dir().joinpath("LVepi_{}.vtk".format(fr))),
-            "-s", str(template_dir.joinpath("LVepi_{}.vtk".format(fr))),
-            "-symmetric",
-            dofin=str(subject.tmps_dir().joinpath("{}.dof.gz".format(fr))),
-            dofout=str(subject.tmps_dir().joinpath("lv_{}_rreg.dof.gz".format(fr))),
-        )
+        if not temp_dir.joinpath("lv_{}_rreg.dof.gz".format(fr)).exists():
+            mirtk.register_points(
+                "-t", str(mesh.lv_endo),
+                "-s", str(self.template.lv_endo(fr)),
+                "-t", str(mesh.lv_epi),
+                "-s", str(self.template.lv_epi(fr)),
+                "-symmetric",
+                dofin=str(temp_dir.joinpath("{}.dof.gz".format(fr))),
+                dofout=str(temp_dir.joinpath("lv_{}_rreg.dof.gz".format(fr))),
+            )
+        if not temp_dir.joinpath("rv_{}_rreg.dof.gz".format(fr)).exists():
+            mirtk.register_points(
+                "-t", str(mesh.rv),
+                "-s", str(self.template.rv(fr)),
+                "-symmetric",
+                dofin=str(temp_dir.joinpath("{}.dof.gz".format(fr))),
+                dofout=str(temp_dir.joinpath("rv_{}_rreg.dof.gz".format(fr))),
+            )
+        return temp_dir.joinpath("lv_{}_rreg.dof.gz".format(fr)), temp_dir.joinpath("rv_{}_rreg.dof.gz".format(fr))
 
-        mirtk.register_points(
-            "-t", str(subject.vtks_dir().joinpath("RV_{}.vtk".format(fr))),
-            "-s", str(template_dir.joinpath("RV_{}.vtk".format(fr))),
-            "-symmetric",
-            dofin=str(subject.tmps_dir().joinpath("{}.dof.gz".format(fr))),
-            dofout=str(subject.tmps_dir().joinpath("rv_{}_rreg.dof.gz".format(fr))),
+    def rigid_transform(self, mesh: Mesh, lv_rigid_transform: Path, rv_rigid_transform: Path, output_dir: Path):
+        transformed_mesh = Mesh(
+            phase=mesh.phase,
+            dir=output_dir.joinpath("rigid_transformed_mesh")
+        )
+        output_dir.joinpath("rigid_transformed_mesh").mkdir(exist_ok=True, parents=True)
+        mirtk.transform_points(
+            str(mesh.rv),
+            str(transformed_mesh.rv),
+            dofin=str(rv_rigid_transform),
         )
 
         mirtk.transform_points(
-            str(subject.vtks_dir().joinpath("RV_{}.vtk".format(fr))),
-            str(subject.vtks_dir().joinpath("N_RV_{}.vtk".format(fr))),
-            dofin=str(subject.tmps_dir().joinpath("rv_{}_rreg.dof.gz".format(fr))),
+            str(mesh.rv_epi),
+            str(transformed_mesh.rv_epi),
+            dofin=str(rv_rigid_transform),
         )
 
         mirtk.transform_points(
-            str(subject.vtks_dir().joinpath("RVepi_{}.vtk".format(fr))),
-            str(subject.vtks_dir().joinpath("N_RVepi_{}.vtk".format(fr))),
-            dofin=str(subject.tmps_dir().joinpath("rv_{}_rreg.dof.gz".format(fr))),
+            str(mesh.lv_endo),
+            str(transformed_mesh.lv_endo),
+            dofin=str(lv_rigid_transform),
         )
 
         mirtk.transform_points(
-            str(subject.vtks_dir().joinpath("LVendo_{}.vtk".format(fr))),
-            str(subject.vtks_dir().joinpath("N_LVendo_{}.vtk".format(fr))),
-            dofin=str(subject.tmps_dir().joinpath("lv_{}_rreg.dof.gz".format(fr))),
-        )
-
-        mirtk.transform_points(
-            str(subject.vtks_dir().joinpath("LVepi_{}.vtk".format(fr))),
-            str(subject.vtks_dir().joinpath("N_LVepi_{}.vtk".format(fr))),
-            dofin=str(subject.tmps_dir().joinpath("lv_{}_rreg.dof.gz".format(fr))),
+            str(mesh.lv_epi),
+            str(transformed_mesh.lv_epi),
+            dofin=str(lv_rigid_transform),
         )
         mirtk.transform_points(
-            str(subject.vtks_dir().joinpath("LVmyo_{}.vtk".format(fr))),
-            str(subject.vtks_dir().joinpath("N_LVmyo_{}.vtk".format(fr))),
-            dofin=str(subject.tmps_dir().joinpath("lv_{}_rreg.dof.gz".format(fr))),
+            str(mesh.lv_myo),
+            str(transformed_mesh.lv_myo),
+            dofin=str(lv_rigid_transform),
         )
+        return transformed_mesh
 
+    def label_rigid_transform(self, lv_label: Path, rv_label: Path, lv_rigid_transform: Path, phase: Phase,
+                              output_dir: Path):
+        temp_dir = output_dir.joinpath("temp")
+        temp_dir.mkdir(exist_ok=True, parents=True)
         mirtk.transform_image(
-            str(subject.tmps_dir().joinpath("vtk_RV_{}.nii.gz".format(fr))),
-            str(subject.tmps_dir().joinpath("N_vtk_RV_{}.nii.gz".format(fr))),
+            str(rv_label),
+            str(temp_dir.joinpath("N_vtk_RV_{}.nii.gz".format(phase))),
             "-invert",
-            dofin=str(subject.tmps_dir().joinpath("lv_{}_rreg.dof.gz".format(fr))),
+            dofin=str(lv_rigid_transform),
         )
-
         mirtk.transform_image(
-            str(subject.tmps_dir().joinpath("vtk_LV_{}.nii.gz".format(fr))),
-            str(subject.tmps_dir().joinpath("N_vtk_LV_{}.nii.gz".format(fr))),
+            str(lv_label),
+            str(temp_dir.joinpath("N_vtk_LV_{}.nii.gz".format(phase))),
             "-invert",
-            dofin=str(subject.tmps_dir().joinpath("lv_{}_rreg.dof.gz".format(fr))),
+            dofin=str(lv_rigid_transform),
         )
-        # affine
+        return temp_dir.joinpath("N_vtk_LV_{}.nii.gz".format(phase)), temp_dir.joinpath("N_vtk_RV_{}.nii.gz".format(phase))
 
+    def affine_registration(self, lv_label_transformed: Path, rv_label_transformed: Path, fr: Phase, output_dir: Path):
+        temp_dir = output_dir.joinpath("temp")
+        temp_dir.mkdir(exist_ok=True, parents=True)
         mirtk.smooth_image(
-            str(template_dir.joinpath("vtk_RV_{}.nii.gz".format(fr))),
-            str(subject.tmps_dir().joinpath("smoothed_template_vtk_RV_{}.nii.gz".format(fr))),
+            str(self.template.vtk_rv(fr)),
+            str(temp_dir.joinpath("smoothed_template_vtk_RV_{}.nii.gz".format(fr))),
             1,
             "-float"
         )
-        mirtk.register(
-            str(subject.tmps_dir().joinpath("smoothed_template_vtk_RV_{}.nii.gz".format(fr))),
-            str(subject.tmps_dir().joinpath("N_vtk_RV_{}.nii.gz".format(fr))),
-            model="Affine",
-            dofout=str(subject.tmps_dir().joinpath("rv_{}_areg.dof.gz".format(fr))),
-            parin=str(template_dir.joinpath("segareg.txt")),
-        )
+        if not temp_dir.joinpath("rv_{}_areg.dof.gz".format(fr)).exists():
+            mirtk.register(
+                str(temp_dir.joinpath("smoothed_template_vtk_RV_{}.nii.gz".format(fr))),
+                str(rv_label_transformed),
+                model="Affine",
+                dofout=str(temp_dir.joinpath("rv_{}_areg.dof.gz".format(fr))),
+                parin=str(self.segareg_path),
+            )
+        if not temp_dir.joinpath("lv_{}_areg.dof.gz".format(fr)).exists():
+            mirtk.register(
+                str(self.template.vtk_lv(fr)),
+                str(lv_label_transformed),
+                model="Affine",
+                dofout=str(temp_dir.joinpath("lv_{}_areg.dof.gz".format(fr))),
+                parin=str(self.segareg_path),
+            )
+        return temp_dir.joinpath("lv_{}_areg.dof.gz".format(fr)), temp_dir.joinpath("rv_{}_areg.dof.gz".format(fr))
 
-        mirtk.register(
-            str(template_dir.joinpath("vtk_LV_{}.nii.gz".format(fr))),
-            str(subject.tmps_dir().joinpath("N_vtk_LV_{}.nii.gz".format(fr))),
-            model="Affine",
-            dofout=str(subject.tmps_dir().joinpath("lv_{}_areg.dof.gz".format(fr))),
-            parin=str(template_dir.joinpath("segareg.txt")),
-        )
-        # non-rigid
-        mirtk.register(
-            str(template_dir.joinpath("vtk_RV_{}.nii.gz".format(fr))),
-            str(subject.tmps_dir().joinpath("N_vtk_RV_{}.nii.gz".format(fr))),
-            model="FFD",
-            dofin=str(subject.tmps_dir().joinpath("rv_{}_areg.dof.gz".format(fr))),
-            dofout=str(subject.tmps_dir().joinpath("rv_{}_nreg.dof.gz".format(fr))),
-            parin=str(template_dir.joinpath("segreg.txt")),
-        )
+    def nonrigid_registration(self, mesh: Mesh, lv_label_transformed: Path, rv_label_transformed: Path,
+                              lv_affine_transform: Path, rv_affine_transform: Path, fr: Phase, output_dir: Path):
+        temp_dir = output_dir.joinpath("temp")
+        temp_dir.mkdir(exist_ok=True, parents=True)
+        if not temp_dir.joinpath("rv_{}_nreg.dof.gz".format(fr)).exists():
+            mirtk.register(
+                str(self.template.vtk_rv(fr)),
+                str(rv_label_transformed),
+                model="FFD",
+                dofin=str(rv_affine_transform),
+                dofout=str(temp_dir.joinpath("rv_{}_nreg.dof.gz".format(fr))),
+                parin=str(self.segreg_path),
+            )
+        if not temp_dir.joinpath("rv{}ds8.dof.gz".format(fr)).exists():
+            mirtk.register(
+                str(self.template.rv(fr)),
+                str(mesh.rv),
+                # "-symmetric",
+                "-par", "Point set distance correspondence", "CP",
+                ds=8,
+                model="FFD",
+                dofin=str(temp_dir.joinpath("rv_{}_nreg.dof.gz".format(fr))),
+                dofout=str(temp_dir.joinpath("rv{}ds8.dof.gz".format(fr))),
+            )
+        if not temp_dir.joinpath("lv_{}_nreg.dof.gz".format(fr)).exists():
+            mirtk.register(
+                str(self.template.vtk_lv(fr)),
+                str(lv_label_transformed),
+                model="FFD",
+                dofin=str(lv_affine_transform),
+                dofout=str(temp_dir.joinpath("lv_{}_nreg.dof.gz".format(fr))),
+                parin=str(self.segreg_path),
+            )
+        if not temp_dir.joinpath("lv{}final.dof.gz".format(fr)).exists():
+            mirtk.register(
+                str(self.template.lv_endo(fr)),
+                str(mesh.lv_endo),
+                str(self.template.lv_epi(fr)),
+                str(mesh.lv_epi),
+                # "-symmetric",
+                "-par", "Energy function", "PCD(T o P(1:2:end), P(2:2:end))",
+                model="FFD",
+                dofin=str(temp_dir.joinpath("lv_{}_nreg.dof.gz".format(fr))),
+                dofout=str(temp_dir.joinpath("lv{}final.dof.gz".format(fr))),
+                ds=4,
+            )
+        return temp_dir.joinpath("lv{}final.dof.gz".format(fr)), temp_dir.joinpath("rv{}ds8.dof.gz".format(fr))
 
-        mirtk.register(
-            str(template_dir.joinpath("RV_{}.vtk".format(fr))),
-            str(subject.vtks_dir().joinpath("N_RV_{}.vtk".format(fr))),
-            # "-symmetric",
-            "-par", "Point set distance correspondence", "CP",
-            ds=8,
-            model="FFD",
-            dofin=str(subject.tmps_dir().joinpath("rv_{}_nreg.dof.gz".format(fr))),
-            dofout=str(subject.tmps_dir().joinpath("rv{}ds8.dof.gz".format(fr))),
+    def nonrigid_transform(self, mesh: Mesh, lv_nonrigid_transform: Path, rv_nonrigid_transform: Path, fr: Phase,
+                           output_dir: Path):
+        transformed_mesh = Mesh(
+            phase=mesh.phase,
+            dir=output_dir.joinpath("nonrigid")
         )
-
-        mirtk.register(
-            str(template_dir.joinpath("vtk_LV_{}.nii.gz".format(fr))),
-            str(subject.tmps_dir().joinpath("N_vtk_LV_{}.nii.gz".format(fr))),
-            model="FFD",
-            dofin=str(subject.tmps_dir().joinpath("lv_{}_areg.dof.gz".format(fr))),
-            dofout=str(subject.tmps_dir().joinpath("lv_{}_nreg.dof.gz".format(fr))),
-            parin=str(template_dir.joinpath("segreg.txt")),
-        )
-
-        mirtk.register(
-            str(template_dir.joinpath("LVendo_{}.vtk".format(fr))),
-            str(subject.vtks_dir().joinpath("N_LVendo_{}.vtk".format(fr))),
-            str(template_dir.joinpath("LVepi_{}.vtk".format(fr))),
-            str(subject.vtks_dir().joinpath("N_LVepi_{}.vtk".format(fr))),
-            # "-symmetric",
-            "-par", "Energy function", "PCD(T o P(1:2:end), P(2:2:end))",
-            model="FFD",
-            dofin=str(subject.tmps_dir().joinpath("lv_{}_nreg.dof.gz".format(fr))),
-            dofout=str(subject.tmps_dir().joinpath("lv{}final.dof.gz".format(fr))),
-            ds=4,
-        )
-        # same number of points
+        output_dir.joinpath("nonrigid").mkdir(parents=True, exist_ok=True)
         mirtk.match_points(
-            str(template_dir.joinpath("LVendo_{}.vtk".format(fr))),
-            str(subject.vtks_dir().joinpath("N_LVendo_{}.vtk".format(fr))),
-            dofin=str(subject.tmps_dir().joinpath("lv{}final.dof.gz".format(fr))),
-            output=str(subject.vtks_dir().joinpath("F_LVendo_{}.vtk".format(fr))),
+            str(self.template.lv_endo(fr)),
+            str(mesh.lv_endo),
+            dofin=str(lv_nonrigid_transform),
+            output=str(transformed_mesh.lv_endo),
         )
 
         mirtk.match_points(
-            str(template_dir.joinpath("LVepi_{}.vtk".format(fr))),
-            str(subject.vtks_dir().joinpath("N_LVepi_{}.vtk".format(fr))),
-            dofin=str(subject.tmps_dir().joinpath("lv{}final.dof.gz".format(fr))),
-            output=str(subject.vtks_dir().joinpath("F_LVepi_{}.vtk".format(fr))),
+            str(self.template.lv_epi(fr)),
+            str(mesh.lv_epi),
+            dofin=str(lv_nonrigid_transform),
+            output=str(transformed_mesh.lv_epi),
         )
 
         mirtk.transform_points(
-            str(template_dir.joinpath("LVmyo_{}.vtk".format(fr))),
-            str(subject.vtks_dir().joinpath("F_LVmyo_{}.vtk".format(fr))),
-            dofin=str(subject.tmps_dir().joinpath("lv{}final.dof.gz".format(fr))),
+            str(self.template.lv_myo(fr)),
+            str(transformed_mesh.lv_myo),
+            dofin=str(lv_nonrigid_transform),
         )
 
         mirtk.match_points(
-            str(template_dir.joinpath("RV_{}.vtk".format(fr))),
-            str(subject.vtks_dir().joinpath("N_RV_{}.vtk".format(fr))),
-            dofin=str(subject.tmps_dir().joinpath("rv{}ds8.dof.gz".format(fr))),
-            output=str(subject.vtks_dir().joinpath("C_RV_{}.vtk".format(fr))),
+            str(self.template.rv(fr)),
+            str(mesh.rv),
+            dofin=str(rv_nonrigid_transform),
+            output=str(transformed_mesh.rv),
+        )
+        shutil.copy(str(mesh.rv_epi), str(transformed_mesh.rv_epi))
+        return transformed_mesh
+
+    def register(self, mesh: Mesh, landmark_dofs: Path, rv_label: Path, lv_label: Path, output_dir: Path):
+        fr = mesh.phase
+        lv_rigid_transform, rv_rigid_transform = self.rigid_registration(mesh, landmark_dofs, output_dir)
+        rigid_transformed_mesh = self.rigid_transform(mesh, lv_rigid_transform, rv_rigid_transform, output_dir)
+        lv_label_transformed, rv_label_transformed = self.label_rigid_transform(
+            lv_label=lv_label,
+            rv_label=rv_label,
+            lv_rigid_transform=lv_rigid_transform,
+            phase=fr,
+            output_dir=output_dir
         )
 
-        shutil.copy(
-            str(subject.vtks_dir().joinpath("F_LVendo_{}.vtk".format(fr))),
-            subject.vtks_dir().joinpath("S_LVendo_{}.vtk".format(fr))
-        )
-        shutil.copy(
-            str(subject.vtks_dir().joinpath("F_LVepi_{}.vtk".format(fr))),
-            subject.vtks_dir().joinpath("S_LVepi_{}.vtk".format(fr))
-        )
-        shutil.copy(
-            str(subject.vtks_dir().joinpath("F_LVmyo_{}.vtk".format(fr))),
-            subject.vtks_dir().joinpath("S_LVmyo_{}.vtk".format(fr))
-        )
-        shutil.copy(
-            str(subject.vtks_dir().joinpath("F_LVmyo_{}.vtk".format(fr))),
-            subject.vtks_dir().joinpath("C_LVmyo_{}.vtk".format(fr))
+        # affine
+        lv_affine_transform, rv_affine_transform = self.affine_registration(
+            lv_label_transformed, rv_label_transformed, fr, output_dir
         )
 
-        shutil.copy(
-            str(subject.vtks_dir().joinpath("F_LVmyo_{}.vtk".format(fr))),
-            subject.vtks_dir().joinpath("W_LVmyo_{}.vtk".format(fr))
+        # non-rigid
+        lv_nonrigid_transform, rv_nonrigid_transform = self.nonrigid_registration(
+            rigid_transformed_mesh, lv_label_transformed, rv_label_transformed,
+            lv_affine_transform, rv_affine_transform, fr, output_dir
         )
-        shutil.copy(
-            str(subject.vtks_dir().joinpath("C_RV_{}.vtk".format(fr))),
-            subject.vtks_dir().joinpath("S_RV_{}.vtk".format(fr))
+        # same number of points
+        nonrigid_transformed_mesh = self.nonrigid_transform(
+            rigid_transformed_mesh, lv_nonrigid_transform, rv_nonrigid_transform, fr, output_dir
         )
-        shutil.copy(
-            str(subject.vtks_dir().joinpath("C_RV_{}.vtk".format(fr))),
-            subject.vtks_dir().joinpath("W_RV_{}.vtk".format(fr))
+        return nonrigid_transformed_mesh
+
+    @staticmethod
+    def compute_wall_thickness(mesh: Mesh, output_dir: Path):
+        fr = mesh.phase
+        output_lv_thickness = output_dir.joinpath("wt", f"LVmyo_{fr}.vtk")
+        output_rv_thickness = output_dir.joinpath("wt", f"RV_{fr}.vtk")
+        output_lv_thickness.parent.mkdir(parents=True, exist_ok=True)
+
+        mirtk.evaluate_distance(
+            str(mesh.lv_endo),
+            str(mesh.lv_epi),
+            str(output_lv_thickness),
+            name="WallThickness",
+        )
+
+        mirtk.evaluate_distance(
+            str(mesh.rv),
+            str(mesh.rv_epi),
+            str(output_rv_thickness),
+            name="WallThickness",
+        )
+
+        mirtk.convert_pointset(
+            str(output_rv_thickness),
+            str(output_dir.joinpath("rv_{}_wallthickness.txt".format(fr))),
+        )
+        mirtk.convert_pointset(
+            str(output_lv_thickness),
+            str(output_dir.joinpath("lv_myo{}_wallthickness.txt".format(fr))),
         )
 
     @staticmethod
-    def compute(subject, template_dir, fr):
-        """Compute the quantities of the heart with respect to template"""
-
-        mirtk.evaluate_distance(
-            str(subject.vtks_dir().joinpath("F_LVendo_{}.vtk".format(fr))),
-            str(subject.vtks_dir().joinpath("F_LVepi_{}.vtk".format(fr))),
-            name="WallThickness",
-        )
-
-        mirtk.evaluate_distance(
-            str(subject.vtks_dir().joinpath("S_LVendo_{}.vtk".format(fr))),
-            str(template_dir.joinpath("LVendo_{}.vtk".format(fr))),
-            name="WallThickness",
-        )
-        mirtk.evaluate_distance(
-            str(subject.vtks_dir().joinpath("S_LVepi_{}.vtk".format(fr))),
-            str(template_dir.joinpath("LVepi_{}.vtk".format(fr))),
-            name="WallThickness",
-        )
+    def compute_curvature(mesh: Mesh, output_dir: Path):
+        fr = mesh.phase
+        output_lv_curv = output_dir.joinpath("curv", f"LVmyo_{fr}.vtk")
+        output_rv_curv = output_dir.joinpath("curv", f"RV_{fr}.vtk")
+        output_rv_curv.parent.mkdir(parents=True, exist_ok=True)
 
         mirtk.calculate_surface_attributes(
-            str(subject.vtks_dir().joinpath("C_LVmyo_{}.vtk".format(fr))),
-            str(subject.vtks_dir().joinpath("C_LVmyo_{}.vtk".format(fr))),
+            str(mesh.lv_myo),
+            str(output_lv_curv),
             smooth_iterations=64,
         )
 
         mirtk.calculate_surface_attributes(
-            str(subject.vtks_dir().joinpath("C_RV_{}.vtk".format(fr))),
-            str(subject.vtks_dir().joinpath("C_RV_{}.vtk".format(fr))),
+            str(mesh.rv),
+            str(output_rv_curv),
             smooth_iterations=64,
         )
-
-        mirtk.evaluate_distance(
-            str(subject.vtks_dir().joinpath("S_RV_{}.vtk".format(fr))),
-            str(template_dir.joinpath("RV_{}.vtk".format(fr))),
-            "-normal",
-            name="WallThickness",
-        )
-
-        mirtk.evaluate_distance(
-            str(subject.vtks_dir().joinpath("W_RV_{}.vtk".format(fr))),
-            str(subject.vtks_dir().joinpath("N_RVepi_{}.vtk".format(fr))),
-            name="WallThickness",
-        )
-
-        if fr == 'ED':
-            fr_ = 'ed'
-        if fr == 'ES':
-            fr_ = 'es'
-
         mirtk.convert_pointset(
-            str(subject.vtks_dir().joinpath("C_RV_{}.vtk".format(fr))),
-            str(subject.dir.joinpath("rv_{}_curvature.txt".format(fr_))),
+            str(output_rv_curv),
+            str(output_dir.joinpath("rv_{}_curvature.txt".format(fr))),
         )
         mirtk.convert_pointset(
-            str(subject.vtks_dir().joinpath("W_RV_{}.vtk".format(fr))),
-            str(subject.dir.joinpath("rv_{}_wallthickness.txt".format(fr_))),
-        )
-        mirtk.convert_pointset(
-            str(subject.vtks_dir().joinpath("S_RV_{}.vtk".format(fr))),
-            str(subject.dir.joinpath("rv_{}_signeddistances.txt".format(fr_))),
-        )
-
-        mirtk.convert_pointset(
-            str(subject.vtks_dir().joinpath("W_LVmyo_{}.vtk".format(fr))),
-            str(subject.dir.joinpath("lv_myo{}_wallthickness.txt".format(fr_))),
-        )
-        mirtk.convert_pointset(
-            str(subject.vtks_dir().joinpath("C_LVmyo_{}.vtk".format(fr))),
-            str(subject.dir.joinpath("lv_myo{}_curvature.txt".format(fr_))),
-        )
-        mirtk.convert_pointset(
-            str(subject.vtks_dir().joinpath("S_LVmyo_{}.vtk".format(fr))),
-            str(subject.dir.joinpath("lv_myo{}_signeddistances.txt".format(fr_))),
+            str(output_lv_curv),
+            str(output_dir.joinpath("lv_myo{}_curvature.txt".format(fr))),
         )
