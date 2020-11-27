@@ -1,10 +1,9 @@
 import os
 from multiprocessing import Pool
 from functools import partial
-from CMRSegment.subject import Subject
+from CMRSegment.common.subject import Subject
 import mirtk
 from pathlib import Path
-from CMRSegment.common.plot import plot_nii_gz
 import shutil
 
 mirtk.subprocess.showcmd = True

@@ -2,8 +2,7 @@ import nibabel as nib
 import vtk
 import numpy as np
 from typing import List
-
-from CMRSegment.subject import Subject
+from pathlib import Path
 
 
 def check_labels(seg, labels):
@@ -20,7 +19,7 @@ def check_labels(seg, labels):
     return flag 
     
 
-def extract_landmarks(subject: Subject, labels: List = None):
+def extract_landmarks(segmentation_path: Path, output_path: Path, labels: List = None):
     # """ Extract landmarks from a LVSA nifti segmentation """
     # path: working directory
     # segmentation_filename: name of the segmentation file
@@ -29,7 +28,7 @@ def extract_landmarks(subject: Subject, labels: List = None):
     # Load the segmentation nifti
     if labels is None:
         labels = [2, 3]
-    nim = nib.load(str(subject.segmented_ed_path))
+    nim = nib.load(str(segmentation_path))
     affine = nim.affine
     seg = nim.get_data()
 
@@ -69,8 +68,8 @@ def extract_landmarks(subject: Subject, labels: List = None):
         poly.SetPoints(points)
         writer = vtk.vtkPolyDataWriter()
         writer.SetInputData(poly)
-        writer.SetFileName(str(subject.landmark_path))
+        writer.SetFileName(str(output_path))
         writer.Write()
     else:
         print("\n ... Error in labels")
-    return subject.landmark_path
+    return output_path

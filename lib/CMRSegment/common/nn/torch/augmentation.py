@@ -1,6 +1,4 @@
-import torch
-from torchvision import transforms
-from CMRSegment.config import AugmentationConfig
+from CMRSegment.common.config import AugmentationConfig
 import numpy as np
 from typing import Tuple
 from scipy.ndimage import zoom

@@ -1,14 +1,9 @@
-import tensorflow as tf
-import os
-from tqdm import tqdm
 import numpy as np
 import nibabel as nib
 import math
-from CMRSegment.utils import rescale_intensity, ED_ES_histogram_matching
-from CMRSegment.subject import Subject, Image, Segmentation
+from CMRSegment.common.utils import rescale_intensity
 from pathlib import Path
 from CMRSegment.segmentor.tf1 import TF1Segmentor
-from typing import List
 
 
 class TF12DSegmentor(TF1Segmentor):

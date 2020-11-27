@@ -1,20 +1,17 @@
 import torch
-from CMRSegment.nn.torch.data import TorchDataset
-from CMRSegment.nn.torch.data import MultiDataLoader
-from torch.utils.data.sampler import SequentialSampler, RandomSampler
-from torch.utils.data import DataLoader
+from CMRSegment.common.nn.torch.data import TorchDataset
+from CMRSegment.common.nn.torch.data import MultiDataLoader
 
-from CMRSegment.nn.torch import prepare_tensors
+from CMRSegment.common.nn.torch import prepare_tensors
 
-from CMRSegment.nn.torch.loss import TorchLoss
+from CMRSegment.common.nn.torch.loss import TorchLoss
 from torch.optim.optimizer import Optimizer
-from CMRSegment.config import ExperimentConfig
+from CMRSegment.common.config import ExperimentConfig
 from tqdm import tqdm
-from typing import Iterable, Union, Tuple, List, Callable
+from typing import Iterable, Tuple, List, Callable
 from torch.utils.tensorboard import SummaryWriter
 import logging
 from argparse import ArgumentParser
-from torch.utils.data.dataset import Dataset
 from datetime import datetime
 import numpy as np
 

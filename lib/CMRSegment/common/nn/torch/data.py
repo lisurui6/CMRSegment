@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from CMRSegment.config import DatasetConfig, DataConfig, DATA_CONF, AugmentationConfig
+from CMRSegment.common.config import DatasetConfig, DataConfig, AugmentationConfig
 import random
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.sampler import SequentialSampler, RandomSampler
@@ -12,7 +12,7 @@ import torch
 from typing import List, Tuple
 from CMRSegment.common.data_table import DataTable
 from scipy.ndimage import zoom
-from CMRSegment.nn.torch.augmentation import augment
+from CMRSegment.common.nn.torch import augment
 
 
 def construct_training_validation_dataset(

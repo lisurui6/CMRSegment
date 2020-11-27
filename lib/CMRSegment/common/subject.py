@@ -15,28 +15,6 @@ class Phase(Enum):
         return self.value
 
 
-class Artifact:
-    def __init__(self):
-        self.enlarge_phases = []
-        self.ed_segmentation = None
-        self.es_segmentation = None
-        self.landmark = None
-        self.ed_mesh = None
-        self.es_mesh = None
-
-    def set_segmentation(self, segmentation: 'Segmentation'):
-        if segmentation.phase == Phase.ED:
-            self.ed_segmentation = segmentation
-        else:
-            self.es_segmentation = segmentation
-
-    def set_mesh(self, mesh: 'Mesh'):
-        if mesh.phase == Phase.ED:
-            self.ed_mesh = mesh
-        else:
-            self.es_mesh = mesh
-
-
 @dataclass
 class Mesh:
     phase: Union[Phase, str, int]
@@ -62,6 +40,23 @@ class Mesh:
     def lv_myo(self):
         return self.dir.joinpath(f"LVmyo_{self.phase}.vtk")
 
+    def exists(self):
+        return self.rv.exists() and self.rv_epi.exists() and self.lv_endo.exists() and self.lv_epi.exists()\
+               and self.lv_myo.exists()
+
+    def check_valid(self):
+        if self.exists():
+            return True
+        if not self.rv.exists():
+            raise FileNotFoundError(f"RV mesh does not exists at {self.rv}.")
+        if not self.rv_epi.exists():
+            raise FileNotFoundError(f"RV epi mesh does not exists at {self.rv_epi}.")
+        if not self.lv_endo.exists():
+            raise FileNotFoundError(f"LV endo mesh does not exists at {self.lv_endo}.")
+        if not self.lv_epi.exists():
+            raise FileNotFoundError(f"LV epi mesh does not exists at {self.lv_epi}.")
+        if not self.lv_myo.exists():
+            raise FileNotFoundError(f"LV myo mesh does not exists at {self.lv_myo}.")
 
 
 @dataclass
@@ -81,6 +76,7 @@ class Image:
     def __post_init__(self):
         if self.output_dir is None:
             self.output_dir = self.path.parent
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
     @property
     def resampled(self):
@@ -111,10 +107,6 @@ class Subject:
         self.enlarge_phases_dir().mkdir(exist_ok=True)
         self.gray_phases_dir().mkdir(exist_ok=True)
         self.resample_phases_dir().mkdir(exist_ok=True)
-        self.motions_dir().mkdir(exist_ok=True)
-        self.tmps_dir().mkdir(exist_ok=True)
-        self.vtks_dir().mkdir(exist_ok=True)
-        self.dofs_dir().mkdir(exist_ok=True)
 
     @property
     def name(self):
@@ -196,9 +188,6 @@ class Subject:
             paths.append(phase_path)
         return paths
 
-    def dofs_dir(self):
-        return self.output_dir.joinpath("dofs")
-
     def rview_dir(self):
         return self.output_dir.joinpath("4D_rview")
 
@@ -210,25 +199,6 @@ class Subject:
 
     def resample_phases_dir(self):
         return self.output_dir.joinpath("resample_phases")
-
-    def segs_dir(self):
-        return self.output_dir.joinpath("segs")
-
-    def sizes_dir(self):
-        return self.output_dir.joinpath("sizes")
-
-    def vtks_dir(self):
-        return self.output_dir.joinpath("vtks")
-
-    def tmps_dir(self):
-        return self.output_dir.joinpath("tmps")
-
-    def motions_dir(self):
-        return self.output_dir.joinpath("motions")
-
-    def output_dirs(self) -> List[Path]:
-        for subdir in ["dofs", "segs", "tmps", "sizes", "motions", "vtks"]:
-            yield self.output_dir.joinpath(subdir)
 
     def clean(self):
         shutil.rmtree(str(self.output_dir), ignore_errors=True)
@@ -260,3 +230,14 @@ class Template:
 
     def vtk_lv(self, phase: Phase):
         return self.dir.joinpath(f"vtk_LV_{phase}.nii.gz")
+
+    def check_valid(self):
+        for phase in [Phase.ED, Phase.ES]:
+            if not self.rv(phase).exists():
+                raise FileNotFoundError(f"RV {phase} template does not exists at {self.rv(phase)}.")
+            if not self.lv_endo(phase).exists():
+                raise FileNotFoundError(f"LV endo {phase} template does not exists at {self.lv_endo(phase)}.")
+            if not self.lv_epi(phase).exists():
+                raise FileNotFoundError(f"LV epi {phase} template does not exists at {self.lv_epi(phase)}.")
+            if not self.lv_myo(phase).exists():
+                raise FileNotFoundError(f"LV myo {phase} template does not exists at {self.lv_myo(phase)}.")

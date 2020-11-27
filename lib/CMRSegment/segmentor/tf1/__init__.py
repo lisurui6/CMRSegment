@@ -2,16 +2,16 @@ from pathlib import Path
 
 import numpy as np
 import tensorflow as tf
-from typing import List
 
-from CMRSegment.subject import Subject, Image, Segmentation
+from CMRSegment.common.subject import Image, Segmentation
 
 
 class TF1Segmentor:
-    def __init__(self, model_path: Path):
+    def __init__(self, model_path: Path, overwrite: bool = False):
         self.model_path = model_path
         tf.compat.v1.reset_default_graph()
         self._sess = tf.compat.v1.Session()
+        self.overwrite = overwrite
 
     def __enter__(self):
         self._sess.__enter__()
@@ -30,7 +30,6 @@ class TF1Segmentor:
         raise NotImplementedError("Must be implemented by subclasses.")
 
     def apply(self, image: Image) -> Segmentation:
-        """Segment the subject (multiple phases)"""
         np_image, predicted = self.execute(image.path, image.segmented)
         return Segmentation(phase=image.phase, path=image.segmented, image=np_image, predicted=predicted)
 

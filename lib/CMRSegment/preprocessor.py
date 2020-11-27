@@ -1,35 +1,24 @@
 import os
-import glob
 from pathlib import Path
-from CMRSegment.common.constants import LIB_DIR
-import shutil
-import subprocess
-import nibabel as nib
-from CMRSegment.common.plot import plot_nii_gz
 
-import sys
 import mirtk
-from typing import Tuple
 from tqdm import tqdm
-from CMRSegment.subject import Subject
+from CMRSegment.common.subject import Subject
 from multiprocessing import Pool
 from functools import partial
 from typing import List
 
 
-mirtk.subprocess.showcmd = True   # whether to print executed commands with arguments
-
-
 class DataPreprocessor:
-    def __init__(self, force_restart: bool = False):
-        self.force_restart = force_restart
+    def __init__(self, overwrite: bool = False):
+        self.overwrite = overwrite
 
     def find_subjects(self, data_dir: Path):
         subjects = []
         for subject_dir in sorted(os.listdir(str(data_dir))):
             subject_dir = data_dir.joinpath(subject_dir)
             subject = Subject(dir=subject_dir)
-            if self.force_restart:
+            if self.overwrite:
                 subject.clean()
             if not subject.ed_path.exists() or not subject.es_path.exists() or not subject.contrasted_nii_path:
                 print(' Detecting ED/ES phases {}...'.format(subject.nii_path))
@@ -50,13 +39,12 @@ class DataPreprocessor:
         if not subject.dir.is_dir():
             print('  {0} is not a valid directory, do nothing'.format(subject.name))
             return
-        print("\n ... Split sequence")
-
-        if self.force_restart or len(subject.gray_phases) == 0:
+        if self.overwrite or len(subject.gray_phases) == 0:
+            print("\n ... Split sequence")
             mirtk.split_volume(
                 str(subject.contrasted_nii_path), "{}/lvsa_".format(str(subject.gray_phases_dir())), "-sequence"
             )
-        if self.force_restart or len(subject.resample_phases) == 0:
+        if self.overwrite or len(subject.resample_phases) == 0:
             for gray_phase_path in tqdm(subject.gray_phases):
                 mirtk.resample_image(
                     str(gray_phase_path),
@@ -64,8 +52,8 @@ class DataPreprocessor:
                     '-size', 1.25, 1.25, 2,
                 )
 
-        print("\n ... Enlarge preprocessing generation")
-        if self.force_restart or len(subject.enlarge_phases) == 0:
+        if self.overwrite or len(subject.enlarge_phases) == 0:
+            print("\n ... Enlarge preprocessing generation")
             for resample_phase_path in tqdm(subject.resample_phases):
                 mirtk.enlarge_image(
                     str(resample_phase_path),
@@ -80,7 +68,7 @@ class DataPreprocessor:
             self.apply(subject)
         return subjects
 
-    def parallel_run(self,data_dir: Path, n_core: int) -> List[Subject]:
+    def parallel_run(self, data_dir: Path, n_core: int) -> List[Subject]:
         subjects = self.find_subjects(data_dir)
         pool1 = Pool(processes=n_core)
         # multiprocessing preprocessing

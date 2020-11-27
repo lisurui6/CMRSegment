@@ -1,8 +1,8 @@
 import numpy as np
 import nibabel as nib
 import math
-from CMRSegment.utils import rescale_intensity, ED_ES_histogram_matching
-from CMRSegment.subject import Subject, Image, Segmentation
+from CMRSegment.common.utils import rescale_intensity
+from CMRSegment.common.subject import Image, Segmentation
 from pathlib import Path
 from CMRSegment.segmentor.tf1 import TF1Segmentor
 from scipy.ndimage import label
@@ -41,12 +41,15 @@ class TF13DSegmentor(TF1Segmentor):
         if image.ndim == 2:
             image = np.expand_dims(image, axis=2)
         # Intensity rescaling
-        pred_segt = self.run(image)
-        nim2 = nib.Nifti1Image(pred_segt, nim.affine)
-        nim2.header['pixdim'] = nim.header['pixdim']
-        nib.save(nim2, str(output_path))
-        refined_mask(output_path)
-        mirtk.header_tool(str(output_path), str(output_path), target=str(phase_path))
+        if not output_path.exists() or self.overwrite:
+            pred_segt = self.run(image)
+            nim2 = nib.Nifti1Image(pred_segt, nim.affine)
+            nim2.header['pixdim'] = nim.header['pixdim']
+            nib.save(nim2, str(output_path))
+            refined_mask(output_path)
+            mirtk.header_tool(str(output_path), str(output_path), target=str(phase_path))
+        else:
+            pred_segt = nib.load(str(output_path)).get_data()
         return image, pred_segt
 
     def apply(self, image: Image) -> Segmentation:

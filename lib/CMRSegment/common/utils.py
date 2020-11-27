@@ -5,23 +5,25 @@ import mirtk
 from pathlib import Path
 
 
-def extract_rv_label(segmentation_path: Path, output_path: Path):
-    mirtk.calculate_element_wise(
-        str(segmentation_path),
-        "-label", 3, 4,
-        set=255, pad=0,
-        output=str(output_path),
-    )
+def extract_rv_label(segmentation_path: Path, output_path: Path, overwrite: bool = False):
+    if not output_path.exists() or overwrite:
+        mirtk.calculate_element_wise(
+            str(segmentation_path),
+            "-label", 3, 4,
+            set=255, pad=0,
+            output=str(output_path),
+        )
     return output_path
 
 
-def extract_lv_label(segmentation_path, output_path: Path):
-    mirtk.calculate_element_wise(
-        str(segmentation_path),
-        "-label", 3, 4,
-        set=255, pad=0,
-        output=str(output_path),
-    )
+def extract_lv_label(segmentation_path, output_path: Path, overwrite: bool = False):
+    if not output_path.exists() or overwrite:
+        mirtk.calculate_element_wise(
+            str(segmentation_path),
+            "-label", 3, 4,
+            set=255, pad=0,
+            output=str(output_path),
+        )
     return output_path
 
 

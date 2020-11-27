@@ -1,18 +1,14 @@
-import os
 import math
 from pathlib import Path
 import nibabel as nib
-import tensorflow as tf
 import numpy as np
-from tqdm import tqdm
 from scipy.ndimage import label
 import shutil
 
 from typing import List
-from CMRSegment.subject import Subject, Image, Segmentation
-from CMRSegment.utils import rescale_intensity
+from CMRSegment.common.subject import Segmentation
+from CMRSegment.common.utils import rescale_intensity
 import mirtk
-from skimage.exposure import match_histograms
 from CMRSegment.segmentor.tf1 import TF1Segmentor
 
 mirtk.subprocess.showcmd = False
@@ -48,14 +44,17 @@ class TF1CineSegmentor(TF1Segmentor):
             image = np.squeeze(image, axis=-1).astype(np.int16)
         if image.ndim == 2:
             image = np.expand_dims(image, axis=2)
-        pred_segt = self.run(image)
-        pred_segt = refined_mask(pred_segt, phase_path, output_path.parent.joinpath("tmp"))
-        #########################################################################
-        # map back to original size
-        nim2 = nib.Nifti1Image(pred_segt, nim.affine)
-        nim2.header['pixdim'] = nim.header['pixdim']
-        nib.save(nim2, str(output_path))
-        shutil.rmtree(str(output_path.parent.joinpath("tmp")), ignore_errors=True)
+        if not output_path.exists() or self.overwrite:
+            pred_segt = self.run(image)
+            pred_segt = refined_mask(pred_segt, phase_path, output_path.parent.joinpath("tmp"))
+            #########################################################################
+            # map back to original size
+            nim2 = nib.Nifti1Image(pred_segt, nim.affine)
+            nim2.header['pixdim'] = nim.header['pixdim']
+            nib.save(nim2, str(output_path))
+            shutil.rmtree(str(output_path.parent.joinpath("tmp")), ignore_errors=True)
+        else:
+            pred_segt = nib.load(str(output_path)).get_data()
         return image, pred_segt
 
     def save_cine(self, segmentations: List[Segmentation], output_dir: Path):
