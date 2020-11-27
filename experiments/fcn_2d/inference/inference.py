@@ -1,15 +1,14 @@
 import torch
 from pathlib import Path
 from argparse import ArgumentParser
-from pyhocon import ConfigTree, ConfigFactory
-from CMRSegment.config import DataConfig, get_conf
+from pyhocon import ConfigFactory
+from CMRSegment.common.config import get_conf
 from experiments.fcn_2d.networks import FCN2DSegmentationModel
-from CMRSegment.nn.torch.data import Torch2DSegmentationDataset
-from CMRSegment.config import DatasetConfig, DataConfig
+from CMRSegment.common.nn.torch.data import Torch2DSegmentationDataset
+from CMRSegment.common.config import DatasetConfig, DataConfig
 import numpy as np
 import nibabel as nib
-import shutil
-from CMRSegment.nn.torch import prepare_tensors
+from CMRSegment.common.nn.torch import prepare_tensors
 
 
 TRAIN_CONF_PATH = Path(__file__).parent.parent.joinpath("train.conf")

@@ -3,11 +3,11 @@ import shutil
 from pathlib import Path
 from argparse import ArgumentParser
 from experiments.fcn_3d.network import UNet
-from CMRSegment.nn.torch.experiment import Experiment, ExperimentConfig
-from CMRSegment.nn.torch.data import construct_training_validation_dataset
-from CMRSegment.nn.torch.loss import FocalLoss, DiceCoeff, BCELoss, DiceCoeffWithLogits
-from CMRSegment.config import DataConfig, get_conf, AugmentationConfig
-from pyhocon import ConfigTree, ConfigFactory
+from CMRSegment.common.nn.torch import Experiment, ExperimentConfig
+from CMRSegment.common.nn.torch.data import construct_training_validation_dataset
+from CMRSegment.common.nn.torch.loss import FocalLoss, BCELoss, DiceCoeffWithLogits
+from CMRSegment.common.config import DataConfig, get_conf, AugmentationConfig
+from pyhocon import ConfigFactory
 from experiments.fcn_3d.inference.inference import inference
 
 TRAIN_CONF_PATH = Path(__file__).parent.joinpath("train.conf")
