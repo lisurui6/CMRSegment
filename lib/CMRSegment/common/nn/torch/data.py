@@ -12,7 +12,7 @@ import torch
 from typing import List, Tuple
 from CMRSegment.common.data_table import DataTable
 from scipy.ndimage import zoom
-from CMRSegment.common.nn.torch import augment
+from CMRSegment.common.nn.torch.augmentation import augment
 
 
 def construct_training_validation_dataset(

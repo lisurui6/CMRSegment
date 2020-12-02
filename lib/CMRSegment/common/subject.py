@@ -77,18 +77,37 @@ class Image:
         if self.output_dir is None:
             self.output_dir = self.path.parent
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.output_dir.joinpath("resampled").mkdir(parents=True, exist_ok=True)
+        self.output_dir.joinpath("enlarged").mkdir(parents=True, exist_ok=True)
+        self.output_dir.joinpath("segmented").mkdir(parents=True, exist_ok=True)
 
     @property
     def resampled(self):
-        return self.output_dir.joinpath(f"resampled_{self.phase}.nii.gz")
+        return self.output_dir.joinpath("resampled", f"lvsa_{self.phase}.nii.gz")
 
     @property
     def enlarged(self):
-        return self.output_dir.joinpath(f"enlarged_{self.phase}.nii.gz")
+        return self.output_dir.joinpath("enlarged", f"lvsa_{self.phase}.nii.gz")
 
     @property
     def segmented(self):
-        return self.output_dir.joinpath(f"segmented_{self.phase}.nii.gz")
+        return self.output_dir.joinpath("segmented", f"lvsa_{self.phase}.nii.gz")
+
+
+@dataclass
+class Cine:
+    dir: Path
+
+    @property
+    def paths(self):
+        paths = []
+        for phase_name in os.listdir(str(self.dir)):
+            phase_path = self.dir.joinpath(phase_name)
+            paths.append(phase_path)
+        return paths
+
+    def __iter__(self):
+        return iter(self.paths)
 
 
 class Subject:
@@ -102,7 +121,7 @@ class Subject:
         self.mkdir()
 
     def mkdir(self):
-        self.output_dir.mkdir(exist_ok=True)
+        self.output_dir.mkdir(exist_ok=True, parents=True)
         self.rview_dir().mkdir(exist_ok=True)
         self.enlarge_phases_dir().mkdir(exist_ok=True)
         self.gray_phases_dir().mkdir(exist_ok=True)

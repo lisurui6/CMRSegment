@@ -24,9 +24,7 @@ def main():
     params_dir = Path(args.params_dir)
     coregister = Coregister(
         template_dir=params_dir,
-        segareg_path=params_dir.joinpath("segareg.txt"),
-        segreg_path=params_dir.joinpath("segreg.txt"),
-        spnreg_path=params_dir.joinpath("spnreg.txt"),
+        param_dir=params_dir
     )
     landmark_path = Path(args.landmark_path)
     segmentation = Segmentation(

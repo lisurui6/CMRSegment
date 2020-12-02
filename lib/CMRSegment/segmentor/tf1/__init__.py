@@ -1,17 +1,15 @@
-from pathlib import Path
-
 import numpy as np
 import tensorflow as tf
+from pathlib import Path
 
-from CMRSegment.common.subject import Image, Segmentation
+from CMRSegment.segmentor import Segmentor
 
 
-class TF1Segmentor:
+class TF1Segmentor(Segmentor):
     def __init__(self, model_path: Path, overwrite: bool = False):
-        self.model_path = model_path
         tf.compat.v1.reset_default_graph()
         self._sess = tf.compat.v1.Session()
-        self.overwrite = overwrite
+        super().__init__(model_path, overwrite)
 
     def __enter__(self):
         self._sess.__enter__()
@@ -25,14 +23,10 @@ class TF1Segmentor:
         self._sess.close()
         self._sess.__exit__(exc_type, exc_val, exc_tb)
 
-    def run(self, image: np.ndarray, training: bool = False) -> np.ndarray:
-        """Call sess.run()"""
-        raise NotImplementedError("Must be implemented by subclasses.")
-
-    def apply(self, image: Image) -> Segmentation:
-        np_image, predicted = self.execute(image.path, image.segmented)
-        return Segmentation(phase=image.phase, path=image.segmented, image=np_image, predicted=predicted)
-
     def execute(self, phase_path: Path, output_dir: Path):
         """Segment a 3D volume cardiac phase from phase_path, save to output_dir"""
+        raise NotImplementedError("Must be implemented by subclasses.")
+
+    def run(self, image: np.ndarray) -> np.ndarray:
+        """Call sess.run()"""
         raise NotImplementedError("Must be implemented by subclasses.")

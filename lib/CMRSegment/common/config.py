@@ -1,7 +1,7 @@
 import dataclasses
 from pathlib import Path
 from pyhocon import ConfigTree, ConfigFactory
-from CMRSegment.common.constants import LIB_DIR
+from CMRSegment.common.constants import LIB_DIR, ROOT_DIR
 from tempfile import gettempdir
 from datetime import datetime
 from typing import List, Tuple

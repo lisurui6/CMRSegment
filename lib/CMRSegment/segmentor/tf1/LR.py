@@ -7,7 +7,7 @@ from CMRSegment.segmentor.tf1 import TF1Segmentor
 
 
 class TF12DSegmentor(TF1Segmentor):
-    def run(self, image: np.ndarray, training: bool = False) -> np.ndarray:
+    def run(self, image: np.ndarray) -> np.ndarray:
         X, Y = image.shape
         image = np.expand_dims(image, axis=2)
         # Intensity rescaling

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from CMRSegment.common.subject import Mesh, Segmentation, Template, Phase
 from CMRSegment.common.utils import extract_lv_label, extract_rv_label
+from CMRSegment.common.config import CoregisterConfig
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger("CMRSegment.coregister")
@@ -12,10 +13,13 @@ LOGGER = logging.getLogger("CMRSegment.coregister")
 
 # TODO: multi process
 class Coregister:
-    def __init__(self, template_dir: Path, segareg_path: Path, segreg_path: Path, spnreg_path: Path,
-                 overwrite: bool = False):
+    def __init__(self, template_dir: Path, param_dir: Path, overwrite: bool = False):
         self.template = Template(dir=template_dir)
         self.template.check_valid()
+        segareg_path = param_dir.joinpath("segareg.txt")
+        segreg_path = param_dir.joinpath("segreg.txt")
+        spnreg_path = param_dir.joinpath("spnreg.txt")
+
         if not segreg_path.exists():
             raise FileNotFoundError(f"segreg.txt does not exist at {segreg_path}")
         if not spnreg_path.exists():

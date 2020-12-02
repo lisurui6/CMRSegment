@@ -1,16 +1,19 @@
+import math
+import mirtk
+import shutil
 import numpy as np
 import nibabel as nib
-import math
+from typing import Tuple
+from pathlib import Path
+from scipy.ndimage import label
+
+from CMRSegment.segmentor.tf1 import TF1Segmentor
 from CMRSegment.common.utils import rescale_intensity
 from CMRSegment.common.subject import Image, Segmentation
-from pathlib import Path
-from CMRSegment.segmentor.tf1 import TF1Segmentor
-from scipy.ndimage import label
-import mirtk
 
 
 class TF13DSegmentor(TF1Segmentor):
-    def run(self, image: np.ndarray, training: bool = False) -> np.ndarray:
+    def run(self, image: np.ndarray) -> np.ndarray:
         image = rescale_intensity(image, (1, 99))
         # Pad the image size to be a factor of 16 so that the downsample and upsample procedures
         # in the network will result in the same image size at each resolution level.
@@ -32,29 +35,29 @@ class TF13DSegmentor(TF1Segmentor):
         pred_segt = pred_segt[x_pre:x_pre + X, y_pre:y_pre + Y, z1_ - z1:z1_ - z1 + Z]
         return pred_segt
 
-    def execute(self, phase_path: Path, output_path: Path):
-        # Read the image
+    def execute(self, phase_path: Path, output_path: Path) -> Tuple[np.ndarray, np.ndarray]:
         nim = nib.load(str(phase_path))
         image = nim.get_data()
         if image.ndim == 4:
             image = np.squeeze(image, axis=-1).astype(np.int16)
         if image.ndim == 2:
             image = np.expand_dims(image, axis=2)
-        # Intensity rescaling
         if not output_path.exists() or self.overwrite:
             pred_segt = self.run(image)
+            pred_segt = refined_mask(pred_segt, phase_path, output_path.parent.joinpath("tmp"))
+            # map back to original size
             nim2 = nib.Nifti1Image(pred_segt, nim.affine)
             nim2.header['pixdim'] = nim.header['pixdim']
             nib.save(nim2, str(output_path))
-            refined_mask(output_path)
-            mirtk.header_tool(str(output_path), str(output_path), target=str(phase_path))
         else:
             pred_segt = nib.load(str(output_path)).get_data()
         return image, pred_segt
 
     def apply(self, image: Image) -> Segmentation:
-        mirtk.resample_image(str(image.path), str(image.resampled), '-size', 1.25, 1.25, 2)
-        mirtk.enlarge_image(str(image.resampled), str(image.enlarged), z=20, value=0)
+        if self.overwrite or not image.resampled.exists():
+            mirtk.resample_image(str(image.path), str(image.resampled), '-size', 1.25, 1.25, 2)
+        if self.overwrite or not image.enlarged.exists():
+            mirtk.enlarge_image(str(image.resampled), str(image.enlarged), z=20, value=0)
         image.path = image.enlarged
         return super().apply(image)
 
@@ -65,8 +68,16 @@ def get_labels(seg, label):
     return mask
 
 
-def refined_mask(mask_path: Path):
-    nim = nib.load(str(mask_path))
+def refined_mask(pred_segt: np.ndarray, phase_path: Path, tmp_dir: Path):
+    nim = nib.load(str(phase_path))
+    ###########################################################################
+    nim2 = nib.Nifti1Image(pred_segt, nim.affine)
+    nim2.header['pixdim'] = nim.header['pixdim']
+    tmp_dir.mkdir(exist_ok=True)
+    tmp_path = tmp_dir.joinpath(phase_path.name)
+    nib.save(nim2, str(tmp_path))
+    ###########################################################################
+    nim = nib.load(str(tmp_path))
     lvsa_data = nim.get_data()
     lvsa_data_bin = np.where(lvsa_data > 0, 1, lvsa_data)
     labelled_mask, num_labels = label(lvsa_data_bin)
@@ -84,4 +95,10 @@ def refined_mask(mask_path: Path):
     final_mask[rv[:, :, :] == 1] = 3
     nim2 = nib.Nifti1Image(final_mask[:, :, :], affine=np.eye(4))
     nim2.header['pixdim'] = nim.header['pixdim']
-    nib.save(nim2, str(mask_path))
+    nib.save(nim2, str(tmp_path))
+    mirtk.header_tool(str(tmp_path), str(tmp_path), target=str(phase_path))
+    nim = nib.load(str(tmp_path))
+    pred_segt = nim.get_data()
+    pred_segt = np.squeeze(pred_segt, axis=-1)
+    shutil.rmtree(str(tmp_dir), ignore_errors=True)
+    return pred_segt
