@@ -5,7 +5,6 @@ from CMRSegment.coregister import Coregister
 from CMRSegment.extractor.mesh import MeshExtractor
 
 from CMRSegment.extractor.landmark import extract_landmarks
-from CMRSegment.segmentor.tf1.HR import TF13DSegmentor
 from CMRSegment.common.subject import Image, Phase, Cine
 from CMRSegment.pipeline.config import PipelineConfig
 
@@ -29,9 +28,17 @@ class CMRPipeline:
                 overwrite=self.config.overwrite
             )
         if self.config.segment:
-            hr_segmentor = TF13DSegmentor(
-                model_path=self.config.segment_config.model_path, overwrite=self.config.overwrite
-            )
+            if not self.config.segment_config.torch:
+                from CMRSegment.segmentor.tf1.HR import TF13DSegmentor
+
+                hr_segmentor = TF13DSegmentor(
+                    model_path=self.config.segment_config.model_path, overwrite=self.config.overwrite
+                )
+            else:
+                from CMRSegment.segmentor.torch import TorchSegmentor
+                hr_segmentor = TorchSegmentor(
+                    model_path=self.config.segment_config.model_path, overwrite=self.config.overwrite
+                )
             hr_segmentor.__enter__()
             cine_segmentor = CineSegmentor(phase_segmentor=hr_segmentor)
         subjects = preprocessor.run(data_dir=data_dir, output_dir=self.config.output_dir)
