@@ -91,7 +91,7 @@ class Image:
 
     @property
     def segmented(self):
-        return self.output_dir.joinpath("segmented", f"lvsa_{self.phase}.nii.gz")
+        return self.output_dir.joinpath(f"LVSA_seg_{self.phase}.nii.gz")
 
 
 @dataclass

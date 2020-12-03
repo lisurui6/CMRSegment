@@ -52,7 +52,7 @@ class CMRPipeline:
             for phase, phase_path in zip([Phase.ED, Phase.ES], [subject.ed_path, subject.es_path]):
                 image = Image(
                     path=phase_path, phase=phase,
-                    output_dir=subject.output_dir.joinpath("segmentation", "ED_ES")
+                    output_dir=subject.output_dir
                 )
                 if self.config.segment:
                     segmentation = hr_segmentor.apply(image)
