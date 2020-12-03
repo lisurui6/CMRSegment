@@ -9,13 +9,13 @@ import multiprocessing.pool as mpool
 from multiprocessing.util import debug
 #############################
 
+
 # Perform motion tracking for cine MR
 def track_cine(data_dir, par_dir, tamplate_dir):
         
     motion_dir = os.path.join(data_dir, 'motion')
 
-    n_frame    = len(glob.glob('{0}/lvsa_??.nii.gz'.format(motion_dir)))
-    
+    n_frame = len(glob.glob('{0}/lvsa_??.nii.gz'.format(motion_dir)))
 
     print("\n ...  Inter-frame motion estimation")
 

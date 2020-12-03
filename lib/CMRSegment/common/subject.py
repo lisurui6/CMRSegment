@@ -122,10 +122,7 @@ class Subject:
 
     def mkdir(self):
         self.output_dir.mkdir(exist_ok=True, parents=True)
-        self.rview_dir().mkdir(exist_ok=True)
-        self.enlarge_phases_dir().mkdir(exist_ok=True)
         self.gray_phases_dir().mkdir(exist_ok=True)
-        self.resample_phases_dir().mkdir(exist_ok=True)
 
     @property
     def name(self):
@@ -136,68 +133,8 @@ class Subject:
         return self.output_dir.joinpath("landmark.vtk")
 
     @property
-    def enlarged_nii_path(self):
-        return self.output_dir.joinpath("enlarged_{}".format(self.nii_path.name))
-
-    @property
     def contrasted_nii_path(self):
         return self.output_dir.joinpath("contrasted_{}".format(self.nii_path.name))
-
-    @property
-    def enlarged_es_path(self):
-        return self.output_dir.joinpath("enlarged_{}".format(self.es_path.name))
-
-    @property
-    def enlarged_ed_path(self):
-        return self.output_dir.joinpath("enlarged_{}".format(self.ed_path.name))
-
-    @property
-    def segmented_es_path(self):
-        return self.output_dir.joinpath("segmented_ES.nii.gz")
-
-    @property
-    def segmented_ed_path(self):
-        return self.output_dir.joinpath("segmented_ED.nii.gz")
-
-    @property
-    def segmented_ed_es(self):
-        return self.segmented_ed_path, self.segmented_es_path
-
-    @property
-    def segmented_LR_es_path(self):
-        return self.output_dir.joinpath("segmented_LR_{}".format(self.es_path.name))
-
-    @property
-    def segmented_LR_ed_path(self):
-        return self.output_dir.joinpath("segmented_LR_{}".format(self.ed_path.name))
-
-    @property
-    def segmented_LR_ed_es(self):
-        return self.segmented_LR_ed_path, self.segmented_LR_es_path
-
-    @property
-    def resampled_ed_path(self):
-        return self.output_dir.joinpath("resampled_{}".format(self.ed_path.name))
-
-    @property
-    def resampled_es_path(self):
-        return self.output_dir.joinpath("resampled_{}".format(self.es_path.name))
-
-    @property
-    def enlarge_phases(self):
-        paths = []
-        for phase_name in os.listdir(str(self.enlarge_phases_dir())):
-            phase_path = self.enlarge_phases_dir().joinpath(phase_name)
-            paths.append(phase_path)
-        return paths
-
-    @property
-    def resample_phases(self):
-        paths = []
-        for phase_name in os.listdir(str(self.resample_phases_dir())):
-            phase_path = self.resample_phases_dir().joinpath(phase_name)
-            paths.append(phase_path)
-        return paths
 
     @property
     def gray_phases(self):
@@ -207,17 +144,8 @@ class Subject:
             paths.append(phase_path)
         return paths
 
-    def rview_dir(self):
-        return self.output_dir.joinpath("4D_rview")
-
-    def enlarge_phases_dir(self):
-        return self.output_dir.joinpath("enlarge_phases")
-
     def gray_phases_dir(self):
         return self.output_dir.joinpath("gray_phases")
-
-    def resample_phases_dir(self):
-        return self.output_dir.joinpath("resample_phases")
 
     def clean(self):
         shutil.rmtree(str(self.output_dir), ignore_errors=True)

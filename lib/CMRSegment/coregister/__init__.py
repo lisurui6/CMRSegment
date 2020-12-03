@@ -5,7 +5,6 @@ from pathlib import Path
 
 from CMRSegment.common.subject import Mesh, Segmentation, Template, Phase
 from CMRSegment.common.utils import extract_lv_label, extract_rv_label
-from CMRSegment.common.config import CoregisterConfig
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger("CMRSegment.coregister")

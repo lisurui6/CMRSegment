@@ -14,8 +14,7 @@ class DataPreprocessor:
     def run(self, data_dir: Path, output_dir: Path) -> List[Subject]:
         subjects = []
         for subject_dir in sorted(os.listdir(str(data_dir))):
-            subject_dir = data_dir.joinpath(subject_dir)
-            subject = Subject(dir=subject_dir, output_dir=output_dir.joinpath(subject_dir))
+            subject = Subject(dir=data_dir.joinpath(subject_dir), output_dir=output_dir.joinpath(subject_dir))
             if self.overwrite:
                 subject.clean()
             if not subject.ed_path.exists() or not subject.es_path.exists() or not subject.contrasted_nii_path:

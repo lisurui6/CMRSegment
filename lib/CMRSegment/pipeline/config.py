@@ -71,7 +71,6 @@ class PipelineConfig:
     @staticmethod
     def argument_parser() -> ArgumentParser:
         parser = ArgumentParser()
-        parser.add_argument("-i", "--data-dir", dest="data_dir", required=True, type=str)
         parser.add_argument("-o", "--output-dir", dest="output_dir", required=True, type=str)
         parser.add_argument("--overwrite", dest="overwrite", action="store_true")
 

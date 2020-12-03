@@ -1,4 +1,5 @@
 import torch
+import shutil
 from pathlib import Path
 from pyhocon import ConfigFactory
 from argparse import ArgumentParser
@@ -27,6 +28,7 @@ def parse_args():
 def main():
     args = parse_args()
     output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
     if args.model_path is not None and args.checkpoint_path is not None:
         raise ValueError("Must input either a model path or a checkpoint path.")
     if args.model_path is None and args.checkpoint_path is None:
@@ -40,11 +42,15 @@ def main():
             n_classes=get_conf(train_conf, group="network", key="n_classes"),
             n_filters=get_conf(train_conf, group="network", key="n_filters"),
         )
+        checkpoint = torch.load(str(Path(args.checkpoint_path)), map_location=torch.device(args.device))
+        network.load_state_dict(checkpoint)
+        network.cuda(args.device)
         torch.save(network, str(output_dir.joinpath("inference_model.pt")))
         model_path = output_dir.joinpath("inference_model.pt")
     else:
         model_path = Path(args.model_path)
     segmentor = TorchSegmentor(model_path=model_path, device=args.device, overwrite=args.overwrite)
+    shutil.copy(str(Path(args.input_path)), str(output_dir))
     segmentation = segmentor.apply(
         image=Image(phase=args.phase, output_dir=output_dir, path=Path(args.input_path))
     )

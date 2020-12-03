@@ -34,8 +34,6 @@ class TorchSegmentor(Segmentor):
         # print(predicted.shape, final_predicted.shape)
 
         for i in range(predicted.shape[0]):
-            a = predicted[i, :, :, :] > 0.5
-            # print(a.shape)
             final_predicted[predicted[i, :, :, :] > 0.5] = i + 1
         # image = nim.get_data()
         final_predicted = np.transpose(final_predicted, [1, 2, 0])
@@ -47,12 +45,12 @@ class TorchSegmentor(Segmentor):
         if image.ndim == 4:
             image = np.squeeze(image, axis=-1).astype(np.int16)
         image = image.astype(np.float32)
-        X, Y, Z = image.shape
-        image = resize_image(image, (self.resize_size[0], self.resize_size[1], self.resize_size[2]), 0)
-        image = np.transpose(image, (2, 0, 1))
-        image = rescale_intensity(image, (1.0, 99.0))
-        image = np.expand_dims(image, 0)
-        predicted = self.run(image)
+        resized_image = resize_image(image, (self.resize_size[0], self.resize_size[1], self.resize_size[2]), 0)
+        resized_image = np.transpose(resized_image, (2, 0, 1))
+        resized_image = rescale_intensity(resized_image, (1.0, 99.0))
+        resized_image = np.expand_dims(resized_image, 0)
+        predicted = self.run(resized_image)
+        predicted = resize_image(predicted, image.shape, 0)
         nim2 = nib.Nifti1Image(predicted, nim.affine)
         nim2.header['pixdim'] = nim.header['pixdim']
         nib.save(nim2, str(output_path))
