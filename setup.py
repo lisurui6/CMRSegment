@@ -10,6 +10,11 @@ setup(
     package_dir={"": "lib"},
     packages=find_namespace_packages(where="lib"),
     setup_requires=["setuptools >= 40.0.0"],
-    package_data={"": ["*.conf"]},
-    entry_points={},
+    package_data={"": ["*.conf", "*.txt"]},
+    entry_points={
+        "console_scripts": [
+            "cmrtk-pipeline = CMRSegment.pipeline.cli:main",
+            "cmrtk-segmentor = CMRSegment.segmentor.cli:main",
+        ]
+    },
 )
