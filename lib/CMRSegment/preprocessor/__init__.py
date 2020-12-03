@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from typing import List
-
+import shutil
 import mirtk
 from CMRSegment.common.subject import Subject
 
@@ -17,23 +17,25 @@ class DataPreprocessor:
             subject = Subject(dir=data_dir.joinpath(subject_dir), output_dir=output_dir.joinpath(subject_dir))
             if self.overwrite:
                 subject.clean()
-            if not subject.ed_path.exists() or not subject.es_path.exists() or not subject.contrasted_nii_path:
-                print(' Detecting ED/ES phases {}...'.format(subject.nii_path))
-                mirtk.auto_contrast(str(subject.nii_path), str(subject.contrasted_nii_path))
-                mirtk.detect_cardiac_phases(
-                    str(subject.contrasted_nii_path), output_ed=str(subject.ed_path), output_es=str(subject.es_path)
-                )
-                print('  Found ED/ES phases ...')
+            shutil.copy(str(subject.dir.joinpath("lvsa_ED.nii.gz")), str(subject.output_dir))
+            shutil.copy(str(subject.dir.joinpath("lvsa_ED.nii.gz")), str(subject.output_dir))
+            # if not subject.ed_path.exists() or not subject.es_path.exists() or not subject.contrasted_nii_path:
+            #     print(' Detecting ED/ES phases {}...'.format(subject.nii_path))
+            #     mirtk.auto_contrast(str(subject.nii_path), str(subject.contrasted_nii_path))
+            #     mirtk.detect_cardiac_phases(
+            #         str(subject.contrasted_nii_path), output_ed=str(subject.ed_path), output_es=str(subject.es_path)
+            #     )
+            #     print('  Found ED/ES phases ...')
 
             if not subject.ed_path.exists() or not subject.es_path.exists():
                 print(" ED {0} or ES {1} does not exist. Skip.".format(subject.ed_path, subject.es_path))
                 continue
             subjects.append(subject)
-            if self.overwrite or len(subject.gray_phases) == 0:
-                print("\n ... Split sequence")
-                mirtk.split_volume(
-                    str(subject.contrasted_nii_path), "{}/lvsa_".format(str(subject.gray_phases_dir())), "-sequence"
-                )
+            # if self.overwrite or len(subject.gray_phases) == 0:
+            #     print("\n ... Split sequence")
+            #     mirtk.split_volume(
+            #         str(subject.contrasted_nii_path), "{}/lvsa_".format(str(subject.gray_phases_dir())), "-sequence"
+            #     )
         return subjects
 
     # def parallel_run(self, data_dir: Path, n_core: int) -> List[Subject]:
