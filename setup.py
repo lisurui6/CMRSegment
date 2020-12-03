@@ -17,4 +17,5 @@ setup(
             "cmrtk-torch-segmentor = CMRSegment.segmentor.torch.cli:main",
         ]
     },
+    include_package_data=True,
 )
