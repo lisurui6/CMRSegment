@@ -14,7 +14,7 @@ setup(
     entry_points={
         "console_scripts": [
             "cmrtk-pipeline = CMRSegment.pipeline.cli:main",
-            "cmrtk-segmentor = CMRSegment.segmentor.cli:main",
+            "cmrtk-torch-segmentor = CMRSegment.segmentor.torch.cli:main",
         ]
     },
 )
