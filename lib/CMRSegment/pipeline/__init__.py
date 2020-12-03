@@ -34,12 +34,12 @@ class CMRPipeline:
                 hr_segmentor = TF13DSegmentor(
                     model_path=self.config.segment_config.model_path, overwrite=self.config.overwrite
                 )
+                hr_segmentor.__enter__()
             else:
                 from CMRSegment.segmentor.torch import TorchSegmentor
                 hr_segmentor = TorchSegmentor(
                     model_path=self.config.segment_config.model_path, overwrite=self.config.overwrite
                 )
-            hr_segmentor.__enter__()
             cine_segmentor = CineSegmentor(phase_segmentor=hr_segmentor)
         subjects = preprocessor.run(data_dir=data_dir, output_dir=self.config.output_dir)
         for subject in subjects:
