@@ -18,10 +18,10 @@ class DataPreprocessor:
             subject = Subject(dir=data_dir.joinpath(subject_dir), output_dir=output_dir.joinpath(subject_dir))
             if self.overwrite:
                 subject.clean()
-            shutil.copy(str(subject.dir.joinpath("lvsa_ED.nii.gz")), str(subject.output_dir))
-            shutil.copy(str(subject.dir.joinpath("lvsa_ES.nii.gz")), str(subject.output_dir))
+            # shutil.copy(str(subject.dir.joinpath("lvsa_ED.nii.gz")), str(subject.output_dir))
+            # shutil.copy(str(subject.dir.joinpath("lvsa_ES.nii.gz")), str(subject.output_dir))
             print(subject_dir)
-            if not subject.ed_path.exists() or not subject.es_path.exists() or not subject.contrasted_nii_path:
+            if not subject.ed_path.exists() or not subject.es_path.exists() or not subject.contrasted_nii_path.exists():
                 print(' Detecting ED/ES phases {}...'.format(subject.nii_path))
                 if not self.use_irtk:
                     mirtk.auto_contrast(str(subject.nii_path), str(subject.contrasted_nii_path))
@@ -44,7 +44,7 @@ class DataPreprocessor:
                 continue
             subjects.append(subject)
             if self.overwrite or len(subject.gray_phases) == 0:
-                print("\n ... Split sequence")
+                print(" ... Split sequence")
                 if not self.use_irtk:
                     mirtk.split_volume(
                         str(subject.contrasted_nii_path), "{}/lvsa_".format(str(subject.gray_phases_dir())), "-sequence"
