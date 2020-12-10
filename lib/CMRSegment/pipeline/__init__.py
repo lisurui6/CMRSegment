@@ -15,7 +15,7 @@ class CMRPipeline:
         self.config = config
 
     def run(self, data_dir: Path):
-        preprocessor = DataPreprocessor(overwrite=self.config.overwrite)
+        preprocessor = DataPreprocessor(overwrite=self.config.overwrite, use_irtk=self.config.use_irtk)
         if self.config.extract:
             mesh_extractor = MeshExtractor(
                 iso_value=self.config.extract_config.iso_value,
