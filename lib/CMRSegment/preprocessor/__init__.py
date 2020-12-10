@@ -1,4 +1,4 @@
-import os
+import subprocess
 from pathlib import Path
 from typing import List
 import shutil
@@ -33,13 +33,13 @@ class DataPreprocessor:
                               f'{str(subject.nii_path)} '\
                               f'{str(subject.contrasted_nii_path)}'
                     print(command)
-                    os.system(command)
+                    subprocess.call(command)
                     command = 'cardiacphasedetection '\
                               f'{str(subject.contrasted_nii_path)} '\
                               f'{str(subject.ed_path)} '\
                               f'{str(subject.es_path)}'
                     print(command)
-                    os.system(command)
+                    subprocess.call(command)
                 print('  Found ED/ES phases ...')
 
             if not subject.ed_path.exists() or not subject.es_path.exists():
@@ -56,7 +56,7 @@ class DataPreprocessor:
                     command = f'splitvolume {str(subject.contrasted_nii_path)} '\
                               f'{str(subject.gray_phases_dir())}/lvsa_ -sequence'
                     print(command)
-                    os.system(command)
+                    subprocess.call(command)
 
         return subjects
 
