@@ -34,13 +34,13 @@ class DataPreprocessor:
                               f'{str(subject.nii_path)} '\
                               f'{str(subject.contrasted_nii_path)}'
                     print(command)
-                    subprocess.call(command)
+                    subprocess.Popen(command, stdin=subprocess.PIPE)
                     command = 'cardiacphasedetection '\
                               f'{str(subject.contrasted_nii_path)} '\
                               f'{str(subject.ed_path)} '\
                               f'{str(subject.es_path)}'
                     print(command)
-                    subprocess.call(command)
+                    subprocess.Popen(command, stdin=subprocess.PIPE)
                 print('  Found ED/ES phases ...')
 
             if not subject.ed_path.exists() or not subject.es_path.exists():
@@ -57,7 +57,7 @@ class DataPreprocessor:
                     command = f'splitvolume {str(subject.contrasted_nii_path)} '\
                               f'{str(subject.gray_phases_dir())}/lvsa_ -sequence'
                     print(command)
-                    subprocess.call(command)
+                    subprocess.Popen(command, stdin=subprocess.PIPE)
 
         return subjects
 
