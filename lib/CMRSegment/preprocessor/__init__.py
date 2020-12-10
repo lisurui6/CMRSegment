@@ -29,14 +29,17 @@ class DataPreprocessor:
                         str(subject.contrasted_nii_path), output_ed=str(subject.ed_path), output_es=str(subject.es_path)
                     )
                 else:
-                    os.system('autocontrast '
-                              f'{str(subject.nii_path)} '
-                              f'{str(subject.contrasted_nii_path)} >/dev/nul ')
-
-                    os.system('cardiacphasedetection '
-                              f'{str(subject.contrasted_nii_path)} '
-                              f'{str(subject.ed_path)} '
-                              f'{str(subject.es_path)} >/dev/nul ')
+                    command = 'autocontrast '\
+                              f'{str(subject.nii_path)} '\
+                              f'{str(subject.contrasted_nii_path)}'
+                    print(command)
+                    os.system(command)
+                    command = 'cardiacphasedetection '\
+                              f'{str(subject.contrasted_nii_path)} '\
+                              f'{str(subject.ed_path)} '\
+                              f'{str(subject.es_path)}'
+                    print(command)
+                    os.system(command)
                 print('  Found ED/ES phases ...')
 
             if not subject.ed_path.exists() or not subject.es_path.exists():
@@ -50,8 +53,10 @@ class DataPreprocessor:
                         str(subject.contrasted_nii_path), "{}/lvsa_".format(str(subject.gray_phases_dir())), "-sequence"
                     )
                 else:
-                    os.system(f'splitvolume {str(subject.contrasted_nii_path)} '
-                              f'{str(subject.gray_phases_dir())}/lvsa_ -sequence')
+                    command = f'splitvolume {str(subject.contrasted_nii_path)} '\
+                              f'{str(subject.gray_phases_dir())}/lvsa_ -sequence'
+                    print(command)
+                    os.system(command)
 
         return subjects
 
