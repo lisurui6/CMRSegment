@@ -20,6 +20,7 @@ class DataPreprocessor:
                 subject.clean()
             shutil.copy(str(subject.dir.joinpath("lvsa_ED.nii.gz")), str(subject.output_dir))
             shutil.copy(str(subject.dir.joinpath("lvsa_ES.nii.gz")), str(subject.output_dir))
+            print(subject_dir)
             if not subject.ed_path.exists() or not subject.es_path.exists() or not subject.contrasted_nii_path:
                 print(' Detecting ED/ES phases {}...'.format(subject.nii_path))
                 if not self.use_irtk:

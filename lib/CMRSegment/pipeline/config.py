@@ -110,4 +110,5 @@ class PipelineConfig:
             blur=args.blur,
             param_dir=Path(args.param_dir) if args.param_dir is not None else None,
             template_dir=Path(args.template_dir) if args.template_dir is not None else None,
+            use_irtk=args.use_irtk,
         )
