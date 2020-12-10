@@ -1,3 +1,4 @@
+import shutil
 import numpy as np
 import nibabel as nib
 from pathlib import Path
@@ -31,9 +32,13 @@ class CineSegmentor:
 
     def apply(self, cine: Cine, output_dir: Path) -> List[Segmentation]:
         segmentations = []
-
         for idx, phase_path in enumerate(cine):
-            image = Image(phase=idx, path=phase_path, output_dir=output_dir)
+            image = Image(
+                phase=idx, path=phase_path, output_dir=output_dir.joinpath("segs"),
+                segmented=output_dir.joinpath("segs").joinpath(f"lvsa_{idx}.nii.gz"),
+                resampled=output_dir.joinpath("resampled"),
+                enlarged=output_dir.joinpath("enlarged"),
+            )
             segmentation = self.__segmentor.apply(image)
             segmentations.append(segmentation)
         nim = nib.load(str(segmentations[-1].path))

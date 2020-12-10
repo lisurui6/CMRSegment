@@ -72,26 +72,23 @@ class Image:
     phase: Union[Phase, str, int]
     path: Path
     output_dir: Path = None
+    resampled: Path = None
+    enlarged: Path = None
+    segmented: Path = None
 
     def __post_init__(self):
         if self.output_dir is None:
             self.output_dir = self.path.parent
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.output_dir.joinpath("resampled").mkdir(parents=True, exist_ok=True)
-        self.output_dir.joinpath("enlarged").mkdir(parents=True, exist_ok=True)
-        self.output_dir.joinpath("segmented").mkdir(parents=True, exist_ok=True)
-
-    @property
-    def resampled(self):
-        return self.output_dir.joinpath("resampled", f"lvsa_{self.phase}.nii.gz")
-
-    @property
-    def enlarged(self):
-        return self.output_dir.joinpath("enlarged", f"lvsa_{self.phase}.nii.gz")
-
-    @property
-    def segmented(self):
-        return self.output_dir.joinpath(f"LVSA_seg_{self.phase}.nii.gz")
+        if self.resampled is None:
+            self.resampled = self.output_dir.joinpath("resampled", f"lvsa_{self.phase}.nii.gz")
+        self.resampled.parent.mkdir(parents=True, exist_ok=True)
+        if self.enlarged is None:
+            self.enlarged = self.output_dir.joinpath("enlarged", f"lvsa_{self.phase}.nii.gz")
+        self.enlarged.parent.mkdir(parents=True, exist_ok=True)
+        if self.segmented is None:
+            self.segmented = self.output_dir.joinpath("segmented", f"lvsa_{self.phase}.nii.gz")
+        self.segmented.parent.mkdir(parents=True, exist_ok=True)
 
 
 @dataclass

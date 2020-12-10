@@ -47,12 +47,14 @@ class CMRPipeline:
         for subject in tqdm(subjects):
             if self.config.segment and self.config.segment_config.segment_cine:
                 cine = Cine(dir=subject.gray_phases_dir())
-                cine_segmentor.apply(cine, output_dir=subject.output_dir.joinpath("segmentation", "phases"))
+                # cine_segmentor.apply(cine, output_dir=subject.output_dir.joinpath("segmentation", "phases"))
+                cine_segmentor.apply(cine, output_dir=subject.output_dir)
 
             for phase, phase_path in zip([Phase.ED, Phase.ES], [subject.ed_path, subject.es_path]):
                 image = Image(
                     path=phase_path, phase=phase,
-                    output_dir=subject.output_dir
+                    output_dir=subject.output_dir,
+                    segmented=subject.output_dir.joinpath(f"LVSA_seg_{phase}.nii.gz"),
                 )
                 if self.config.segment:
                     segmentation = hr_segmentor.apply(image)
