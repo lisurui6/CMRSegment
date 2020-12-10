@@ -16,7 +16,7 @@ def parse_args():
     parser.add_argument("-c", "--checkpoint-path", dest="checkpoint_path", type=str, default=None)
     parser.add_argument("-n", "--network-conf", dest="network_conf_path", default=None, type=str)
 
-    parser.add_argument("--input-path", dest="input_path", type=str, required=True, help="Input path of a nii.gz file.")
+    parser.add_argument("-i", "--input-path", dest="input_path", type=str, required=True, help="Input path of a nii.gz file.")
     parser.add_argument("--phase", dest="phase", default="phase", type=str)
 
     parser.add_argument("-o", "--output-dir", dest="output_dir", type=str, required=True)

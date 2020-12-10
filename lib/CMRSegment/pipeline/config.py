@@ -41,7 +41,7 @@ class CoregisterConfig(PipelineModuleConfig):
 class PipelineConfig:
     def __init__(self, segment: bool, extract: bool, coregister: bool, output_dir: Path, overwrite: bool = False,
                  model_path: Path = None, segment_cine: bool = None, torch: bool = True, iso_value: int = 120,
-                 blur: int = 2, param_dir: Path = None, template_dir: Path = None):
+                 blur: int = 2, param_dir: Path = None, template_dir: Path = None, use_irtk: bool = False):
         self.output_dir = output_dir
         self.overwrite = overwrite
         if segment:
@@ -68,12 +68,14 @@ class PipelineConfig:
         else:
             self.coregister = False
             self.coregister_config = None
+        self.use_irtk = use_irtk
 
     @staticmethod
     def argument_parser() -> ArgumentParser:
         parser = ArgumentParser()
         parser.add_argument("-o", "--output-dir", dest="output_dir", required=True, type=str)
         parser.add_argument("--overwrite", dest="overwrite", action="store_true")
+        parser.add_argument("--irtk", dest="use_irtk", action="store_true")
 
         parser.add_argument("--segment", dest="segment", action="store_true")
         parser.add_argument("--extract", dest="extract", action="store_true")
