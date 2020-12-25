@@ -5,7 +5,7 @@ from experiments.fcn_3d.network import UNet
 
 
 class DefSegNet(torch.nn.Module):
-    def __init__(self, template: np.ndarray, in_channels, n_classes, n_filters, feature_size, n_slices, int_steps=7,
+    def __init__(self, in_channels, n_classes, n_filters, feature_size, n_slices, int_steps=7,
                  int_downsize=1, bidir=False):
         super().__init__()
         self.seg_unet = UNet(
@@ -22,12 +22,12 @@ class DefSegNet(torch.nn.Module):
             int_steps=int_steps,
             int_downsize=int_downsize,
         )
-        self.template = torch.from_numpy(template).float().cuda().unsqueeze(0)
 
-    def forward(self, image):
+    def forward(self, inputs):
+        image, template = inputs
         pred_maps = self.seg_unet(image)
         pred_maps = torch.sigmoid(pred_maps)
-        warped_template, warped_maps, flow = self.vxm_dense(self.template, pred_maps)
+        warped_template, warped_maps, flow = self.vxm_dense(template, pred_maps)
 
         # if not self.training:
         #     visualise(image, self.template, pred_maps, warped_template)

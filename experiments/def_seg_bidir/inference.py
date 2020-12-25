@@ -5,8 +5,8 @@ from pathlib import Path
 
 
 def inference(image: torch.Tensor, label: torch.Tensor, image_path: Path, network: torch.nn.Module, output_dir: Path):
-
-    warped_template, warped_maps, pred_maps, flow = network(image)
+    image, template = image
+    warped_template, warped_maps, pred_maps, flow = network((image, template))
     for prefix, predicted in zip(["warped_template", "pred_maps"], [warped_template, pred_maps]):
         # predicted = torch.sigmoid(predicted)
         # print("sigmoid", torch.mean(predicted).item(), torch.max(predicted).item())

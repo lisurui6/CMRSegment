@@ -342,8 +342,18 @@ class MultiDataLoader:
             inputs, outputs = next(loader_iter)
             all_inputs.append(inputs)
             all_outputs.append(outputs)
-        all_inputs = torch.cat(all_inputs, dim=0)
-        all_outputs = torch.cat(all_outputs, dim=0)
+
+        if isinstance(all_inputs[0], tuple) or isinstance(all_inputs[0], list):
+            all_inputs = zip(*all_inputs)
+            all_inputs = (torch.cat(inputs) for inputs in all_inputs)
+        else:
+            all_inputs = torch.cat(all_inputs, dim=0)
+
+        if isinstance(all_outputs[0], tuple) or isinstance(all_outputs[0], list):
+            all_outputs = zip(*all_outputs)
+            all_outputs = (torch.cat(outputs) for outputs in all_outputs)
+        else:
+            all_outputs = torch.cat(all_outputs, dim=0)
         return all_inputs, all_outputs
 
     def __len__(self):

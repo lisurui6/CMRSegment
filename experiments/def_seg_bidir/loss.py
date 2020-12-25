@@ -6,48 +6,48 @@ import torch
 import torch.nn.functional as F
 from CMRSegment.common.nn.torch.loss import TorchLoss, MSELoss, BCELoss, DiceCoeff
 import numpy as np
+from typing import List
 
 
 class DefSegLoss(TorchLoss):
-    def __init__(self, template, penalty="l2", loss_mult=None, weight=0.01):
+    def __init__(self, weights: List[float], penalty="l2", loss_mult=None):
         super().__init__()
         self.label_mse_loss = MSELoss()
         self.template_mse_loss = MSELoss()
         self.bce_loss = BCELoss(logit=False)
         self.grad_loss = Grad(penalty=penalty, loss_mult=loss_mult)
-        self.weight = weight
-        if isinstance(template, np.ndarray):
-            self.template = torch.from_numpy(template).float().cuda().unsqueeze(0)
-        else:
-            self.template = template
+        self.weights = weights
 
     def cumulate(
         self,
         predicted: Union[torch.Tensor, Iterable[torch.Tensor]],
         outputs: Union[torch.Tensor, Iterable[torch.Tensor]],
     ):
-        # predicted = (warped template, warped maps, pred maps, flow)
+        """predicted = (warped template, warped maps, pred maps, flow)"""
+        label, template = outputs
 
-        label_mse_loss = self.label_mse_loss.cumulate(predicted[0], outputs)
-        template_mse_loss = self.template_mse_loss.cumulate(predicted[1], self.template)
+        label_mse_loss = self.label_mse_loss.cumulate(predicted[0], label)
+        template_mse_loss = self.template_mse_loss.cumulate(predicted[1], template)
 
-        bce_loss = self.bce_loss.cumulate(predicted[2], outputs)
+        bce_loss = self.bce_loss.cumulate(predicted[2], label)
         grad_loss = self.grad_loss.cumulate(predicted[3], None)
-        loss = label_mse_loss + bce_loss + grad_loss * self.weight + template_mse_loss * 0.1
+        loss = label_mse_loss * self.weights[0] + template_mse_loss * self.weights[1] \
+               + bce_loss * self.weights[2] + grad_loss * self.weights[3]
+
         self._cum_loss += loss.item()
         self._count += 1
         return loss
 
     def new(self):
         new_loss = self.__class__(
-            template=self.template, penalty=self.grad_loss.penalty,
-            loss_mult=self.grad_loss.loss_mult, weight=self.weight
+            penalty=self.grad_loss.penalty,
+            loss_mult=self.grad_loss.loss_mult, weights=self.weights
         )
         new_loss.reset()
         return new_loss
 
     def description(self):
-        return "{}, {}, {}, {}".format(
+        return "label {}, template {}, {}, {}".format(
             self.label_mse_loss.description(), self.template_mse_loss.description(),
             self.bce_loss.description(), self.grad_loss.description()
         )
@@ -61,48 +61,28 @@ class DefSegLoss(TorchLoss):
 
 
 class DefSegWarpedTemplateDice(DiceCoeff, ABC):
-    def __init__(self, template):
-        if isinstance(template, np.ndarray):
-            self.template = torch.from_numpy(template).float().cuda().unsqueeze(0)
-        else:
-            self.template = template
-        super().__init__()
-
     def forward(self, input, target):
-        # predicted = (warped template, warped maps, pred maps, flow)
+        label, template = target
+        # input = (warped template, warped maps, pred maps, flow)
         pred = (input[0] > 0.5).float()
-        return super().forward(pred, target)
-
-    def new(self):
-        new_loss = self.__class__(template=self.template)
-        new_loss.reset()
-        return new_loss
+        return super().forward(pred, label)
 
 
 class DefSegPredDice(DiceCoeff):
     def forward(self, input, target):
-        # predicted = (warped template, warped maps, pred maps, flow)
+        label, template = target
+
+        # input = (warped template, warped maps, pred maps, flow)
         pred = (input[2] > 0.5).float()
-        return super().forward(pred, target)
+        return super().forward(pred, label)
 
 
 class DefSegWarpedMapsDice(DiceCoeff):
-    def __init__(self, template):
-        if isinstance(template, np.ndarray):
-            self.template = torch.from_numpy(template).float().cuda().unsqueeze(0)
-        else:
-            self.template = template
-        super().__init__()
-
     def forward(self, input, target):
-        # predicted = (warped template, warped maps, pred maps, flow)
+        label, template = target
+        # input = (warped template, warped maps, pred maps, flow)
         pred = (input[1] > 0.5).float()
-        return super().forward(pred, self.template.contiguous())
-
-    def new(self):
-        new_loss = self.__class__(template=self.template)
-        new_loss.reset()
-        return new_loss
+        return super().forward(pred, template)
 
 
 class Grad(TorchLoss):

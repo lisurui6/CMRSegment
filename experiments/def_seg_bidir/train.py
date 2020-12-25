@@ -8,13 +8,15 @@ from pathlib import Path
 from argparse import ArgumentParser
 from experiments.fcn_3d.network import UNet
 from CMRSegment.common.nn.torch.experiment import Experiment, ExperimentConfig
-from CMRSegment.common.nn.torch.data import construct_training_validation_dataset, Torch2DSegmentationDataset
+# from CMRSegment.common.nn.torch.data import construct_training_validation_dataset, Torch2DSegmentationDataset
 from CMRSegment.common.nn.torch.loss import FocalLoss, BCELoss, DiceCoeffWithLogits, DiceCoeff, MSELoss
 from CMRSegment.common.config import DataConfig, get_conf, AugmentationConfig
 from pyhocon import ConfigFactory
 from experiments.def_seg_bidir.inference import inference
 from experiments.def_seg_bidir.network import DefSegNet
 from experiments.def_seg_bidir.loss import DefSegWarpedTemplateDice, DefSegPredDice, DefSegLoss, DefSegWarpedMapsDice
+from experiments.def_seg_bidir.data import construct_training_validation_dataset
+from experiments.def_seg_bidir.experiment import DefSegExperiment
 
 
 TRAIN_CONF_PATH = Path(__file__).parent.joinpath("train.conf")
@@ -23,7 +25,6 @@ TRAIN_CONF_PATH = Path(__file__).parent.joinpath("train.conf")
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument("-c", "--conf", dest="conf_path", default=None, type=str)
-    # parser.add_argument("-a", "--atlas", dest="atlas_path", required=True, type=str)
     args = parser.parse_args()
     return args
 
@@ -54,20 +55,13 @@ def main():
     )
     augmentation_config = AugmentationConfig.from_conf(conf_path)
     shutil.copy(str(conf_path), str(config.experiment_dir.joinpath("train.conf")))
-    atlas_path = "D:\surui\\rbh\cardiac\DL_segmentation\RBH_3D_atlases\IHD586_10RZ04876_RBH_IHD_201410241040_MRC25598\seg_lvsa_SR_ED.nii.gz"
-    atlas = Torch2DSegmentationDataset.read_label(
-        label_path=Path(atlas_path),
-        feature_size=get_conf(train_conf, group="network", key="feature_size"),
-        n_slices=get_conf(train_conf, group="network", key="n_slices"),
-    )
     network = DefSegNet(
         in_channels=get_conf(train_conf, group="network", key="in_channels"),
         n_classes=get_conf(train_conf, group="network", key="n_classes"),
         n_filters=get_conf(train_conf, group="network", key="n_filters"),
         feature_size=get_conf(train_conf, group="network", key="feature_size"),
         n_slices=get_conf(train_conf, group="network", key="n_slices"),
-        template=atlas,
-        int_downsize=2,
+        int_downsize=get_conf(train_conf, group="network", key="integrate_downsize"),
         bidir=True,
     )
 
@@ -92,15 +86,13 @@ def main():
         optimizer = torch.optim.Adam(
             network.parameters(), lr=get_conf(train_conf, group="optimizer", key="learning_rate")
         )
-    if get_conf(train_conf, group="loss", key="type") == "FocalLoss":
-        loss = FocalLoss(
-            alpha=get_conf(train_conf, group="loss", key="alpha"),
-            gamma=get_conf(train_conf, group="loss", key="gamma"),
-            logits=True,
-        )
-    else:
-        loss = DefSegLoss(penalty="l2", loss_mult=2, template=atlas)
-    experiment = Experiment(
+
+    loss = DefSegLoss(
+        penalty="l2",
+        loss_mult=get_conf(train_conf, group="network", key="integrate_downsize"),
+        weights=get_conf(train_conf, group="loss", key="weights"),
+    )
+    experiment = DefSegExperiment(
         config=config,
         network=network,
         training_sets=training_sets,
@@ -109,7 +101,7 @@ def main():
         optimizer=optimizer,
         loss=loss,
         other_validation_metrics=[
-            DefSegWarpedTemplateDice(template=atlas), DefSegPredDice(), DefSegWarpedMapsDice(template=atlas)
+            DefSegWarpedTemplateDice(), DefSegPredDice(), DefSegWarpedMapsDice()
         ],
         inference_func=inference
     )
