@@ -40,7 +40,10 @@ class TorchLoss(torch.nn.Module):
         self._count = 0
 
     def avg(self):
-        return self._cum_loss / self._count
+        if self._count > 0:
+            return self._cum_loss / self._count
+        else:
+            return 0
 
     def new(self):
         """Copy and reset obj"""
@@ -71,7 +74,7 @@ class FocalLoss(TorchLoss):
             return F_loss
 
     def description(self):
-        return "Focal loss: {}".format(self.avg())
+        return "Focal loss: {:.4f}".format(self.avg())
 
     def document(self):
         return "Focal Loss - alpha: {}, gamma: {}, logits: {}, reduce: {}".format(
@@ -100,7 +103,7 @@ class DiceCoeff(TorchLoss):
 
 class MSELoss(TorchLoss, torch.nn.MSELoss):
     def description(self):
-        return "Sqrt MSE loss: {}".format(math.sqrt(self.avg()))
+        return "Sqrt MSE loss: {:.4f}".format(math.sqrt(self.avg()))
 
 
 class L1Loss(TorchLoss, torch.nn.L1Loss):
@@ -108,9 +111,15 @@ class L1Loss(TorchLoss, torch.nn.L1Loss):
 
 
 class BCELoss(TorchLoss):
+    def __init__(self, logit: bool = True):
+        super().__init__()
+        self.logit = logit
 
     def forward(self, predicted, targets):
-        BCE_loss = F.binary_cross_entropy_with_logits(predicted, targets, reduction="mean")
+        if self.logit:
+            BCE_loss = F.binary_cross_entropy_with_logits(predicted, targets, reduction="mean")
+        else:
+            BCE_loss = F.binary_cross_entropy(predicted, targets, reduction="mean")
         return BCE_loss
 
 

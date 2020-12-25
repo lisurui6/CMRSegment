@@ -1,14 +1,21 @@
+import os
+
+os.environ['VXM_BACKEND'] = 'pytorch'
+
 import torch
 import shutil
 from pathlib import Path
 from argparse import ArgumentParser
 from experiments.fcn_3d.network import UNet
 from CMRSegment.common.nn.torch.experiment import Experiment, ExperimentConfig
-from CMRSegment.common.nn.torch.data import construct_training_validation_dataset
-from CMRSegment.common.nn.torch.loss import FocalLoss, BCELoss, DiceCoeffWithLogits
+from CMRSegment.common.nn.torch.data import construct_training_validation_dataset, Torch2DSegmentationDataset
+from CMRSegment.common.nn.torch.loss import FocalLoss, BCELoss, DiceCoeffWithLogits, DiceCoeff, MSELoss
 from CMRSegment.common.config import DataConfig, get_conf, AugmentationConfig
 from pyhocon import ConfigFactory
-from experiments.fcn_3d.inference.inference import inference
+from experiments.def_seg_bidir.inference import inference
+from experiments.def_seg_bidir.network import DefSegNet
+from experiments.def_seg_bidir.loss import DefSegWarpedTemplateDice, DefSegPredDice, DefSegLoss, DefSegWarpedMapsDice
+
 
 TRAIN_CONF_PATH = Path(__file__).parent.joinpath("train.conf")
 
@@ -16,6 +23,7 @@ TRAIN_CONF_PATH = Path(__file__).parent.joinpath("train.conf")
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument("-c", "--conf", dest="conf_path", default=None, type=str)
+    # parser.add_argument("-a", "--atlas", dest="atlas_path", required=True, type=str)
     args = parser.parse_args()
     return args
 
@@ -46,11 +54,23 @@ def main():
     )
     augmentation_config = AugmentationConfig.from_conf(conf_path)
     shutil.copy(str(conf_path), str(config.experiment_dir.joinpath("train.conf")))
-    network = UNet(
+    atlas_path = "D:\surui\\rbh\cardiac\DL_segmentation\RBH_3D_atlases\IHD586_10RZ04876_RBH_IHD_201410241040_MRC25598\seg_lvsa_SR_ED.nii.gz"
+    atlas = Torch2DSegmentationDataset.read_label(
+        label_path=Path(atlas_path),
+        feature_size=get_conf(train_conf, group="network", key="feature_size"),
+        n_slices=get_conf(train_conf, group="network", key="n_slices"),
+    )
+    network = DefSegNet(
         in_channels=get_conf(train_conf, group="network", key="in_channels"),
         n_classes=get_conf(train_conf, group="network", key="n_classes"),
         n_filters=get_conf(train_conf, group="network", key="n_filters"),
+        feature_size=get_conf(train_conf, group="network", key="feature_size"),
+        n_slices=get_conf(train_conf, group="network", key="n_slices"),
+        template=atlas,
+        int_downsize=2,
+        bidir=True,
     )
+
     training_sets, validation_sets, extra_validation_sets = construct_training_validation_dataset(
         DataConfig.from_conf(conf_path), feature_size=get_conf(train_conf, group="network", key="feature_size"),
         n_slices=get_conf(train_conf, group="network", key="n_slices"), is_3d=True, seed=config.seed,
@@ -79,7 +99,7 @@ def main():
             logits=True,
         )
     else:
-        loss = BCELoss()
+        loss = DefSegLoss(penalty="l2", loss_mult=2, template=atlas)
     experiment = Experiment(
         config=config,
         network=network,
@@ -88,7 +108,9 @@ def main():
         extra_validation_sets=extra_validation_sets,
         optimizer=optimizer,
         loss=loss,
-        other_validation_metrics=[DiceCoeffWithLogits()],
+        other_validation_metrics=[
+            DefSegWarpedTemplateDice(template=atlas), DefSegPredDice(), DefSegWarpedMapsDice(template=atlas)
+        ],
         inference_func=inference
     )
     experiment.train()
