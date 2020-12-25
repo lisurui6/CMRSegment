@@ -1,3 +1,3 @@
-from experiments.def_seg.train import main
+from experiments.def_seg_bidir.train import main
 
 main()
