@@ -90,6 +90,7 @@ def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_spli
         val_label_paths = label_paths[int((1 - validation_split) * size):]
         print("Selecting {} trainig images, {} validation images.".format(len(train_image_paths), len(val_image_paths)))
         train_set = DefSegDataset(
+            template_path=train_label_paths[0],
             name=dataset_config.name,
             image_paths=train_image_paths,
             label_paths=train_label_paths,
@@ -106,6 +107,7 @@ def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_spli
         print("Selecting {} validation images.".format(len(val_image_paths)))
 
     val_set = DefSegDataset(
+        template_path=train_label_paths[0],
         name=dataset_config.name,
         image_paths=val_image_paths,
         label_paths=val_label_paths,
@@ -116,12 +118,22 @@ def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_spli
 
 
 class DefSegDataset(Torch2DSegmentationDataset):
+    def __init__(self, template_path: Path, name: str, image_paths: List[Path], label_paths: List[Path],
+                 n_slices: int, feature_size: int, augmentation_prob: float = 0,
+                 augmentation_config: AugmentationConfig = None, is_3d: bool = False, seed: int = None,
+                 output_dir: Path = None):
+        super().__init__(
+            name, image_paths, label_paths, n_slices, feature_size, augmentation_prob,
+            augmentation_config, is_3d, seed, output_dir
+        )
+        self.template = self.read_label(template_path, self.feature_size, self.n_slices)
+
     def __getitem__(self, index: int):
         image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
         label = self.read_label(self.label_paths[index], self.feature_size, self.n_slices)
-        template_index = np.random.randint(0, len(self))
+        # template_index = np.random.randint(0, len(self))
         # template_index = 0
-        template = self.read_label(self.label_paths[template_index], self.feature_size, self.n_slices)
+        # template = self.read_label(self.label_paths[template_index], self.feature_size, self.n_slices)
         if self.augmentation_prob > 0 and self.augmentation_config is not None:
             if np.random.uniform(0, 1) >= self.augmentation_prob:
                 augment(
@@ -134,7 +146,7 @@ class DefSegDataset(Torch2DSegmentationDataset):
             image = np.expand_dims(image, 0)
         image = torch.from_numpy(image).float()
         label = torch.from_numpy(label).float()
-        template = torch.from_numpy(template).float()
+        template = torch.from_numpy(self.template).float()
         return (image, template), (label, template)
 
     def save(self, image: np.ndarray, label: np.ndarray, index: int):

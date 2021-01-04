@@ -1,7 +1,93 @@
 import torch
+from pathlib import Path
+from argparse import ArgumentParser
+from pyhocon import ConfigFactory
+from CMRSegment.common.config import get_conf
+from experiments.def_seg_bidir.network import DefSegNet
+from experiments.def_seg_bidir.data import DefSegDataset
+from CMRSegment.common.config import DatasetConfig, DataConfig
 import numpy as np
 import nibabel as nib
-from pathlib import Path
+from CMRSegment.common.nn.torch import prepare_tensors
+
+
+TRAIN_CONF_PATH = Path(__file__).parent.joinpath("train.conf")
+
+
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument("-m", "--model-path", dest="model_path", required=True, type=str)
+    parser.add_argument("-i", "--input-dir", dest="input_dir", required=True, type=str)
+    parser.add_argument("-t", "--template", dest="template_path", required=True)
+    parser.add_argument("-o", "--output-dir", dest="output_dir", type=str, required=True)
+    parser.add_argument("-n", "--network-conf", dest="network_conf_path", default=None, type=str)
+    parser.add_argument("-d", "--device", dest="device", default=0, type=int)
+    parser.add_argument("-p", "--phase", dest="phase", default="ED", type=str)
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    model_path = Path(args.model_path)
+    if args.network_conf_path is not None:
+        train_conf = ConfigFactory.parse_file(str(Path(args.network_conf_path)))
+        conf_path = Path(args.network_conf_path)
+    else:
+        train_conf = ConfigFactory.parse_file(str(TRAIN_CONF_PATH))
+        conf_path = TRAIN_CONF_PATH
+    data_config = DataConfig.from_conf(conf_path)
+    dataset_config = DatasetConfig.from_conf(
+        name=data_config.training_datasets[0], mount_prefix=data_config.mount_prefix, mode=data_config.data_mode
+    )
+    input_path = Path(args.input_dir).joinpath(dataset_config.image_label_format.image.format(phase=args.phase))
+    output_dir = Path(args.output_dir)
+    checkpoint = torch.load(str(model_path), map_location=torch.device(args.device))
+
+    get_conf(train_conf, group="network", key="experiment_dir")
+    network = DefSegNet(
+        in_channels=get_conf(train_conf, group="network", key="in_channels"),
+        n_classes=get_conf(train_conf, group="network", key="n_classes"),
+        n_filters=get_conf(train_conf, group="network", key="n_filters"),
+        feature_size=get_conf(train_conf, group="network", key="feature_size"),
+        n_slices=get_conf(train_conf, group="network", key="n_slices"),
+        int_downsize=get_conf(train_conf, group="network", key="integrate_downsize"),
+        bidir=True,
+    )
+    network.load_state_dict(checkpoint)
+    network.cuda(device=args.device)
+    # image = nib.load(str(input_path)).get_data()
+    # if image.ndim == 4:
+    #     image = np.squeeze(image, axis=-1).astype(np.int16)
+    # image = image.astype(np.int16)
+    # image = np.transpose(image, (2, 0, 1))
+    dataset = DefSegDataset(
+        name=dataset_config.name,
+        image_paths=[input_path],
+        label_paths=[input_path.parent.joinpath(dataset_config.image_label_format.label.format(phase=args.phase))],
+        feature_size=get_conf(train_conf, group="network", key="feature_size"),
+        n_slices=get_conf(train_conf, group="network", key="n_slices"),
+        is_3d=True,
+        template_path=Path(args.template_path),
+    )
+
+    image = dataset.get_image_tensor_from_index(0)
+    image = torch.unsqueeze(image, 0)
+    image = prepare_tensors(image, True, args.device)
+
+    label = dataset.get_label_tensor_from_index(0)
+
+    template = dataset.template
+    template = torch.from_numpy(template).float()
+    template = torch.unsqueeze(template, 0)
+    template = prepare_tensors(template, True, args.device)
+
+    inference(
+        image=(image, template),
+        label=label,
+        image_path=input_path,
+        network=network,
+        output_dir=output_dir,
+    )
 
 
 def inference(image: torch.Tensor, label: torch.Tensor, image_path: Path, network: torch.nn.Module, output_dir: Path):
@@ -66,3 +152,7 @@ def inference(image: torch.Tensor, label: torch.Tensor, image_path: Path, networ
     nim2.header['pixdim'] = nim.header['pixdim']
     output_dir.mkdir(parents=True, exist_ok=True)
     nib.save(nim2, '{0}/label.nii.gz'.format(str(output_dir)))
+
+
+if __name__ == '__main__':
+    main()

@@ -110,7 +110,8 @@ class VxmDense(LoadableModel):
         int_steps=7,
         int_downsize=2,
         bidir=False,
-        use_probs=False
+        use_probs=False,
+        mode="bilinear",
     ):
         """ 
         Parameters:
@@ -168,7 +169,7 @@ class VxmDense(LoadableModel):
         self.integrate = layers.VecInt(down_shape, int_steps) if int_steps > 0 else None
 
         # configure transformer
-        self.transformer = layers.SpatialTransformer(inshape)
+        self.transformer = layers.SpatialTransformer(inshape, mode=mode)
 
     def forward(self, source, target, registration=False):
         '''
@@ -226,7 +227,8 @@ class ConvBlock(nn.Module):
 
         Conv = getattr(nn, 'Conv%dd' % ndims)
         self.main = Conv(in_channels, out_channels, 3, stride, 1)
-        self.activation = nn.LeakyReLU(0.2)
+        # self.activation = nn.LeakyReLU(0.2)
+        self.activation = nn.ReLU()
 
     def forward(self, x):
         out = self.main(x)

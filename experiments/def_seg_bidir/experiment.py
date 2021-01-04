@@ -17,7 +17,9 @@ class DefSegExperiment(Experiment):
                 output_dir.joinpath(val.name, image_path.parent.stem).mkdir(exist_ok=True, parents=True)
                 image = val.get_image_tensor_from_index(idx)
                 label = val.get_label_tensor_from_index(idx)
-                template = val.get_label_tensor_from_index(np.random.randint(0, len(val)))
+                # template = val.get_label_tensor_from_index(np.random.randint(0, len(val)))
+                template = val.template
+                template = torch.from_numpy(template).float()
                 # template = val.get_label_tensor_from_index(0)
 
                 template = torch.unsqueeze(template, 0)
@@ -37,7 +39,9 @@ class DefSegExperiment(Experiment):
                 output_dir.joinpath(val.name, image_path.parent.stem).mkdir(exist_ok=True, parents=True)
                 image = val.get_image_tensor_from_index(idx)
                 label = val.get_label_tensor_from_index(idx)
-                template = val.get_label_tensor_from_index(np.random.randint(0, len(val)))
+                # template = val.get_label_tensor_from_index(np.random.randint(0, len(val)))
+                template = val.template
+                template = torch.from_numpy(template).float()
                 # template = val.get_label_tensor_from_index(0)
 
                 template = torch.unsqueeze(template, 0)

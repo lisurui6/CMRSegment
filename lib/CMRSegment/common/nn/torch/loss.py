@@ -101,6 +101,20 @@ class DiceCoeff(TorchLoss):
         return t
 
 
+class DiceLoss(TorchLoss):
+    """
+    N-D dice for segmentation
+    """
+
+    def forward(self, y_true, y_pred):
+        ndims = len(list(y_pred.size())) - 2
+        vol_axes = list(range(2, ndims+2))
+        top = 2 * (y_true * y_pred).sum(dim=vol_axes)
+        bottom = torch.clamp((y_true + y_pred).sum(dim=vol_axes), min=1e-5)
+        dice = torch.mean(top / bottom)
+        return -dice
+
+
 class MSELoss(TorchLoss, torch.nn.MSELoss):
     def description(self):
         return "Sqrt MSE loss: {:.4f}".format(math.sqrt(self.avg()))

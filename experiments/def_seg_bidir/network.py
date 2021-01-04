@@ -21,6 +21,7 @@ class DefSegNet(torch.nn.Module):
             bidir=bidir,
             int_steps=int_steps,
             int_downsize=int_downsize,
+            mode="bilinear",
         )
 
     def forward(self, inputs):
@@ -28,6 +29,8 @@ class DefSegNet(torch.nn.Module):
         pred_maps = self.seg_unet(image)
         pred_maps = torch.sigmoid(pred_maps)
         warped_template, warped_maps, flow = self.vxm_dense(template, pred_maps)
+        # warped_template = torch.clamp(warped_template, min=0, max=1)
+        # warped_maps = torch.clamp(warped_maps, min=0, max=1)
 
         # if not self.training:
         #     visualise(image, self.template, pred_maps, warped_template)
