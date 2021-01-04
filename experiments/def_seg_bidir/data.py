@@ -32,7 +32,7 @@ def construct_training_validation_dataset(
     training_sets = []
     validation_sets = []
     for config in training_set_configs:
-        train, val = train_val_dataset_from_config(
+        train, val, template_path = train_val_dataset_from_config(
             dataset_config=config,
             augmentation_config=augmentation_config,
             augmentation_prob=data_config.augmentation_prob,
@@ -49,7 +49,7 @@ def construct_training_validation_dataset(
     extra_val_sets = []
 
     for config in extra_val_set_configs:
-        __, val = train_val_dataset_from_config(
+        __, val, __ = train_val_dataset_from_config(
             dataset_config=config,
             validation_split=data_config.validation_split,
             feature_size=feature_size,
@@ -59,6 +59,7 @@ def construct_training_validation_dataset(
             renew_dataframe=data_config.renew_dataframe,
             seed=seed,
             output_dir=output_dir,
+            template_path=template_path,
         )
         extra_val_sets.append(val)
     return training_sets, validation_sets, extra_val_sets
@@ -67,7 +68,8 @@ def construct_training_validation_dataset(
 def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_split: float, feature_size: int,
                                   n_slices: int, is_3d: bool, output_dir: Path, only_val: bool = False,
                                   renew_dataframe: bool = False, seed: int = None,
-                                  augmentation_config: AugmentationConfig = None, augmentation_prob: float = 0):
+                                  augmentation_config: AugmentationConfig = None, augmentation_prob: float = 0,
+                                  template_path: Path = None):
     if dataset_config.dataframe_path.exists():
         print("Dataframe {} exists.".format(dataset_config.dataframe_path))
     if not dataset_config.dataframe_path.exists() or renew_dataframe:
@@ -89,8 +91,10 @@ def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_spli
         train_label_paths = label_paths[:int((1 - validation_split) * size)]
         val_label_paths = label_paths[int((1 - validation_split) * size):]
         print("Selecting {} trainig images, {} validation images.".format(len(train_image_paths), len(val_image_paths)))
+        print("Template Path: {}".format(train_label_paths[0]))
+        template_path = train_label_paths[0]
         train_set = DefSegDataset(
-            template_path=train_label_paths[0],
+            template_path=template_path,
             name=dataset_config.name,
             image_paths=train_image_paths,
             label_paths=train_label_paths,
@@ -107,14 +111,14 @@ def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_spli
         print("Selecting {} validation images.".format(len(val_image_paths)))
 
     val_set = DefSegDataset(
-        template_path=train_label_paths[0],
+        template_path=template_path,
         name=dataset_config.name,
         image_paths=val_image_paths,
         label_paths=val_label_paths,
         feature_size=feature_size, n_slices=n_slices, is_3d=is_3d, seed=seed,
         output_dir=output_dir.joinpath("val"),
     )
-    return train_set, val_set
+    return train_set, val_set, template_path
 
 
 class DefSegDataset(Torch2DSegmentationDataset):
