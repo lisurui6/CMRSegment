@@ -77,22 +77,22 @@ def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_spli
     image_paths, label_paths = read_dataframe(dataset_config.dataframe_path)
     c = list(zip(image_paths, label_paths))
     random.shuffle(c)
-    image_paths, label_paths = zip(*c)
-    print("Dataset {} has {} images.".format(dataset_config.name, len(image_paths)))
+    shuffled_image_paths, shuffled_label_paths = zip(*c)
+    print("Dataset {} has {} images.".format(dataset_config.name, len(shuffled_image_paths)))
     if dataset_config.size is None:
-        size = len(image_paths)
+        size = len(shuffled_image_paths)
     else:
         size = dataset_config.size
 
     if not only_val:
-        train_image_paths = image_paths[:int((1 - validation_split) * size)]
-        val_image_paths = image_paths[int((1 - validation_split) * size):]
+        train_image_paths = shuffled_image_paths[:int((1 - validation_split) * size)]
+        val_image_paths = shuffled_image_paths[int((1 - validation_split) * size):]
 
-        train_label_paths = label_paths[:int((1 - validation_split) * size)]
-        val_label_paths = label_paths[int((1 - validation_split) * size):]
+        train_label_paths = shuffled_label_paths[:int((1 - validation_split) * size)]
+        val_label_paths = shuffled_label_paths[int((1 - validation_split) * size):]
         print("Selecting {} trainig images, {} validation images.".format(len(train_image_paths), len(val_image_paths)))
         print("Template Path: {}".format(train_label_paths[0]))
-        template_path = train_label_paths[0]
+        template_path = image_paths[0]
         train_set = DefSegDataset(
             template_path=template_path,
             name=dataset_config.name,
@@ -139,7 +139,8 @@ class DefSegDataset(Torch2DSegmentationDataset):
         # template_index = 0
         # template = self.read_label(self.label_paths[template_index], self.feature_size, self.n_slices)
         if self.augmentation_prob > 0 and self.augmentation_config is not None:
-            if np.random.uniform(0, 1) >= self.augmentation_prob:
+            prob = torch.FloatTensor(1).uniform_(0, 1)
+            if prob.item() >= self.augmentation_prob:
                 augment(
                     image, label, self.augmentation_config,
                     (self.n_slices, self.feature_size, self.feature_size),
