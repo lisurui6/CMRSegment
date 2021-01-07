@@ -37,6 +37,10 @@ class DefSegNet(torch.nn.Module):
 
         return warped_template, warped_maps, pred_maps, flow
 
+    def freeze_vxm(self):
+        for param in self.vxm_dense.parameters():
+            param.requires_grad = False
+
 
 def visualise(image, template, pred: torch.Tensor, warped: torch.Tensor):
     import neurite as ne

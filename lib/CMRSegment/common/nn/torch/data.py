@@ -82,11 +82,11 @@ def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_spli
         size = dataset_config.size
 
     if not only_val:
-        train_image_paths = shuffled_image_paths[:int((1 - validation_split) * size)]
-        val_image_paths = shuffled_image_paths[int((1 - validation_split) * size):]
+        train_image_paths = image_paths[:int((1 - validation_split) * size)]
+        val_image_paths = image_paths[int((1 - validation_split) * size):size]
 
-        train_label_paths = shuffled_label_paths[:int((1 - validation_split) * size)]
-        val_label_paths = shuffled_label_paths[int((1 - validation_split) * size):]
+        train_label_paths = label_paths[:int((1 - validation_split) * size)]
+        val_label_paths = label_paths[int((1 - validation_split) * size):size]
         print("Selecting {} trainig images, {} validation images.".format(len(train_image_paths), len(val_image_paths)))
         train_set = Torch2DSegmentationDataset(
             name=dataset_config.name,

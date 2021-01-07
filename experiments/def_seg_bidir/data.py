@@ -18,7 +18,7 @@ from CMRSegment.common.nn.torch.data import Torch2DSegmentationDataset, generate
 
 def construct_training_validation_dataset(
     data_config: DataConfig, feature_size: int, n_slices: int, output_dir: Path, is_3d: bool = False,
-    augmentation_config: AugmentationConfig = None, seed: int = None,
+    augmentation_config: AugmentationConfig = None, seed: int = None, template_path: Path = None,
 ) -> Tuple[List["Torch2DSegmentationDataset"], List["Torch2DSegmentationDataset"], List["Torch2DSegmentationDataset"]]:
     training_set_configs = [
         DatasetConfig.from_conf(name, mode=data_config.data_mode, mount_prefix=data_config.mount_prefix)
@@ -43,11 +43,11 @@ def construct_training_validation_dataset(
             renew_dataframe=data_config.renew_dataframe,
             seed=seed,
             output_dir=output_dir,
+            template_path=template_path
         )
         training_sets.append(train)
         validation_sets.append(val)
     extra_val_sets = []
-
     for config in extra_val_set_configs:
         __, val, __ = train_val_dataset_from_config(
             dataset_config=config,
@@ -85,14 +85,16 @@ def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_spli
         size = dataset_config.size
 
     if not only_val:
-        train_image_paths = shuffled_image_paths[:int((1 - validation_split) * size)]
-        val_image_paths = shuffled_image_paths[int((1 - validation_split) * size):]
+        train_image_paths = image_paths[:int((1 - validation_split) * size)]
+        val_image_paths = image_paths[int((1 - validation_split) * size):size]
 
-        train_label_paths = shuffled_label_paths[:int((1 - validation_split) * size)]
-        val_label_paths = shuffled_label_paths[int((1 - validation_split) * size):]
+        train_label_paths = label_paths[:int((1 - validation_split) * size)]
+        val_label_paths = label_paths[int((1 - validation_split) * size):size]
         print("Selecting {} trainig images, {} validation images.".format(len(train_image_paths), len(val_image_paths)))
-        print("Template Path: {}".format(train_label_paths[0]))
-        template_path = image_paths[0]
+        if template_path is None:
+            template_path = image_paths[0]
+        print("Template Path: {}".format(template_path))
+
         train_set = DefSegDataset(
             template_path=template_path,
             name=dataset_config.name,
