@@ -28,7 +28,7 @@ class DefSegNet(torch.nn.Module):
         image, template = inputs
         pred_maps = self.seg_unet(image)
         # pred_maps = torch.sigmoid(pred_maps)
-        warped_template, warped_maps, flow = self.vxm_dense(template, pred_maps)
+        warped_template, warped_maps, flow, __, __ = self.vxm_dense(template, pred_maps)
         # warped_maps = torch.sigmoid(warped_maps)
         # warped_template = torch.clamp(warped_template, min=0, max=1)
         # warped_maps = torch.clamp(warped_maps, min=0, max=1)
