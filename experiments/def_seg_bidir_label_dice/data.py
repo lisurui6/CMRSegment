@@ -92,7 +92,7 @@ def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_spli
         val_label_paths = label_paths[int((1 - validation_split) * size):size]
         print("Selecting {} trainig images, {} validation images.".format(len(train_image_paths), len(val_image_paths)))
         if template_path is None:
-            template_path = image_paths[0]
+            template_path = label_paths[0]
         print("Template Path: {}".format(template_path))
 
         train_set = DefSegDataset(
@@ -137,9 +137,6 @@ class DefSegDataset(Torch2DSegmentationDataset):
     def __getitem__(self, index: int):
         image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
         label = self.read_label(self.label_paths[index], self.feature_size, self.n_slices)
-        # template_index = np.random.randint(0, len(self))
-        # template_index = 0
-        # template = self.read_label(self.label_paths[template_index], self.feature_size, self.n_slices)
         if self.augmentation_prob > 0 and self.augmentation_config is not None:
             prob = torch.FloatTensor(1).uniform_(0, 1)
             if prob.item() >= self.augmentation_prob:

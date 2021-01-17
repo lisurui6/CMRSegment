@@ -25,22 +25,13 @@ class DefSegLoss(TorchLoss):
         """predicted = (warped template, warped maps, pred maps, flow)"""
         label, template = outputs
 
-        # label_mse_loss = self.label_mse_loss.cumulate(predicted[0], label)
-        # template_mse_loss = self.template_mse_loss.cumulate(predicted[1], template)
-
-        # bce_loss = self.pred_maps_bce_loss.cumulate(predicted[2], label)
         grad_loss = self.grad_loss.cumulate(predicted[3], None)
         deform_loss = self.deform_mse_loss.cumulate(predicted[3], torch.zeros(predicted[3].shape).cuda())
 
         label_dice_loss = self.label_dice_loss.cumulate(predicted[0], label)
-        # template_dice_loss = self.template_dice_loss.cumulate(predicted[1], template)
-
-        # label_bce_loss = self.label_bce_loss.cumulate(predicted[0], label)
-        # template_bce_loss = self.template_bce_loss.cumulate(predicted[1], template)
 
         loss = grad_loss * self.weights[0] + deform_loss * self.weights[1] + \
             label_dice_loss * self.weights[2]
-            # label_bce_loss * self.weights[7] + template_bce_loss * self.weights[8]
 
         self._cum_loss += loss.item()
         self._count += 1

@@ -12,8 +12,6 @@ from typing import List
 class DefSegLoss(TorchLoss):
     def __init__(self, weights: List[float], penalty="l2", loss_mult=None):
         super().__init__()
-        self.label_mse_loss = MSELoss()
-        self.template_mse_loss = MSELoss()
 
         self.pred_maps_bce_loss = BCELoss(logit=False)
         self.grad_loss = Grad(penalty=penalty, loss_mult=loss_mult)
@@ -21,37 +19,32 @@ class DefSegLoss(TorchLoss):
         self.deform_mse_loss = MSELoss()
 
         self.label_dice_loss = DiceLoss()
-        self.template_dice_loss = DiceLoss()
 
         # self.label_bce_loss = BCELoss(logit=False)
         # self.template_bce_loss = BCELoss(logit=False)
+        self.warped_image_loss = MSELoss()
+        self.warped_template_image_loss = MSELoss()
 
     def cumulate(
         self,
         predicted: Union[torch.Tensor, Iterable[torch.Tensor]],
         outputs: Union[torch.Tensor, Iterable[torch.Tensor]],
     ):
-        """predicted = (warped template, warped maps, pred maps, flow)"""
-        label, template = outputs
-
-        label_mse_loss = self.label_mse_loss.cumulate(predicted[0], label)
-        template_mse_loss = self.template_mse_loss.cumulate(predicted[1], template)
+        """predicted = (warped template, warped maps, pred maps, flow, warped image, warped template image)"""
+        label, template, image, template_image = outputs
 
         bce_loss = self.pred_maps_bce_loss.cumulate(predicted[2], label)
         grad_loss = self.grad_loss.cumulate(predicted[3], None)
         deform_loss = self.deform_mse_loss.cumulate(predicted[3], torch.zeros(predicted[3].shape).cuda())
 
         label_dice_loss = self.label_dice_loss.cumulate(predicted[0], label)
-        template_dice_loss = self.template_dice_loss.cumulate(predicted[1], template)
 
-        # label_bce_loss = self.label_bce_loss.cumulate(predicted[0], label)
-        # template_bce_loss = self.template_bce_loss.cumulate(predicted[1], template)
+        warped_image_loss = self.warped_image_loss.cumulate(predicted[4], template_image)
+        warped_template_image_loss = self.warped_template_image_loss.cumulate(predicted[5], image)
 
-        loss = label_mse_loss * self.weights[0] + template_mse_loss * self.weights[1] + \
-            bce_loss * self.weights[2] + grad_loss * self.weights[3] + deform_loss * self.weights[4] + \
-            label_dice_loss * self.weights[5] + template_dice_loss * self.weights[6]
-            # label_bce_loss * self.weights[7] + template_bce_loss * self.weights[8]
-
+        loss = bce_loss * self.weights[0] + grad_loss * self.weights[1] + deform_loss * self.weights[2] + \
+            label_dice_loss * self.weights[3] + warped_image_loss * self.weights[4] + \
+            warped_template_image_loss * self.weights[5]
         self._cum_loss += loss.item()
         self._count += 1
         return loss
@@ -65,10 +58,9 @@ class DefSegLoss(TorchLoss):
         return new_loss
 
     def description(self):
-        return "label {}, template {}, {}, {}, deform {}, label {}, template {}".format(
-            self.label_mse_loss.description(), self.template_mse_loss.description(),
+        return "{}, {}, deform {}, label {}".format(
             self.pred_maps_bce_loss.description(), self.grad_loss.description(), self.deform_mse_loss.description(),
-            self.label_dice_loss.description(), self.template_dice_loss.description(),
+            self.label_dice_loss.description()
         )
 
     def reset(self):

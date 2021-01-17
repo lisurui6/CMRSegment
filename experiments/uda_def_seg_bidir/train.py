@@ -75,7 +75,8 @@ def main():
         DataConfig.from_conf(conf_path), feature_size=get_conf(train_conf, group="network", key="feature_size"),
         n_slices=get_conf(train_conf, group="network", key="n_slices"), is_3d=True, seed=config.seed,
         augmentation_config=augmentation_config, output_dir=config.experiment_dir,
-        template_path=Path(get_conf(train_conf, group="network", key="template_path"))
+        template_path=Path(get_conf(train_conf, group="network", key="template_path")),
+        template_image_path=Path(get_conf(train_conf, group="network", key="template_image_path")),
     )
     for train in training_sets:
         train.export(config.experiment_dir.joinpath("training_set_{}.csv".format(train.name)))

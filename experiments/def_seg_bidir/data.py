@@ -19,6 +19,7 @@ from CMRSegment.common.nn.torch.data import Torch2DSegmentationDataset, generate
 def construct_training_validation_dataset(
     data_config: DataConfig, feature_size: int, n_slices: int, output_dir: Path, is_3d: bool = False,
     augmentation_config: AugmentationConfig = None, seed: int = None, template_path: Path = None,
+    template_image_path: Path = None,
 ) -> Tuple[List["Torch2DSegmentationDataset"], List["Torch2DSegmentationDataset"], List["Torch2DSegmentationDataset"]]:
     training_set_configs = [
         DatasetConfig.from_conf(name, mode=data_config.data_mode, mount_prefix=data_config.mount_prefix)
@@ -43,7 +44,8 @@ def construct_training_validation_dataset(
             renew_dataframe=data_config.renew_dataframe,
             seed=seed,
             output_dir=output_dir,
-            template_path=template_path
+            template_path=template_path,
+            template_image_path=template_image_path,
         )
         training_sets.append(train)
         validation_sets.append(val)
@@ -60,6 +62,7 @@ def construct_training_validation_dataset(
             seed=seed,
             output_dir=output_dir,
             template_path=template_path,
+            template_image_path=template_image_path,
         )
         extra_val_sets.append(val)
     return training_sets, validation_sets, extra_val_sets
@@ -69,7 +72,7 @@ def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_spli
                                   n_slices: int, is_3d: bool, output_dir: Path, only_val: bool = False,
                                   renew_dataframe: bool = False, seed: int = None,
                                   augmentation_config: AugmentationConfig = None, augmentation_prob: float = 0,
-                                  template_path: Path = None):
+                                  template_path: Path = None, template_image_path: Path = None):
     if dataset_config.dataframe_path.exists():
         print("Dataframe {} exists.".format(dataset_config.dataframe_path))
     if not dataset_config.dataframe_path.exists() or renew_dataframe:
@@ -92,11 +95,15 @@ def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_spli
         val_label_paths = label_paths[int((1 - validation_split) * size):size]
         print("Selecting {} trainig images, {} validation images.".format(len(train_image_paths), len(val_image_paths)))
         if template_path is None:
-            template_path = image_paths[0]
+            template_path = label_paths[0]
+        if template_image_path is None:
+            template_image_path = image_paths[0]
         print("Template Path: {}".format(template_path))
+        print("Template Image Path: {}".format(template_image_path))
 
         train_set = DefSegDataset(
             template_path=template_path,
+            template_image_path=template_image_path,
             name=dataset_config.name,
             image_paths=train_image_paths,
             label_paths=train_label_paths,
@@ -114,6 +121,7 @@ def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_spli
 
     val_set = DefSegDataset(
         template_path=template_path,
+        template_image_path=template_image_path,
         name=dataset_config.name,
         image_paths=val_image_paths,
         label_paths=val_label_paths,
@@ -124,7 +132,7 @@ def train_val_dataset_from_config(dataset_config: DatasetConfig, validation_spli
 
 
 class DefSegDataset(Torch2DSegmentationDataset):
-    def __init__(self, template_path: Path, name: str, image_paths: List[Path], label_paths: List[Path],
+    def __init__(self, template_path: Path, template_image_path: Path, name: str, image_paths: List[Path], label_paths: List[Path],
                  n_slices: int, feature_size: int, augmentation_prob: float = 0,
                  augmentation_config: AugmentationConfig = None, is_3d: bool = False, seed: int = None,
                  output_dir: Path = None):
@@ -133,6 +141,7 @@ class DefSegDataset(Torch2DSegmentationDataset):
             augmentation_config, is_3d, seed, output_dir
         )
         self.template = self.read_label(template_path, self.feature_size, self.n_slices)
+        self.template_image = self.read_image(template_image_path, self.feature_size, self.n_slices)
 
     def __getitem__(self, index: int):
         image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
@@ -154,7 +163,8 @@ class DefSegDataset(Torch2DSegmentationDataset):
         image = torch.from_numpy(image).float()
         label = torch.from_numpy(label).float()
         template = torch.from_numpy(self.template).float()
-        return (image, template), (label, template)
+        template_image = torch.from_numpy(self.template_image).float
+        return (image, template, template_image), (label, template, image, template)
 
     def save(self, image: np.ndarray, label: np.ndarray, index: int):
         if index % 100 == 0:

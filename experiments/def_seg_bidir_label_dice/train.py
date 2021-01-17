@@ -6,10 +6,7 @@ import torch
 import shutil
 from pathlib import Path
 from argparse import ArgumentParser
-from experiments.fcn_3d.network import UNet
 from CMRSegment.common.nn.torch.experiment import Experiment, ExperimentConfig
-# from CMRSegment.common.nn.torch.data import construct_training_validation_dataset, Torch2DSegmentationDataset
-from CMRSegment.common.nn.torch.loss import FocalLoss, BCELoss, DiceCoeffWithLogits, DiceCoeff, MSELoss
 from CMRSegment.common.config import DataConfig, get_conf, AugmentationConfig
 from pyhocon import ConfigFactory
 from experiments.def_seg_bidir_label_dice.inference import inference
