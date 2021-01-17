@@ -58,22 +58,20 @@ class DefSegLoss(TorchLoss):
         return new_loss
 
     def description(self):
-        return "{}, {}, deform {}, label {}".format(
+        return "{}, {}, deform {}, label {}, warped image {}, warped template image {}".format(
             self.pred_maps_bce_loss.description(), self.grad_loss.description(), self.deform_mse_loss.description(),
-            self.label_dice_loss.description()
+            self.label_dice_loss.description(), self.warped_image_loss.description(),
+            self.warped_template_image_loss.description(),
         )
 
     def reset(self):
         super().reset()
-        self.label_mse_loss.reset()
-        self.template_mse_loss.reset()
         self.pred_maps_bce_loss.reset()
         self.grad_loss.reset()
         self.deform_mse_loss.reset()
         self.label_dice_loss.reset()
-        self.template_dice_loss.reset()
-        # self.label_bce_loss.reset()
-        # self.template_bce_loss.reset()
+        self.warped_template_image_loss.reset()
+        self.warped_image_loss.reset()
 
 
 class DefSegWarpedTemplateDice(DiceCoeff, ABC):
