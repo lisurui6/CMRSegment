@@ -76,7 +76,7 @@ class DefSegLoss(TorchLoss):
 
 class DefSegWarpedTemplateDice(DiceCoeff, ABC):
     def forward(self, input, target):
-        label, template = target
+        label, template, image, template_image = target
         # input = (warped template, warped maps, pred maps, flow)
         pred = (input[0] > 0.5).float()
         return super().forward(pred, label)
@@ -84,7 +84,7 @@ class DefSegWarpedTemplateDice(DiceCoeff, ABC):
 
 class DefSegPredDice(DiceCoeff):
     def forward(self, input, target):
-        label, template = target
+        label, template, image, template_image = target
 
         # input = (warped template, warped maps, pred maps, flow)
         pred = (input[2] > 0.5).float()
@@ -93,7 +93,7 @@ class DefSegPredDice(DiceCoeff):
 
 class DefSegWarpedMapsDice(DiceCoeff):
     def forward(self, input, target):
-        label, template = target
+        label, template, image, template_image = target
         # input = (warped template, warped maps, pred maps, flow)
         pred = (input[1] > 0.5).float()
         return super().forward(pred, template)
