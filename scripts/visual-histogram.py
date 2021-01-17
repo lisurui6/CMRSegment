@@ -1,14 +1,9 @@
-from CMRSegment.subject import Subject
-from CMRSegment.utils import rescale_intensity
-
 from CMRSegment.preprocessor import DataPreprocessor
-from CMRSegment.common.constants import ROOT_DIR, MODEL_DIR
+from CMRSegment.common.constants import LIB_DIR
 import nibabel as nib
 from matplotlib import pyplot as plt
-import numpy as np
 
-
-preprocessor = DataPreprocessor(force_restart=False)
+preprocessor = DataPreprocessor(overwrite=False)
 # center = "sheffield"
 # # , "ukbb", "sheffield"
 # for center in ["genscan", "ukbb", "sheffield", "singapore_hcm", "singapore_lvsa"]:
@@ -27,13 +22,13 @@ preprocessor = DataPreprocessor(force_restart=False)
 
 from skimage.exposure import match_histograms
 reference_center = "genscan"
-subjects = preprocessor.run(data_dir=ROOT_DIR.joinpath("data", reference_center))
+subjects = preprocessor.run(data_dir=LIB_DIR.joinpath("data", reference_center))
 reference_subject = subjects[0]
 reference_ed_nim = nib.load(str(reference_subject.ed_path))
 reference_ed_image = reference_ed_nim.get_data()
 # reference_ed_image = rescale_intensity(reference_ed_image)
 for target_center in ["singapore_lvsa"]:
-    subjects = preprocessor.run(data_dir=ROOT_DIR.joinpath("data", target_center))
+    subjects = preprocessor.run(data_dir=LIB_DIR.joinpath("data", target_center))
     target_subject = subjects[0]
     target_ed_nim = nib.load(str(target_subject.ed_path))
     target_ed_image = target_ed_nim.get_data()

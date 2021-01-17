@@ -6,3 +6,4 @@ pyhocon
 SimpleITK
 pandas
 tensorboard
+neurite

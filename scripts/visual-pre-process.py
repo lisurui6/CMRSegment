@@ -1,7 +1,5 @@
-from pathlib import Path
 from CMRSegment.common.plot import plot_nii_gz
-from CMRSegment.subject import Subject
-from CMRSegment.common.constants import ROOT_DIR
+from CMRSegment.common.constants import LIB_DIR
 
 # plot enlarge phases
 # data_dir = ROOT_DIR.joinpath("data")
@@ -10,4 +8,4 @@ from CMRSegment.common.constants import ROOT_DIR
 #     phase_path = subject.enlarge_phases_dir().joinpath("lvsa_SR_00.nii.gz")
 #     print(phase_path)
 #     plot_nii_gz(phase_path)
-plot_nii_gz(ROOT_DIR.joinpath("data", "ukbb", "1", "4d_rview", "4Dimg.nii.gz"))
+plot_nii_gz(LIB_DIR.joinpath("data", "ukbb", "1", "4d_rview", "4Dimg.nii.gz"))
