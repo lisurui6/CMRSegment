@@ -41,7 +41,11 @@ class AffineLocalNet(torch.nn.Module):
         self.maxpoo1 = nn.MaxPool3d(kernel_size=4, stride=4, padding=0)
         self.conv2 = conv_block_2_3d(16, 8, activation, batch_norm, group_norm)
         self.maxpoo2 = nn.MaxPool3d(kernel_size=4, stride=4, padding=0)
-        self.conv3 = torch.nn.Conv3d(8, 1, kernel_size=1)
+        self.conv3 = torch.nn.Sequential(
+            torch.nn.Conv3d(8, 1, kernel_size=1),
+            nn.BatchNorm3d(1),
+            activation(),
+        )
         self.regress = torch.nn.Linear(256, 12)
 
     def forward(self, pred_maps, atlas):
