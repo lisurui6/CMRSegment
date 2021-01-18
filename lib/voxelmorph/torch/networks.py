@@ -18,7 +18,7 @@ class Unet(nn.Module):
         decoder: [32, 32, 32, 32, 32, 16, 16]
     """
 
-    def __init__(self, inshape, nb_features=None, nb_levels=None, feat_mult=1):
+    def __init__(self, inshape, nb_features=None, nb_levels=None, feat_mult=1, batch_norm=False):
         super().__init__()
         """
         Parameters:
@@ -56,7 +56,7 @@ class Unet(nn.Module):
         prev_nf = 6
         self.downarm = nn.ModuleList()
         for nf in self.enc_nf:
-            self.downarm.append(ConvBlock(ndims, prev_nf, nf, stride=2))
+            self.downarm.append(ConvBlock(ndims, prev_nf, nf, stride=2, batch_norm=batch_norm))
             prev_nf = nf
 
         # configure decoder (up-sampling path)
@@ -64,14 +64,14 @@ class Unet(nn.Module):
         self.uparm = nn.ModuleList()
         for i, nf in enumerate(self.dec_nf[:len(self.enc_nf)]):
             channels = prev_nf + enc_history[i] if i > 0 else prev_nf
-            self.uparm.append(ConvBlock(ndims, channels, nf, stride=1))
+            self.uparm.append(ConvBlock(ndims, channels, nf, stride=1, batch_norm=batch_norm))
             prev_nf = nf
 
         # configure extra decoder convolutions (no up-sampling)
         prev_nf += 6
         self.extras = nn.ModuleList()
         for nf in self.dec_nf[len(self.enc_nf):]:
-            self.extras.append(ConvBlock(ndims, prev_nf, nf, stride=1))
+            self.extras.append(ConvBlock(ndims, prev_nf, nf, stride=1, batch_norm=batch_norm))
             prev_nf = nf
  
     def forward(self, x):
@@ -112,6 +112,7 @@ class VxmDense(LoadableModel):
         bidir=False,
         use_probs=False,
         mode="bilinear",
+        batch_norm=False,
     ):
         """ 
         Parameters:
@@ -141,7 +142,8 @@ class VxmDense(LoadableModel):
             inshape,
             nb_features=nb_unet_features,
             nb_levels=nb_unet_levels,
-            feat_mult=unet_feat_mult
+            feat_mult=unet_feat_mult,
+            batch_norm=batch_norm,
         )
 
         # configure unet to flow field layer
@@ -222,15 +224,22 @@ class ConvBlock(nn.Module):
     Specific convolutional block followed by leakyrelu for unet.
     """
 
-    def __init__(self, ndims, in_channels, out_channels, stride=1):
+    def __init__(self, ndims, in_channels, out_channels, stride=1, batch_norm=False):
         super().__init__()
 
         Conv = getattr(nn, 'Conv%dd' % ndims)
         self.main = Conv(in_channels, out_channels, 3, stride, 1)
         # self.activation = nn.LeakyReLU(0.2)
         self.activation = nn.ReLU()
+        if batch_norm:
+            self.bn = nn.BatchNorm3d(out_channels)
+        else:
+            self.bn = None
 
     def forward(self, x):
         out = self.main(x)
+        if self.bn is not None:
+            out = self.bn(out)
         out = self.activation(out)
+
         return out

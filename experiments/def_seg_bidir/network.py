@@ -23,6 +23,7 @@ class DefSegNet(torch.nn.Module):
             int_steps=int_steps,
             int_downsize=int_downsize,
             mode="bilinear",
+            batch_norm=batch_norm,
         )
 
     def forward(self, inputs):
