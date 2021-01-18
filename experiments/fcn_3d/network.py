@@ -10,6 +10,7 @@ def conv_trans_block_3d(in_dim, out_dim, activation, batch_norm=True, group_norm
             activation(),
         )
     elif group_norm:
+        print("unet gn trans")
         return nn.Sequential(
             nn.ConvTranspose3d(in_dim, out_dim, kernel_size=3, stride=2, padding=1, output_padding=1),
             nn.GroupNorm(4, out_dim),
@@ -37,6 +38,7 @@ def conv_block_2_3d(in_dim, out_dim, activation, batch_norm: bool = True, group_
             nn.BatchNorm3d(out_dim),
         )
     elif group_norm:
+        print("unet gn conv")
         return nn.Sequential(
             nn.Conv3d(in_dim, out_dim, kernel_size=3, stride=1, padding=1),
             nn.GroupNorm(4, out_dim),
