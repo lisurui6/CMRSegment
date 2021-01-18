@@ -26,7 +26,7 @@ class DefSegNet(torch.nn.Module):
         )
 
     def forward(self, inputs):
-        image, template, template_image = inputs
+        image, template = inputs
         pred_maps = self.seg_unet(image)
         pred_maps = torch.sigmoid(pred_maps)
         warped_template, warped_maps, flow, pos_flow, neg_flow = self.vxm_dense(template, pred_maps)
