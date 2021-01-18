@@ -12,41 +12,48 @@ from typing import List
 class DefSegLoss(TorchLoss):
     def __init__(self, weights: List[float], penalty="l2", loss_mult=None):
         super().__init__()
+        self.weights = weights
 
         self.pred_maps_bce_loss = BCELoss(logit=False)
+        self.pred_maps_mse_loss = MSELoss()
+
         self.grad_loss = Grad(penalty=penalty, loss_mult=loss_mult)
-        self.weights = weights
         self.deform_mse_loss = MSELoss()
 
         self.label_dice_loss = DiceLoss()
         self.label_mse_loss = MSELoss()
 
+        self.template_dice_loss = DiceLoss()
+        self.template_mse_loss = MSELoss()
+
         # self.label_bce_loss = BCELoss(logit=False)
         # self.template_bce_loss = BCELoss(logit=False)
-        self.warped_image_loss = MSELoss()
-        self.warped_template_image_loss = MSELoss()
+
 
     def cumulate(
         self,
         predicted: Union[torch.Tensor, Iterable[torch.Tensor]],
         outputs: Union[torch.Tensor, Iterable[torch.Tensor]],
     ):
-        """predicted = (warped template, warped maps, pred maps, flow, warped image, warped template image)"""
-        label, template, image, template_image = outputs
+        """predicted = (warped template, warped maps, pred maps, flow)"""
+        label, template = outputs
 
-        bce_loss = self.pred_maps_bce_loss.cumulate(predicted[2], label)
+        pred_map_bce_loss = self.pred_maps_bce_loss.cumulate(predicted[2], label)
+        pred_map_mse_loss = self.pred_maps_mse_loss.cumulate(predicted[2], label)
+        pred_map_loss = self.weights[0] * pred_map_bce_loss + self.weights[1] * pred_map_mse_loss
+
         grad_loss = self.grad_loss.cumulate(predicted[3], None)
         deform_loss = self.deform_mse_loss.cumulate(predicted[3], torch.zeros(predicted[3].shape).cuda())
 
         label_dice_loss = self.label_dice_loss.cumulate(predicted[0], label)
         label_mse_loss = self.label_mse_loss.cumulate(predicted[0], label)
+        label_loss = self.weights[2] * label_dice_loss + self.weights[3] * label_mse_loss
 
-        warped_image_loss = self.warped_image_loss.cumulate(predicted[4], template_image)
-        warped_template_image_loss = self.warped_template_image_loss.cumulate(predicted[5], image)
+        template_dice_loss = self.template_dice_loss.cumulate(predicted[1], template)
+        template_mse_loss = self.template_mse_loss.cumulate(predicted[1], template)
+        template_loss = self.weights[4] * template_dice_loss + self.weights[5] * template_mse_loss
 
-        loss = bce_loss * self.weights[0] + grad_loss * self.weights[1] + deform_loss * self.weights[2] + \
-            label_dice_loss * self.weights[3] + label_mse_loss * self.weights[4] + warped_image_loss * self.weights[5] + \
-            warped_template_image_loss * self.weights[6]
+        loss = pred_map_loss + label_loss + template_loss + grad_loss * self.weights[6] + deform_loss * self.weights[7]
         self._cum_loss += loss.item()
         self._count += 1
         return loss
@@ -60,27 +67,29 @@ class DefSegLoss(TorchLoss):
         return new_loss
 
     def description(self):
-        return "total {}, {}, {}, deform {}, label {}, label {}, warped image {}, warped template image {}".format(
+        return "total {}, pred map {}, pred map {}, label {}, label {}, template {}, template {}, grad {}, deform {}, ".format(
             self.log(),
-            self.pred_maps_bce_loss.description(), self.grad_loss.description(), self.deform_mse_loss.description(),
-            self.label_dice_loss.description(), self.label_mse_loss.description(), self.warped_image_loss.description(),
-            self.warped_template_image_loss.description(),
+            self.pred_maps_bce_loss.description(), self.pred_maps_mse_loss,
+            self.label_dice_loss.description(), self.label_mse_loss.description(),
+            self.template_dice_loss.description(), self.template_mse_loss.description(),
+            self.grad_loss.description(), self.deform_mse_loss.description(),
         )
 
     def reset(self):
         super().reset()
         self.pred_maps_bce_loss.reset()
+        self.pred_maps_mse_loss.reset()
         self.grad_loss.reset()
         self.deform_mse_loss.reset()
         self.label_dice_loss.reset()
-        self.warped_template_image_loss.reset()
-        self.warped_image_loss.reset()
         self.label_mse_loss.reset()
+        self.template_mse_loss.reset()
+        self.template_dice_loss.reset()
 
 
 class DefSegWarpedTemplateDice(DiceCoeff, ABC):
     def forward(self, input, target):
-        label, template, image, template_image = target
+        label, template = target
         # input = (warped template, warped maps, pred maps, flow)
         pred = (input[0] > 0.5).float()
         return super().forward(pred, label)
@@ -88,7 +97,7 @@ class DefSegWarpedTemplateDice(DiceCoeff, ABC):
 
 class DefSegPredDice(DiceCoeff):
     def forward(self, input, target):
-        label, template, image, template_image = target
+        label, template = target
 
         # input = (warped template, warped maps, pred maps, flow)
         pred = (input[2] > 0.5).float()
@@ -97,7 +106,7 @@ class DefSegPredDice(DiceCoeff):
 
 class DefSegWarpedMapsDice(DiceCoeff):
     def forward(self, input, target):
-        label, template, image, template_image = target
+        label, template = target
         # input = (warped template, warped maps, pred maps, flow)
         pred = (input[1] > 0.5).float()
         return super().forward(pred, template)

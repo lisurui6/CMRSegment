@@ -91,9 +91,9 @@ def main():
 
 
 def inference(image: torch.Tensor, label: torch.Tensor, image_path: Path, network: torch.nn.Module, output_dir: Path):
-    image, template, template_image = image
+    image, template = image
     # warped_template, warped_maps, pred_maps, flow = network((image, template))
-    warped_template, warped_maps, pred_maps, flow, warped_image, warped_template_image = network((image, template, template_image))
+    warped_template, warped_maps, pred_maps, flow = network((image, template))
     for prefix, predicted in zip(["warped_template", "pred_maps"], [warped_template, pred_maps]):
         # predicted = torch.sigmoid(predicted)
         # print("sigmoid", torch.mean(predicted).item(), torch.max(predicted).item())
