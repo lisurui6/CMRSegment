@@ -6,12 +6,13 @@ from experiments.fcn_3d.network import UNet
 
 class DefSegNet(torch.nn.Module):
     def __init__(self, in_channels, n_classes, n_filters, feature_size, n_slices, int_steps=7,
-                 int_downsize=1, bidir=False):
+                 int_downsize=1, bidir=False, batch_norm=True):
         super().__init__()
         self.seg_unet = UNet(
             in_channels=in_channels,
             n_classes=n_classes,
             n_filters=n_filters,
+            batch_norm=batch_norm
         )
         enc_nf = [16, 32, 32, 32]
         dec_nf = [32, 32, 32, 32, 32, 16, 16]
