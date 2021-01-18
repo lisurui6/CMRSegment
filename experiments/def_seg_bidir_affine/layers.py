@@ -30,16 +30,15 @@ class AffineSpatialTransformer(nn.Module):
     def forward(self, src, theta):
         # theta = (N, 3, 4)
         # new locations
-        grid = nnf.affine_grid(theta, size=src.shape)
+        new_locs = nnf.affine_grid(theta, size=src.shape)
         # move channels dim to last position
         # also not sure why, but the channels need to be reversed
-        print(src.shape[2:])
-        if len(src.shape[2:]) == 2:
-            grid = grid.permute(0, 2, 3, 1)
-            grid = grid[..., [1, 0]]
-        elif len(src.shape[2:]) == 3:
-            grid = grid.permute(0, 2, 3, 4, 1)
-            grid = grid[..., [2, 1, 0]]
-        print(self.grid.shape, grid.shape)
-        new_locs = self.grid + grid
+        shape = src.shape[2:]
+        if len(shape) == 2:
+            new_locs = new_locs.permute(0, 2, 3, 1)
+            new_locs = new_locs[..., [1, 0]]
+        elif len(shape) == 3:
+            new_locs = new_locs.permute(0, 2, 3, 4, 1)
+            new_locs = new_locs[..., [2, 1, 0]]
+        new_locs = self.grid + new_locs
         return nnf.grid_sample(src, new_locs, align_corners=True, mode=self.mode)
