@@ -236,7 +236,7 @@ class ConvBlock(nn.Module):
         if batch_norm:
             self.norm = nn.BatchNorm3d(out_channels)
         elif group_norm:
-            self.norm = nn.GroupNorm(16, out_channels)
+            self.norm = nn.GroupNorm(8, out_channels)
         else:
             self.norm = None
 
