@@ -6,13 +6,15 @@ from experiments.fcn_3d.network import UNet
 
 class DefSegNet(torch.nn.Module):
     def __init__(self, in_channels, n_classes, n_filters, feature_size, n_slices, int_steps=7,
-                 int_downsize=1, bidir=False, batch_norm=True):
+                 int_downsize=1, bidir=False, batch_norm=True, group_norm=False):
+        assert not (batch_norm and group_norm)
         super().__init__()
         self.seg_unet = UNet(
             in_channels=in_channels,
             n_classes=n_classes,
             n_filters=n_filters,
-            batch_norm=batch_norm
+            batch_norm=batch_norm,
+            group_norm=group_norm,
         )
         enc_nf = [16, 32, 32, 32]
         dec_nf = [32, 32, 32, 32, 32, 16, 16]
@@ -24,6 +26,7 @@ class DefSegNet(torch.nn.Module):
             int_downsize=int_downsize,
             mode="bilinear",
             batch_norm=batch_norm,
+            group_norm=group_norm,
         )
 
     def forward(self, inputs):

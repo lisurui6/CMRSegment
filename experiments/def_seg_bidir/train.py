@@ -64,6 +64,7 @@ def main():
         int_downsize=get_conf(train_conf, group="network", key="integrate_downsize"),
         bidir=True,
         batch_norm=get_conf(train_conf, group="network", key="batch_norm"),
+        group_norm=get_conf(train_conf, group="network", key="group_norm"),
     )
 
     training_sets, validation_sets, extra_validation_sets = construct_training_validation_dataset(
