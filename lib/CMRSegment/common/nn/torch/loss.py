@@ -117,7 +117,7 @@ class DiceLoss(TorchLoss):
 
 class MSELoss(TorchLoss, torch.nn.MSELoss):
     def description(self):
-        return "Sqrt MSE loss: {:.4f}".format(math.sqrt(self.avg()))
+        return "MSE loss: {:.4f}".format(self.avg())
 
 
 class L1Loss(TorchLoss, torch.nn.L1Loss):
