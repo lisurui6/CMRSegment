@@ -33,7 +33,7 @@ class AffineSpatialTransformer(nn.Module):
         grid = nnf.affine_grid(theta, size=src.shape)
         # move channels dim to last position
         # also not sure why, but the channels need to be reversed
-        if len(grid) == 2:
+        if len(src.shape[2:]) == 2:
             grid = grid.permute(0, 2, 3, 1)
             grid = grid[..., [1, 0]]
         elif len(grid) == 3:
