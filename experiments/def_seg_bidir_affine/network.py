@@ -42,7 +42,7 @@ class AffineLocalNet(torch.nn.Module):
         self.conv2 = conv_block_2_3d(16, 8, activation, batch_norm, group_norm)
         self.maxpoo2 = nn.MaxPool3d(kernel_size=4, stride=4, padding=0)
         self.conv3 = torch.nn.Conv3d(8, 1, kernel_size=1)
-        self.regress = torch.nn.Linear(10, 12)
+        self.regress = torch.nn.Linear(256, 12)
 
     def forward(self, pred_maps, atlas):
         x = torch.cat([pred_maps, atlas], dim=1)
@@ -52,7 +52,6 @@ class AffineLocalNet(torch.nn.Module):
         out = self.maxpoo2(out)
         out = self.conv3(out)
         out = out.view(out.shape[0], -1)
-        print(out.shape)
         theta = self.regress(out)
         theta = theta.view(theta.shape[0], 3, 4)
         return theta
