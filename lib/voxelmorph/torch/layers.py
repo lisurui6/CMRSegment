@@ -38,13 +38,14 @@ class SpatialTransformer(nn.Module):
 
         # move channels dim to last position
         # also not sure why, but the channels need to be reversed
+        print("new locs", new_locs.shape)
         if len(shape) == 2:
             new_locs = new_locs.permute(0, 2, 3, 1)
             new_locs = new_locs[..., [1, 0]]
         elif len(shape) == 3:
             new_locs = new_locs.permute(0, 2, 3, 4, 1)
             new_locs = new_locs[..., [2, 1, 0]]
-
+        print(new_locs.shape)
         return nnf.grid_sample(src, new_locs, align_corners=True, mode=self.mode)
 
 
