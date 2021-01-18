@@ -53,8 +53,8 @@ class AffineLocalNet(torch.nn.Module):
             torch.nn.Linear(50, 12),
         )
         bias = torch.from_numpy(np.array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0])).float()
-        self.regress.weight.data.zero_()
-        self.regress.bias.data.copy_(bias)
+        self.regress[3].weight.data.zero_()
+        self.regress[3].bias.data.copy_(bias)
 
     def forward(self, pred_maps, atlas):
         x = torch.cat([pred_maps, atlas], dim=1)
