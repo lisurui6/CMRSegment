@@ -48,7 +48,7 @@ class AffineLocalNet(torch.nn.Module):
         )
         self.regress = torch.nn.Sequential(
             torch.nn.Linear(256, 50),
-            nn.BatchNorm2d(50),
+            nn.BatchNorm1d(50),
             activation(),
             torch.nn.Linear(50, 12),
         )
