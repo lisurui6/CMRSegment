@@ -24,6 +24,7 @@ class DefSegExperiment(Experiment):
                 template = prepare_tensors(template, self.config.gpu, self.config.device)
 
                 template_image = val.template_image
+                template_image = np.expand_dims(template_image, 0)
                 template_image = torch.from_numpy(template_image).float()
                 template_image = torch.unsqueeze(template_image, 0)
                 template_image = prepare_tensors(template_image, self.config.gpu, self.config.device)
