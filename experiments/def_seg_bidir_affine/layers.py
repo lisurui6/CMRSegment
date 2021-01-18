@@ -36,7 +36,7 @@ class AffineSpatialTransformer(nn.Module):
         if len(src.shape[2:]) == 2:
             grid = grid.permute(0, 2, 3, 1)
             grid = grid[..., [1, 0]]
-        elif len(grid) == 3:
+        elif len(src.shape[2:]) == 3:
             grid = grid.permute(0, 2, 3, 4, 1)
             grid = grid[..., [2, 1, 0]]
 
