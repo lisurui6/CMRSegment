@@ -2,31 +2,45 @@ import torch
 import torch.nn as nn
 
 
-def conv_trans_block_3d(in_dim, out_dim, activation):
-    return nn.Sequential(
-        nn.ConvTranspose3d(in_dim, out_dim, kernel_size=3, stride=2, padding=1, output_padding=1),
-        nn.BatchNorm3d(out_dim),
-        activation(),
-    )
+def conv_trans_block_3d(in_dim, out_dim, activation, batch_norm: bool = True):
+    if batch_norm:
+        return nn.Sequential(
+            nn.ConvTranspose3d(in_dim, out_dim, kernel_size=3, stride=2, padding=1, output_padding=1),
+            nn.BatchNorm3d(out_dim),
+            activation(),
+        )
+    else:
+        return nn.Sequential(
+            nn.ConvTranspose3d(in_dim, out_dim, kernel_size=3, stride=2, padding=1, output_padding=1),
+            activation(),
+        )
 
 
 def max_pooling_3d():
     return nn.MaxPool3d(kernel_size=2, stride=2, padding=0)
 
 
-def conv_block_2_3d(in_dim, out_dim, activation):
-    return nn.Sequential(
-        # conv_block_3d(in_dim, out_dim, activation),
-        nn.Conv3d(in_dim, out_dim, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm3d(out_dim),
-        activation(),
-        nn.Conv3d(out_dim, out_dim, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm3d(out_dim),
-    )
+def conv_block_2_3d(in_dim, out_dim, activation, batch_norm: bool = True):
+    if batch_norm:
+        return nn.Sequential(
+            # conv_block_3d(in_dim, out_dim, activation),
+            nn.Conv3d(in_dim, out_dim, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm3d(out_dim),
+            activation(),
+            nn.Conv3d(out_dim, out_dim, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm3d(out_dim),
+        )
+    else:
+        return nn.Sequential(
+            # conv_block_3d(in_dim, out_dim, activation),
+            nn.Conv3d(in_dim, out_dim, kernel_size=3, stride=1, padding=1),
+            activation(),
+            nn.Conv3d(out_dim, out_dim, kernel_size=3, stride=1, padding=1),
+        )
 
 
 class UNet(nn.Module):
-    def __init__(self, in_channels, n_classes, n_filters):
+    def __init__(self, in_channels, n_classes, n_filters, batch_norm: bool = True):
         super(UNet, self).__init__()
 
         self.in_dim = in_channels
@@ -34,33 +48,34 @@ class UNet(nn.Module):
         self.num_filters = n_filters
         # activation = nn.LeakyReLU(0.2, inplace=True)
         activation = nn.ReLU
+        self.batch_norm = batch_norm
 
         # Down sampling
-        self.down_1 = conv_block_2_3d(self.in_dim, self.num_filters, activation)
+        self.down_1 = conv_block_2_3d(self.in_dim, self.num_filters, activation, self.batch_norm)
         self.pool_1 = max_pooling_3d()
-        self.down_2 = conv_block_2_3d(self.num_filters, self.num_filters * 2, activation)
+        self.down_2 = conv_block_2_3d(self.num_filters, self.num_filters * 2, activation, self.batch_norm)
         self.pool_2 = max_pooling_3d()
-        self.down_3 = conv_block_2_3d(self.num_filters * 2, self.num_filters * 4, activation)
+        self.down_3 = conv_block_2_3d(self.num_filters * 2, self.num_filters * 4, activation, self.batch_norm)
         self.pool_3 = max_pooling_3d()
-        self.down_4 = conv_block_2_3d(self.num_filters * 4, self.num_filters * 8, activation)
+        self.down_4 = conv_block_2_3d(self.num_filters * 4, self.num_filters * 8, activation, self.batch_norm)
         self.pool_4 = max_pooling_3d()
-        self.down_5 = conv_block_2_3d(self.num_filters * 8, self.num_filters * 16, activation)
+        self.down_5 = conv_block_2_3d(self.num_filters * 8, self.num_filters * 16, activation, self.batch_norm)
         self.pool_5 = max_pooling_3d()
 
         # Bridge
-        self.bridge = conv_block_2_3d(self.num_filters * 16, self.num_filters * 32, activation)
+        self.bridge = conv_block_2_3d(self.num_filters * 16, self.num_filters * 32, activation, self.batch_norm)
 
         # Up sampling
-        self.trans_1 = conv_trans_block_3d(self.num_filters * 32, self.num_filters * 32, activation)
-        self.up_1 = conv_block_2_3d(self.num_filters * 48, self.num_filters * 16, activation)
-        self.trans_2 = conv_trans_block_3d(self.num_filters * 16, self.num_filters * 16, activation)
-        self.up_2 = conv_block_2_3d(self.num_filters * 24, self.num_filters * 8, activation)
-        self.trans_3 = conv_trans_block_3d(self.num_filters * 8, self.num_filters * 8, activation)
-        self.up_3 = conv_block_2_3d(self.num_filters * 12, self.num_filters * 4, activation)
-        self.trans_4 = conv_trans_block_3d(self.num_filters * 4, self.num_filters * 4, activation)
-        self.up_4 = conv_block_2_3d(self.num_filters * 6, self.num_filters * 2, activation)
-        self.trans_5 = conv_trans_block_3d(self.num_filters * 2, self.num_filters * 2, activation)
-        self.up_5 = conv_block_2_3d(self.num_filters * 3, self.num_filters * 1, activation)
+        self.trans_1 = conv_trans_block_3d(self.num_filters * 32, self.num_filters * 32, activation, self.batch_norm)
+        self.up_1 = conv_block_2_3d(self.num_filters * 48, self.num_filters * 16, activation, self.batch_norm)
+        self.trans_2 = conv_trans_block_3d(self.num_filters * 16, self.num_filters * 16, activation, self.batch_norm)
+        self.up_2 = conv_block_2_3d(self.num_filters * 24, self.num_filters * 8, activation, self.batch_norm)
+        self.trans_3 = conv_trans_block_3d(self.num_filters * 8, self.num_filters * 8, activation, self.batch_norm)
+        self.up_3 = conv_block_2_3d(self.num_filters * 12, self.num_filters * 4, activation, self.batch_norm)
+        self.trans_4 = conv_trans_block_3d(self.num_filters * 4, self.num_filters * 4, activation, self.batch_norm)
+        self.up_4 = conv_block_2_3d(self.num_filters * 6, self.num_filters * 2, activation, self.batch_norm)
+        self.trans_5 = conv_trans_block_3d(self.num_filters * 2, self.num_filters * 2, activation, self.batch_norm)
+        self.up_5 = conv_block_2_3d(self.num_filters * 3, self.num_filters * 1, activation, self.batch_norm)
 
         # Output
         self.out = nn.Conv3d(self.num_filters, self.out_dim, kernel_size=1)
