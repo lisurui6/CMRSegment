@@ -15,6 +15,7 @@ class DefSegLoss(TorchLoss):
         self.weights = weights
 
         self.pred_maps_bce_loss = BCELoss(logit=False)
+        self.pred_maps_dice_loss = DiceLoss()
         self.pred_maps_mse_loss = MSELoss()
 
         self.grad_loss = Grad(penalty=penalty, loss_mult=loss_mult)
@@ -39,21 +40,22 @@ class DefSegLoss(TorchLoss):
         label, template = outputs
 
         pred_map_bce_loss = self.pred_maps_bce_loss.cumulate(predicted[2], label)
+        pred_map_dice_loss = self.pred_maps_dice_loss.cumulate(predicted[2], label)
         pred_map_mse_loss = self.pred_maps_mse_loss.cumulate(predicted[2], label)
-        pred_map_loss = self.weights[0] * pred_map_bce_loss + self.weights[1] * pred_map_mse_loss
+        pred_map_loss = self.weights[0] * pred_map_bce_loss + self.weights[1] * pred_map_dice_loss + self.weights[2] * pred_map_mse_loss
 
         grad_loss = self.grad_loss.cumulate(predicted[3], None)
         deform_loss = self.deform_mse_loss.cumulate(predicted[3], torch.zeros(predicted[3].shape).cuda())
 
         label_dice_loss = self.label_dice_loss.cumulate(predicted[0], label)
         label_mse_loss = self.label_mse_loss.cumulate(predicted[0], label)
-        label_loss = self.weights[2] * label_dice_loss + self.weights[3] * label_mse_loss
+        label_loss = self.weights[3] * label_dice_loss + self.weights[4] * label_mse_loss
 
         template_dice_loss = self.template_dice_loss.cumulate(predicted[1], template)
         template_mse_loss = self.template_mse_loss.cumulate(predicted[1], template)
-        template_loss = self.weights[4] * template_dice_loss + self.weights[5] * template_mse_loss
+        template_loss = self.weights[5] * template_dice_loss + self.weights[6] * template_mse_loss
 
-        loss = pred_map_loss + label_loss + template_loss + grad_loss * self.weights[6] + deform_loss * self.weights[7]
+        loss = pred_map_loss + label_loss + template_loss + grad_loss * self.weights[7] + deform_loss * self.weights[8]
         self._cum_loss += loss.item()
         self._count += 1
         return loss
@@ -67,9 +69,9 @@ class DefSegLoss(TorchLoss):
         return new_loss
 
     def description(self):
-        return "total {}, pred map {}, pred map {}, label {}, label {}, template {}, template {}, grad {}, deform {}, ".format(
+        return "total {}, pred map {}, pred map {}, pred map {}, label {}, label {}, template {}, template {}, grad {}, deform {}, ".format(
             self.log(),
-            self.pred_maps_bce_loss.description(), self.pred_maps_mse_loss.description(),
+            self.pred_maps_bce_loss.description(), self.pred_maps_dice_loss.description(), self.pred_maps_mse_loss.description(),
             self.label_dice_loss.description(), self.label_mse_loss.description(),
             self.template_dice_loss.description(), self.template_mse_loss.description(),
             self.grad_loss.description(), self.deform_mse_loss.description(),
@@ -79,6 +81,8 @@ class DefSegLoss(TorchLoss):
         super().reset()
         self.pred_maps_bce_loss.reset()
         self.pred_maps_mse_loss.reset()
+        self.pred_maps_dice_loss.reset()
+
         self.grad_loss.reset()
         self.deform_mse_loss.reset()
         self.label_dice_loss.reset()
