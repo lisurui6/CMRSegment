@@ -60,7 +60,8 @@ class DefSegLoss(TorchLoss):
         return new_loss
 
     def description(self):
-        return "{}, {}, deform {}, label {}, label {}, warped image {}, warped template image {}".format(
+        return "total {}, {}, {}, deform {}, label {}, label {}, warped image {}, warped template image {}".format(
+            self.log(),
             self.pred_maps_bce_loss.description(), self.grad_loss.description(), self.deform_mse_loss.description(),
             self.label_dice_loss.description(), self.label_mse_loss.description(), self.warped_image_loss.description(),
             self.warped_template_image_loss.description(),
