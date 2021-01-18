@@ -31,5 +31,6 @@ class AffineSpatialTransformer(nn.Module):
         # theta = (N, 3, 4)
         # new locations
         grid = nnf.affine_grid(theta, size=src.shape)
+        print(grid.shape, self.grid.shape)
         new_locs = self.grid + grid
         return nnf.grid_sample(src, grid, align_corners=True, mode=self.mode)
