@@ -15,7 +15,7 @@ class TorchLoss(torch.nn.Module):
 
     def description(self):
         """Description use for display"""
-        return "{}: {:.8f}".format(self.document(), self.avg())
+        return "{}: {:.4f}".format(self.document(), self.avg())
 
     def log(self):
         """Value(s) to store in logging"""
