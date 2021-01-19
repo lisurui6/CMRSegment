@@ -67,12 +67,14 @@ class Experiment:
             num_workers=self.config.num_workers,
             pin_memory=self.config.pin_memory
         )
+        set = False
         for epoch in range(self.config.num_epochs):
             self.network.train()
             self.logger.info("{}: starting epoch {}/{}".format(datetime.now(), epoch, self.config.num_epochs))
             self.loss.reset()
-            if epoch > 5:
+            if epoch > 5 and not set:
                 self.optimizer.param_groups[0]['lr'] /= 10
+                set = True
             # eval first
             # val_metrics = self.eval(self.loss.new(), *self.other_validation_metrics, datasets=self.validation_sets)
             # self.logger.info("Validation loss: {}".format(val_metrics[0].description()))
