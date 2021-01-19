@@ -74,6 +74,7 @@ class Experiment:
             self.loss.reset()
             if epoch > 10 and not set:
                 self.optimizer.param_groups[0]['lr'] /= 10
+                print("-------------Learning rate: {}-------------".format(self.optimizer.param_groups[0]['lr']))
                 set = True
             # eval first
             # val_metrics = self.eval(self.loss.new(), *self.other_validation_metrics, datasets=self.validation_sets)
