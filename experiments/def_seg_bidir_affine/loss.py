@@ -38,7 +38,7 @@ class DefSegLoss(TorchLoss):
     ):
         """predicted = (warped template, warped maps, pred maps, flow)"""
         label, template = outputs
-        if self.epoch < 5:
+        if self.epoch <= 10:
             weights = [1, 0, 0, 0, 0, 0, 0, 0, 0]
         else:
             weights = self.weights
