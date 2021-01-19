@@ -141,7 +141,7 @@ class DefSegDataset(Torch2DSegmentationDataset):
             augmentation_config, is_3d, seed, output_dir
         )
         self.template = self.read_label(template_path, self.feature_size, self.n_slices)
-        self.template_image = self.read_image(template_image_path, self.feature_size, self.n_slices)
+        # self.template_image = self.read_image(template_image_path, self.feature_size, self.n_slices)
 
     def __getitem__(self, index: int):
         image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
