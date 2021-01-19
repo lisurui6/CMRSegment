@@ -73,23 +73,23 @@ class UNet(nn.Module):
         self.pool_3 = max_pooling_3d()
         self.down_4 = conv_block_2_3d(self.num_filters * 4, self.num_filters * 8, activation, self.batch_norm, group_norm)
         self.pool_4 = max_pooling_3d()
-        self.down_5 = conv_block_2_3d(self.num_filters * 8, self.num_filters * 16, activation, self.batch_norm, group_norm)
+        self.down_5 = conv_block_2_3d(self.num_filters * 8, self.num_filters * 8, activation, self.batch_norm, group_norm)
         self.pool_5 = max_pooling_3d()
 
         # Bridge
-        self.bridge = conv_block_2_3d(self.num_filters * 16, self.num_filters * 32, activation, self.batch_norm, group_norm)
+        self.bridge = conv_block_2_3d(self.num_filters * 8, self.num_filters * 8, activation, self.batch_norm, group_norm)
 
         # Up sampling
-        self.trans_1 = conv_trans_block_3d(self.num_filters * 32, self.num_filters * 32, activation, self.batch_norm, group_norm)
-        self.up_1 = conv_block_2_3d(self.num_filters * 48, self.num_filters * 16, activation, self.batch_norm, group_norm)
-        self.trans_2 = conv_trans_block_3d(self.num_filters * 16, self.num_filters * 16, activation, self.batch_norm, group_norm)
-        self.up_2 = conv_block_2_3d(self.num_filters * 24, self.num_filters * 8, activation, self.batch_norm, group_norm)
+        self.trans_1 = conv_trans_block_3d(self.num_filters * 8, self.num_filters * 8, activation, self.batch_norm, group_norm)
+        self.up_1 = conv_block_2_3d(self.num_filters * 8, self.num_filters * 8, activation, self.batch_norm, group_norm)
+        self.trans_2 = conv_trans_block_3d(self.num_filters * 8, self.num_filters * 8, activation, self.batch_norm, group_norm)
+        self.up_2 = conv_block_2_3d(self.num_filters * 8, self.num_filters * 8, activation, self.batch_norm, group_norm)
         self.trans_3 = conv_trans_block_3d(self.num_filters * 8, self.num_filters * 8, activation, self.batch_norm, group_norm)
-        self.up_3 = conv_block_2_3d(self.num_filters * 12, self.num_filters * 4, activation, self.batch_norm, group_norm)
+        self.up_3 = conv_block_2_3d(self.num_filters * 8, self.num_filters * 4, activation, self.batch_norm, group_norm)
         self.trans_4 = conv_trans_block_3d(self.num_filters * 4, self.num_filters * 4, activation, self.batch_norm, group_norm)
-        self.up_4 = conv_block_2_3d(self.num_filters * 6, self.num_filters * 2, activation, self.batch_norm, group_norm)
+        self.up_4 = conv_block_2_3d(self.num_filters * 4, self.num_filters * 2, activation, self.batch_norm, group_norm)
         self.trans_5 = conv_trans_block_3d(self.num_filters * 2, self.num_filters * 2, activation, self.batch_norm, group_norm)
-        self.up_5 = conv_block_2_3d(self.num_filters * 3, self.num_filters * 1, activation, self.batch_norm, group_norm)
+        self.up_5 = conv_block_2_3d(self.num_filters * 2, self.num_filters * 1, activation, self.batch_norm, group_norm)
 
         # Output
         self.out = nn.Conv3d(self.num_filters, self.out_dim, kernel_size=1)
