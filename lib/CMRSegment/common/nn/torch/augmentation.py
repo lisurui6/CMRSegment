@@ -93,9 +93,6 @@ def random_channel_shift(image, brightness, contrast, gamma):
 
 def augment(image: np.ndarray, label: np.ndarray, config: AugmentationConfig, output_size, seed: int = None):
     """image = (slice, weight, height), label = (class, slice, weight, height)"""
-    if seed is None:
-        seed = np.random.randint(0, 10000000)
-    np.random.seed(seed)
     image = zoom(image, (1 + config.scaling_factors[0], 1 + config.scaling_factors[1], 1 + config.scaling_factors[2]), order=1)
     labels = []
     for i in range(label.shape[0]):
