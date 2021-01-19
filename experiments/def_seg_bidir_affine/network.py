@@ -6,7 +6,7 @@ from experiments.fcn_3d.network import UNet
 from experiments.def_seg_bidir_affine.layers import AffineSpatialTransformer
 
 
-def conv_block_2_3d(in_dim, out_dim, activation, batch_norm: bool = True, group_norm=False):
+def conv_block_2_3d(in_dim, out_dim, activation, batch_norm: bool = True, group_norm=0):
     if batch_norm:
         return nn.Sequential(
             # conv_block_3d(in_dim, out_dim, activation),
@@ -16,13 +16,13 @@ def conv_block_2_3d(in_dim, out_dim, activation, batch_norm: bool = True, group_
             nn.Conv3d(out_dim, out_dim, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm3d(out_dim),
         )
-    elif group_norm:
+    elif group_norm > 0:
         return nn.Sequential(
             nn.Conv3d(in_dim, out_dim, kernel_size=3, stride=1, padding=1),
-            nn.GroupNorm(4, out_dim),
+            nn.GroupNorm(group_norm, out_dim),
             activation(),
             nn.Conv3d(out_dim, out_dim, kernel_size=3, stride=1, padding=1),
-            nn.GroupNorm(4, out_dim),
+            nn.GroupNorm(group_norm, out_dim),
         )
     else:
         return nn.Sequential(
@@ -71,7 +71,7 @@ class AffineLocalNet(torch.nn.Module):
 
 class DefSegNet(torch.nn.Module):
     def __init__(self, in_channels, n_classes, n_filters, feature_size, n_slices, int_steps=7,
-                 int_downsize=1, bidir=False, batch_norm=True, group_norm=False):
+                 int_downsize=1, bidir=False, batch_norm=True, group_norm=0):
         assert not (batch_norm and group_norm)
         super().__init__()
         self.seg_unet = UNet(
