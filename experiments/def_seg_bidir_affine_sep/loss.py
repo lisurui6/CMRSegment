@@ -36,7 +36,7 @@ class DefSegLoss(TorchLoss):
         predicted: Union[torch.Tensor, Iterable[torch.Tensor]],
         outputs: Union[torch.Tensor, Iterable[torch.Tensor]],
     ):
-        """predicted = (warped template, warped maps, pred maps, flows)"""
+        """predicted = (warped template, warped maps, pred maps, flows0, flows1, flows2)"""
         label, template = outputs
         if self.epoch <= 10:
             weights = [1, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -49,7 +49,7 @@ class DefSegLoss(TorchLoss):
         pred_map_loss = weights[0] * pred_map_bce_loss + weights[1] * pred_map_dice_loss + weights[2] * pred_map_mse_loss
 
         grad_loss = 0
-        for flow in predicted[3]:
+        for flow in predicted[3:]:
             grad_loss += self.grad_loss.cumulate(flow, None)
         # deform_loss = self.deform_mse_loss.cumulate(predicted[3], torch.zeros(predicted[3].shape).cuda())
 

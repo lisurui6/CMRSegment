@@ -121,7 +121,7 @@ class DefSegNet(torch.nn.Module):
         warped_template = torch.cat(warped_templates, dim=1)
         warped_maps = torch.cat(warped_maps_list, dim=1)
 
-        return warped_template, warped_maps, pred_maps, flows
+        return warped_template, warped_maps, pred_maps, flows[0], flows[1], flows[2]
 
     def freeze_vxm(self):
         for param in self.vxm_dense.parameters():
