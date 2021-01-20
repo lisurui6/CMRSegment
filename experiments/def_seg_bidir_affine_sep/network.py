@@ -106,9 +106,11 @@ class DefSegNet(torch.nn.Module):
         flows = []
         warped_maps_list = []
         for i in range(3):
-            affine_theta = self.affine_local(pred_maps.view(-1, i, -1), template.view(-1, i, -1))
-            affine_transformed_template = self.affine_transformer(template.view(-1, i, -1), affine_theta)
-            warped_template, warped_maps, flow, pos_flow, neg_flow = self.vxm_dense(affine_transformed_template, pred_maps.view(-1, i, -1))
+            pred = pred_maps[:, i, :, :, :]
+            atlas = template[:, i, :, :, :]
+            affine_theta = self.affine_local(pred, atlas)
+            affine_transformed_template = self.affine_transformer(atlas, affine_theta)
+            warped_template, warped_maps, flow, pos_flow, neg_flow = self.vxm_dense(affine_transformed_template, pred)
             warped_templates.append(warped_template)
             flows.append(flow)
             warped_maps_list.append(warped_maps)
