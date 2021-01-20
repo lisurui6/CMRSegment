@@ -18,7 +18,7 @@ class Unet(nn.Module):
         decoder: [32, 32, 32, 32, 32, 16, 16]
     """
 
-    def __init__(self, inshape, nb_features=None, nb_levels=None, feat_mult=1, batch_norm=False, group_norm=False):
+    def __init__(self, inshape, nb_features=None, nb_levels=None, feat_mult=1, batch_norm=False, group_norm=False, prev_nf=6):
         super().__init__()
         """
         Parameters:
@@ -53,7 +53,7 @@ class Unet(nn.Module):
         self.upsample = nn.Upsample(scale_factor=2, mode='nearest')
 
         # configure encoder (down-sampling path)
-        prev_nf = 6
+        prev_nf = prev_nf
         self.downarm = nn.ModuleList()
         for nf in self.enc_nf:
             self.downarm.append(ConvBlock(ndims, prev_nf, nf, stride=2, batch_norm=batch_norm, group_norm=group_norm))
@@ -68,7 +68,7 @@ class Unet(nn.Module):
             prev_nf = nf
 
         # configure extra decoder convolutions (no up-sampling)
-        prev_nf += 6
+        prev_nf += prev_nf
         self.extras = nn.ModuleList()
         for nf in self.dec_nf[len(self.enc_nf):]:
             self.extras.append(ConvBlock(ndims, prev_nf, nf, stride=1, batch_norm=batch_norm, group_norm=group_norm))
@@ -114,6 +114,7 @@ class VxmDense(LoadableModel):
         mode="bilinear",
         batch_norm=False,
         group_norm=False,
+        prev_nf=6,
     ):
         """ 
         Parameters:
@@ -146,6 +147,7 @@ class VxmDense(LoadableModel):
             feat_mult=unet_feat_mult,
             batch_norm=batch_norm,
             group_norm=group_norm,
+            prev_nf=prev_nf,
         )
 
         # configure unet to flow field layer
