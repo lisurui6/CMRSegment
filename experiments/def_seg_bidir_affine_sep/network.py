@@ -107,7 +107,10 @@ class DefSegNet(torch.nn.Module):
         warped_maps_list = []
         for i in range(3):
             pred = pred_maps[:, i, :, :, :]
+            pred = torch.unsqueeze(pred, dim=1)
             atlas = template[:, i, :, :, :]
+            atlas = torch.unsqueeze(atlas, dim=1)
+
             affine_theta = self.affine_local(pred, atlas)
             affine_transformed_template = self.affine_transformer(atlas, affine_theta)
             warped_template, warped_maps, flow, pos_flow, neg_flow = self.vxm_dense(affine_transformed_template, pred)
