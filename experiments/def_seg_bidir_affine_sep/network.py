@@ -92,7 +92,7 @@ class DefSegNet(torch.nn.Module):
             mode="bilinear",
             batch_norm=batch_norm,
             group_norm=group_norm,
-            prev_nf=2,
+            in_dim=2,
         )
         self.affine_local = AffineLocalNet(2, batch_norm=batch_norm, group_norm=group_norm)
         self.affine_transformer = AffineSpatialTransformer(
