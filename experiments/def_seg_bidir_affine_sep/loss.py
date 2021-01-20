@@ -19,7 +19,7 @@ class DefSegLoss(TorchLoss):
         self.pred_maps_mse_loss = MSELoss()
 
         self.grad_loss = Grad(penalty=penalty, loss_mult=loss_mult)
-        self.deform_mse_loss = MSELoss()
+        # self.deform_mse_loss = MSELoss()
 
         self.label_dice_loss = DiceLoss()
         self.label_mse_loss = MSELoss()
@@ -61,7 +61,7 @@ class DefSegLoss(TorchLoss):
         template_mse_loss = self.template_mse_loss.cumulate(predicted[1], template)
         template_loss = weights[5] * template_dice_loss + weights[6] * template_mse_loss
 
-        loss = pred_map_loss + label_loss + template_loss + grad_loss * self.weights[7] + deform_loss * self.weights[8]
+        loss = pred_map_loss + label_loss + template_loss + grad_loss * self.weights[7]
         self._cum_loss += loss.item()
         self._count += 1
         return loss
@@ -91,7 +91,7 @@ class DefSegLoss(TorchLoss):
         self.pred_maps_dice_loss.reset()
 
         self.grad_loss.reset()
-        self.deform_mse_loss.reset()
+        # self.deform_mse_loss.reset()
         self.label_dice_loss.reset()
         self.label_mse_loss.reset()
         self.template_mse_loss.reset()
