@@ -92,20 +92,19 @@ class DefSegNet(torch.nn.Module):
             mode="bilinear",
             batch_norm=batch_norm,
             group_norm=group_norm,
-            in_dim=4,
         )
-        self.affine_local = AffineLocalNet(4, batch_norm=batch_norm, group_norm=group_norm)
+        self.affine_local = AffineLocalNet(6, batch_norm=batch_norm, group_norm=group_norm)
         self.affine_transformer = AffineSpatialTransformer(
             size=(n_slices, feature_size, feature_size), mode="bilinear"
         )
 
     def forward(self, inputs):
         image, template = inputs
-        # pred_maps = self.seg_unet(image)
-        # pred_maps = torch.sigmoid(pred_maps)
-        affine_theta = self.affine_local(image, template)
+        pred_maps = self.seg_unet(image)
+        pred_maps = torch.sigmoid(pred_maps)
+        affine_theta = self.affine_local(pred_maps, template)
         affine_transformed_template = self.affine_transformer(template, affine_theta)
-        warped_template, warped_maps, flow, pos_flow, neg_flow = self.vxm_dense(affine_transformed_template, image)
+        warped_template, warped_maps, flow, pos_flow, neg_flow = self.vxm_dense(affine_transformed_template, pred_maps)
         # warped_image = self.vxm_dense.transformer(image, neg_flow)
         # warped_template_image = self.vxm_dense.transformer(template_image, pos_flow)
         # warped_image = template_image
