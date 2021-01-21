@@ -65,15 +65,15 @@ class AffineLocalNet(torch.nn.Module):
     def forward(self, pred_maps, atlas):
         x = torch.cat([pred_maps, atlas], dim=1)
         out = self.conv1(x)
-        out = self.maxpoo1(out)
+        # out = self.maxpoo1(out)
         out = self.conv2(out)
         out = self.maxpoo2(out)
         out = self.conv3(out)
-        out = self.maxpoo3(out)
+        # out = self.maxpoo3(out)
         out = self.conv4(out)
         out = self.maxpoo4(out)
         out = self.conv5(out)
-        out = self.maxpoo5(out)
+        # out = self.maxpoo5(out)
 
         out = self.conv6(out)
         print(out.shape)
