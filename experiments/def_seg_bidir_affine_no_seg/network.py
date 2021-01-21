@@ -53,9 +53,9 @@ class AffineLocalNet(torch.nn.Module):
             activation(),
         )
         self.regress = torch.nn.Sequential(
-            torch.nn.Linear(32, 50),
+            torch.nn.Linear(16384, 500),
             activation(),
-            torch.nn.Linear(50, 12),
+            torch.nn.Linear(500, 12),
             torch.nn.Tanh()  # affine grid seems to want [-1, 1]
         )
         bias = torch.from_numpy(np.array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0])).float()
