@@ -38,15 +38,15 @@ class AffineLocalNet(torch.nn.Module):
         super().__init__()
         activation = torch.nn.ReLU
         self.conv1 = conv_block_2_3d(in_dim, 16, activation, batch_norm, group_norm)
-        self.maxpoo1 = nn.MaxPool3d(kernel_size=2, stride=2, padding=0)
+        # self.maxpoo1 = nn.MaxPool3d(kernel_size=2, stride=2, padding=0)
         self.conv2 = conv_block_2_3d(16, 32, activation, batch_norm, group_norm)
         self.maxpoo2 = nn.MaxPool3d(kernel_size=2, stride=2, padding=0)
         self.conv3 = conv_block_2_3d(32, 64, activation, batch_norm, group_norm)
-        self.maxpoo3 = nn.MaxPool3d(kernel_size=2, stride=2, padding=0)
+        # self.maxpoo3 = nn.MaxPool3d(kernel_size=2, stride=2, padding=0)
         self.conv4 = conv_block_2_3d(64, 32, activation, batch_norm, group_norm)
         self.maxpoo4 = nn.MaxPool3d(kernel_size=2, stride=2, padding=0)
         self.conv5 = conv_block_2_3d(32, 16, activation, batch_norm, group_norm)
-        self.maxpoo5 = nn.MaxPool3d(kernel_size=2, stride=2, padding=0)
+        # self.maxpoo5 = nn.MaxPool3d(kernel_size=2, stride=2, padding=0)
         self.conv6 = torch.nn.Sequential(
             torch.nn.Conv3d(16, 1, kernel_size=1),
             nn.BatchNorm3d(1),
@@ -76,7 +76,9 @@ class AffineLocalNet(torch.nn.Module):
         out = self.maxpoo5(out)
 
         out = self.conv6(out)
+        print(out.shape)
         out = out.view(out.shape[0], -1)
+        print(out.shape)
         theta = self.regress(out)
         theta = theta.view(theta.shape[0], 3, 4)
         return theta
