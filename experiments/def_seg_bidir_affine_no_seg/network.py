@@ -76,9 +76,7 @@ class AffineLocalNet(torch.nn.Module):
         out = self.maxpoo5(out)
 
         out = self.conv6(out)
-        print(out.shape)
         out = out.view(out.shape[0], -1)
-        print(out.shape)
         theta = self.regress(out)
         theta = theta.view(theta.shape[0], 3, 4)
         return theta
