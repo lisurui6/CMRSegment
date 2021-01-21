@@ -92,6 +92,7 @@ class DefSegNet(torch.nn.Module):
             mode="bilinear",
             batch_norm=batch_norm,
             group_norm=group_norm,
+            in_dim=4,
         )
         self.affine_local = AffineLocalNet(6, batch_norm=batch_norm, group_norm=group_norm)
         self.affine_transformer = AffineSpatialTransformer(
@@ -100,22 +101,12 @@ class DefSegNet(torch.nn.Module):
 
     def forward(self, inputs):
         image, template = inputs
-        pred_maps = self.seg_unet(image)
-        pred_maps = torch.sigmoid(pred_maps)
-        affine_theta = self.affine_local(pred_maps, template)
+
+        affine_theta = self.affine_local(image, template)
         affine_transformed_template = self.affine_transformer(template, affine_theta)
-        warped_template, warped_maps, flow, pos_flow, neg_flow = self.vxm_dense(affine_transformed_template, pred_maps)
-        # warped_image = self.vxm_dense.transformer(image, neg_flow)
-        # warped_template_image = self.vxm_dense.transformer(template_image, pos_flow)
-        # warped_image = template_image
-        # warped_template_image = image
-        # warped_template = torch.clamp(warped_template, min=0, max=1)
-        # warped_maps = torch.clamp(warped_maps, min=0, max=1)
+        warped_template, warped_maps, flow, pos_flow, neg_flow = self.vxm_dense(affine_transformed_template, image)
 
-        # if not self.training:
-        #     visualise(image, self.template, pred_maps, warped_template)
-
-        return warped_template, warped_maps, pred_maps, flow
+        return warped_template, flow
 
     def freeze_vxm(self):
         for param in self.vxm_dense.parameters():
