@@ -53,7 +53,7 @@ class AffineLocalNet(torch.nn.Module):
             activation(),
         )
         self.regress = torch.nn.Sequential(
-            torch.nn.Linear(256, 50),
+            torch.nn.Linear(32, 50),
             activation(),
             torch.nn.Linear(50, 12),
             torch.nn.Tanh()  # affine grid seems to want [-1, 1]
