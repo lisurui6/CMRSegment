@@ -102,7 +102,7 @@ def main():
         optimizer=optimizer,
         loss=loss,
         other_validation_metrics=[
-            DefSegWarpedTemplateDice(), DefSegAffineTemplateDice
+            DefSegWarpedTemplateDice(), DefSegAffineTemplateDice()
         ],
         inference_func=inference
     )
