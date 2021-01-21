@@ -35,9 +35,9 @@ class DefSegLoss(TorchLoss):
 
         label_dice_loss = self.label_dice_loss.cumulate(predicted[0], label)
         label_mse_loss = self.label_mse_loss.cumulate(predicted[0], label)
-        label_loss = weights[3] * label_dice_loss + weights[4] * label_mse_loss
+        label_loss = weights[0] * label_dice_loss + weights[1] * label_mse_loss
 
-        loss = label_loss + grad_loss * self.weights[7] + deform_loss * self.weights[8]
+        loss = label_loss + grad_loss * self.weights[2] + deform_loss * self.weights[3]
         self._cum_loss += loss.item()
         self._count += 1
         return loss
