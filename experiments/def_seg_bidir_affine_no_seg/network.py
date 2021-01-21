@@ -113,7 +113,7 @@ class DefSegNet(torch.nn.Module):
         affine_transformed_template = self.affine_transformer(template, affine_theta)
         warped_template, warped_maps, flow, pos_flow, neg_flow = self.vxm_dense(affine_transformed_template, image)
 
-        return warped_template, flow
+        return warped_template, affine_transformed_template, flow
 
     def freeze_vxm(self):
         for param in self.vxm_dense.parameters():

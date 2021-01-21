@@ -20,24 +20,30 @@ class DefSegLoss(TorchLoss):
         self.label_dice_loss = DiceLoss()
         self.label_mse_loss = MSELoss()
 
+        self.affine_template_dice_loss = DiceLoss()
+        self.affine_template_mse_loss = MSELoss()
 
     def cumulate(
         self,
         predicted: Union[torch.Tensor, Iterable[torch.Tensor]],
         outputs: Union[torch.Tensor, Iterable[torch.Tensor]],
     ):
-        """predicted = (warped template, flow)"""
+        """predicted = (warped template, affine_transformed_template, flow)"""
         label, template = outputs
         weights = self.weights
 
-        grad_loss = self.grad_loss.cumulate(predicted[1], None)
-        deform_loss = self.deform_mse_loss.cumulate(predicted[1], torch.zeros(predicted[1].shape).cuda())
+        grad_loss = self.grad_loss.cumulate(predicted[2], None)
+        deform_loss = self.deform_mse_loss.cumulate(predicted[2], torch.zeros(predicted[2].shape).cuda())
 
         label_dice_loss = self.label_dice_loss.cumulate(predicted[0], label)
         label_mse_loss = self.label_mse_loss.cumulate(predicted[0], label)
         label_loss = weights[0] * label_dice_loss + weights[1] * label_mse_loss
 
-        loss = label_loss + grad_loss * self.weights[2] + deform_loss * self.weights[3]
+        affine_template_dice_loss = self.affine_template_dice_loss.cumulate(predicted[1], label)
+        affine_template_mse_loss = self.affine_template_mse_loss.cumulate(predicted[1], label)
+        affine_template_loss = weights[4] * affine_template_dice_loss + weights[5] * affine_template_mse_loss
+
+        loss = label_loss + grad_loss * self.weights[2] + deform_loss * self.weights[3] + affine_template_loss
         self._cum_loss += loss.item()
         self._count += 1
         return loss
@@ -51,10 +57,11 @@ class DefSegLoss(TorchLoss):
         return new_loss
 
     def description(self):
-        return "total {:.4f}, label {}, label {}, grad {}, deform {}, ".format(
+        return "total {:.4f}, label {}, label {}, grad {}, deform {}, affine {}, affine {} ".format(
             self.log(),
             self.label_dice_loss.description(), self.label_mse_loss.description(),
             self.grad_loss.description(), self.deform_mse_loss.description(),
+            self.affine_template_dice_loss.description(), self.affine_template_mse_loss.description(),
         )
 
     def reset(self):
@@ -63,13 +70,23 @@ class DefSegLoss(TorchLoss):
         self.deform_mse_loss.reset()
         self.label_dice_loss.reset()
         self.label_mse_loss.reset()
+        self.affine_template_mse_loss.reset()
+        self.affine_template_dice_loss.reset()
 
 
 class DefSegWarpedTemplateDice(DiceCoeff, ABC):
     def forward(self, input, target):
         label, template = target
-        # input = (warped template, flow)
+        # input = (warped template, affine template, flow)
         pred = (input[0] > 0.5).float()
+        return super().forward(pred, label)
+
+
+class DefSegAffineTemplateDice(DiceCoeff, ABC):
+    def forward(self, input, target):
+        label, template = target
+        # input = (warped template, affine template, flow)
+        pred = (input[1] > 0.5).float()
         return super().forward(pred, label)
 
 

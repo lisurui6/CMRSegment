@@ -13,7 +13,7 @@ from CMRSegment.common.config import DataConfig, get_conf, AugmentationConfig
 from pyhocon import ConfigFactory
 from experiments.def_seg_bidir_affine_no_seg.inference import inference
 from experiments.def_seg_bidir_affine_no_seg.network import DefSegNet
-from experiments.def_seg_bidir_affine_no_seg.loss import DefSegWarpedTemplateDice, DefSegLoss
+from experiments.def_seg_bidir_affine_no_seg.loss import DefSegWarpedTemplateDice, DefSegLoss, DefSegAffineTemplateDice
 from experiments.def_seg_bidir_affine_no_seg.data import construct_training_validation_dataset
 from experiments.def_seg_bidir_affine_no_seg.experiment import DefSegExperiment
 
@@ -102,7 +102,7 @@ def main():
         optimizer=optimizer,
         loss=loss,
         other_validation_metrics=[
-            DefSegWarpedTemplateDice(),
+            DefSegWarpedTemplateDice(), DefSegAffineTemplateDice
         ],
         inference_func=inference
     )
