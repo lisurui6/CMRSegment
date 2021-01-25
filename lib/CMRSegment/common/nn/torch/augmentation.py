@@ -86,7 +86,7 @@ def adjust_gamma(image, delta):
 def random_channel_shift(image, brightness, contrast, gamma):
     image = random_brightness(image, brightness)
     image = random_contrast(image, contrast)
-    image = adjust_gamma(image, gamma)
+    # image = adjust_gamma(image, gamma)
     image = np.clip(image, 0, 1)
     return image
 
