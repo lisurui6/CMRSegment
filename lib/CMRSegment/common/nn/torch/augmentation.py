@@ -93,15 +93,15 @@ def random_channel_shift(image, brightness, contrast, gamma):
 
 def augment(image: np.ndarray, label: np.ndarray, config: AugmentationConfig, output_size, seed: int = None):
     """image = (slice, weight, height), label = (class, slice, weight, height)"""
-    image = zoom(image, (1 + config.scaling_factors[0], 1 + config.scaling_factors[1], 1 + config.scaling_factors[2]), order=1)
-    labels = []
-    for i in range(label.shape[0]):
-        labels.append(zoom(label[i, :, :, :], (1 + config.scaling_factors[0], 1 + config.scaling_factors[1], 1 + config.scaling_factors[2]), order=0))
-    label = np.stack(labels, axis=0)
+    # image = zoom(image, (1 + config.scaling_factors[0], 1 + config.scaling_factors[1], 1 + config.scaling_factors[2]), order=1)
+    # labels = []
+    # for i in range(label.shape[0]):
+    #     labels.append(zoom(label[i, :, :, :], (1 + config.scaling_factors[0], 1 + config.scaling_factors[1], 1 + config.scaling_factors[2]), order=0))
+    # label = np.stack(labels, axis=0)
     image, label = random_flip(image, label, config.flip)
     # image, label = random_rotation(image, label, config.rotation_angles)
-    image, label = random_crop(image, label, output_size)
-    image, label = random_scaling(image, label, config.scaling_factors)
+    # image, label = random_crop(image, label, output_size)
+    # image, label = random_scaling(image, label, config.scaling_factors)
     if config.channel_shift:
         image = random_channel_shift(image, config.brightness, config.contrast, config.gamma)
     return image, label
