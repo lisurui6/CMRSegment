@@ -173,7 +173,7 @@ class Torch2DSegmentationDataset(TorchDataset):
         self.output_dir = output_dir
 
     @staticmethod
-    def read_image(image_path: Path, feature_size: int, n_slices: int, crop: bool = False) -> np.ndarray:
+    def read_image(image_path: Path, feature_size: int, n_slices: int, crop: bool = False, augment: bool = False) -> np.ndarray:
         image = nib.load(str(image_path)).get_data()
         if image.ndim == 4:
             image = np.squeeze(image, axis=-1).astype(np.int16)
@@ -185,7 +185,8 @@ class Torch2DSegmentationDataset(TorchDataset):
         else:
             image = resize_image(image, (feature_size, feature_size, n_slices), 0)
         image = np.transpose(image, (2, 0, 1))
-        image = rescale_intensity(image, (1.0, 99.0))
+        if not augment:
+            image = rescale_intensity(image, (1.0, 99.0))
         return image
 
     @staticmethod
@@ -236,6 +237,7 @@ class Torch2DSegmentationDataset(TorchDataset):
                     (self.n_slices, self.feature_size, self.feature_size),
                     seed=self.seed
                 )
+                image = rescale_intensity(image, (1.0, 99.0))
         self.save(image, label, index)
         if self.is_3d:
             image = np.expand_dims(image, 0)
