@@ -226,18 +226,23 @@ class Torch2DSegmentationDataset(TorchDataset):
         return label
 
     def __getitem__(self, index: int):
-        image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
 
         label = self.read_label(self.label_paths[index], self.feature_size, self.n_slices)
         if self.augmentation_prob > 0 and self.augmentation_config is not None:
             prob = torch.FloatTensor(1).uniform_(0, 1)
             if prob.item() >= self.augmentation_prob:
+                image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices, augment=True)
                 augment(
                     image, label, self.augmentation_config,
                     (self.n_slices, self.feature_size, self.feature_size),
                     seed=self.seed
                 )
                 image = rescale_intensity(image, (1.0, 99.0))
+            else:
+                image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
+        else:
+            image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
+
         self.save(image, label, index)
         if self.is_3d:
             image = np.expand_dims(image, 0)
