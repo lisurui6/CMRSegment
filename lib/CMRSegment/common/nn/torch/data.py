@@ -336,7 +336,7 @@ class MultiDataLoader:
                 sampler=sampler_cls(dataset),
                 num_workers=num_workers,
                 pin_memory=pin_memory,
-                worker_init_fn=worker_init_fn()
+                worker_init_fn=worker_init_fn
             ) for dataset in datasets
         ]
         self.loader_iters = []
