@@ -318,6 +318,10 @@ class Torch2DSegmentationDataset(TorchDataset):
         return crop
 
 
+def worker_init_fn(worker_id):
+    np.random.seed(np.random.get_state()[1][0] + worker_id)
+
+
 class MultiDataLoader:
     def __init__(self, *datasets: Dataset, batch_size: int, sampler_cls: str, num_workers: int = 0,
                  pin_memory: bool = False):
@@ -332,6 +336,7 @@ class MultiDataLoader:
                 sampler=sampler_cls(dataset),
                 num_workers=num_workers,
                 pin_memory=pin_memory,
+                worker_init_fn=worker_init_fn()
             ) for dataset in datasets
         ]
         self.loader_iters = []
