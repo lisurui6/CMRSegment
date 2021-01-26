@@ -63,6 +63,7 @@ def random_scaling(image: np.ndarray, label: np.ndarray, delta_factors: Tuple[fl
 
 def random_brightness(image, max_delta):
     delta = np.random.uniform(-max_delta, max_delta)
+    print(delta)
     image = image + delta
     return image
 
