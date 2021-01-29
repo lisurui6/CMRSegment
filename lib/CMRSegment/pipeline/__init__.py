@@ -39,7 +39,8 @@ class CMRPipeline:
             else:
                 from CMRSegment.segmentor.torch import TorchSegmentor
                 hr_segmentor = TorchSegmentor(
-                    model_path=self.config.segment_config.model_path, overwrite=self.config.overwrite
+                    model_path=self.config.segment_config.model_path, overwrite=self.config.overwrite,
+                    use_irtk=self.config.use_irtk,
                 )
             if self.config.segment_config.segment_cine:
                 cine_segmentor = CineSegmentor(phase_segmentor=hr_segmentor)
@@ -54,7 +55,9 @@ class CMRPipeline:
                 image = Image(
                     path=phase_path, phase=phase,
                     output_dir=subject.output_dir,
-                    segmented=subject.output_dir.joinpath(f"LVSA_seg_{phase}.nii.gz"),
+                    segmented=subject.output_dir.joinpath(f"seg_lvsa_SR_{phase}.nii.gz"),
+                    resampled=subject.output_dir.joinpath(f"lvsa_SR_{phase}.nii.gz"),
+                    enlarged=subject.output_dir.joinpath(f"lvsa_SR_{phase}.nii.gz"),
                 )
                 if self.config.segment:
                     segmentation = hr_segmentor.apply(image)

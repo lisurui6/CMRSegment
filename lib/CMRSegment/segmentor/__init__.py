@@ -1,3 +1,5 @@
+import mirtk
+import subprocess
 import numpy as np
 import nibabel as nib
 from pathlib import Path
@@ -7,15 +9,34 @@ from CMRSegment.common.subject import Image, Segmentation, Cine
 
 
 class Segmentor:
-    def __init__(self, model_path: Path, overwrite: bool = False):
+    def __init__(self, model_path: Path, overwrite: bool = False, use_irtk: bool = False):
         self.model_path = model_path
         self.overwrite = overwrite
+        self.use_irtk = use_irtk
 
     def run(self, image: np.ndarray) -> np.ndarray:
         """Call sess.run()"""
         raise NotImplementedError("Must be implemented by subclasses.")
 
     def apply(self, image: Image) -> Segmentation:
+        if self.overwrite or not image.resampled.exists():
+            if not self.use_irtk:
+                mirtk.resample_image(str(image.path), str(image.resampled), '-size', 1.25, 1.25, 2)
+            else:
+                command = 'resample ' \
+                    f'{str(image.path)} ' \
+                    f'{str(image.resampled)}'
+                print(command)
+                subprocess.call(command, shell=True)
+        if self.overwrite or not image.enlarged.exists():
+            if not self.use_irtk:
+                mirtk.enlarge_image(str(image.resampled), str(image.enlarged), z=20, value=0)
+            else:
+                command = 'enlarge_image ' \
+                    f'{str(image.resampled)} ' \
+                    f'{str(image.enlarged)}'
+                print(command)
+                subprocess.call(command, shell=True)
         np_image, predicted = self.execute(image.path, image.segmented)
         return Segmentation(phase=image.phase, path=image.segmented, image=np_image, predicted=predicted)
 

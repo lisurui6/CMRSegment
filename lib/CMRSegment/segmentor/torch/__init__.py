@@ -9,7 +9,8 @@ from CMRSegment.common.nn.torch import prepare_tensors
 
 
 class TorchSegmentor(Segmentor):
-    def __init__(self, model_path: Path, overwrite: bool = False, resize_size: Tuple = None, device: int = 0):
+    def __init__(self, model_path: Path, overwrite: bool = False, resize_size: Tuple = None, device: int = 0,
+                 use_irtk: bool = False):
         super().__init__(model_path, overwrite)
         self.model = torch.load(str(model_path))
         self.model.eval()
@@ -17,6 +18,7 @@ class TorchSegmentor(Segmentor):
             resize_size = (128, 128, 64)
         self.resize_size = resize_size
         self.device = device
+        self.use_irtk = use_irtk
 
     def run(self, image: np.ndarray) -> np.ndarray:
         image = torch.from_numpy(image).float()
