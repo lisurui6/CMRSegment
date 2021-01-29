@@ -38,7 +38,7 @@ class DefSegLoss(TorchLoss):
     ):
         """predicted = (warped template, warped maps, pred maps, flows0, flows1, flows2)"""
         label, template = outputs
-        if self.epoch <= 10:
+        if self.epoch <= 5:
             weights = [1, 0, 0, 0, 0, 0, 0, 0, 0]
         else:
             weights = self.weights
@@ -61,7 +61,7 @@ class DefSegLoss(TorchLoss):
         template_mse_loss = self.template_mse_loss.cumulate(predicted[1], template)
         template_loss = weights[5] * template_dice_loss + weights[6] * template_mse_loss
 
-        loss = pred_map_loss + label_loss + template_loss + grad_loss * self.weights[7]
+        loss = pred_map_loss + label_loss + template_loss + grad_loss * weights[7]
         self._cum_loss += loss.item()
         self._count += 1
         return loss

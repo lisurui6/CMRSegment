@@ -24,7 +24,7 @@ class DefSegExperiment(Experiment):
             self.network.train()
             self.logger.info("{}: starting epoch {}/{}".format(datetime.now(), epoch, self.config.num_epochs))
             self.loss.reset()
-            if epoch > 10 and not set:
+            if epoch > 5 and not set:
                 self.optimizer.param_groups[0]['lr'] /= 10
                 print("-------------Learning rate: {}-------------".format(self.optimizer.param_groups[0]['lr']))
                 set = True
