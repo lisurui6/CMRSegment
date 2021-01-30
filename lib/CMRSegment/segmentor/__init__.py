@@ -36,7 +36,7 @@ class Segmentor:
                 command = 'enlarge_image ' \
                     f'{str(image.resampled)} ' \
                     f'{str(image.enlarged)} ' \
-                    '-z 21 -value 0'
+                    '-z 22 -value 0'
                 print(command)
                 subprocess.call(command, shell=True)
         nim = nib.load(str(image.path))
