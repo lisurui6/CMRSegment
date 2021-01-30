@@ -49,7 +49,6 @@ class TorchSegmentor(Segmentor):
         image = image.astype(np.float32)
         # resized_image = resize_image(image, (self.resize_size[0], self.resize_size[1], self.resize_size[2]), 0)
         image = np.transpose(image, (2, 0, 1))
-        print("Segmenting image with shape: {}".format(image.shape))
         image = rescale_intensity(image, (1.0, 99.0))
         image = np.expand_dims(image, 0)
         predicted = self.run(image)

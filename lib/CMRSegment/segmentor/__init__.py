@@ -39,6 +39,13 @@ class Segmentor:
                     '-z 20 -value 0'
                 print(command)
                 subprocess.call(command, shell=True)
+        nim = nib.load(str(image.resampled))
+        image = nim.get_data()
+        print("Resampled image shape: {}".format(image.shape))
+        nim = nib.load(str(image.enlarged))
+        image = nim.get_data()
+        print("Enlarged image shape: {}".format(image.shape))
+
         np_image, predicted = self.execute(image.enlarged, image.segmented)
         return Segmentation(phase=image.phase, path=image.enlarged, image=np_image, predicted=predicted)
 
