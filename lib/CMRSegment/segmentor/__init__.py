@@ -39,8 +39,8 @@ class Segmentor:
                     '-z 20 -value 0'
                 print(command)
                 subprocess.call(command, shell=True)
-        np_image, predicted = self.execute(image.path, image.segmented)
-        return Segmentation(phase=image.phase, path=image.segmented, image=np_image, predicted=predicted)
+        np_image, predicted = self.execute(image.enlarged, image.segmented)
+        return Segmentation(phase=image.phase, path=image.enlarged, image=np_image, predicted=predicted)
 
     def execute(self, phase_path: Path, output_dir: Path) -> Tuple[np.ndarray, np.ndarray]:
         """Segment a 3D volume cardiac phase from phase_path, save to output_dir"""
