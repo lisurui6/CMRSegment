@@ -25,7 +25,8 @@ class Segmentor:
             else:
                 command = 'resample ' \
                     f'{str(image.path)} ' \
-                    f'{str(image.resampled)}'
+                    f'{str(image.resampled)}' \
+                    '-size 1.25 1.25 2'
                 print(command)
                 subprocess.call(command, shell=True)
         if self.overwrite or not image.enlarged.exists():
@@ -34,7 +35,8 @@ class Segmentor:
             else:
                 command = 'enlarge_image ' \
                     f'{str(image.resampled)} ' \
-                    f'{str(image.enlarged)}'
+                    f'{str(image.enlarged)}' \
+                    '-z 20 -value 0'
                 print(command)
                 subprocess.call(command, shell=True)
         np_image, predicted = self.execute(image.path, image.segmented)
