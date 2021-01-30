@@ -15,7 +15,7 @@ class DataPreprocessor:
 
     def run(self, data_dir: Path, output_dir: Path) -> List[Subject]:
         subjects = []
-        for subject_dir in sorted(os.listdir(str(data_dir))):
+        for idx, subject_dir in enumerate(sorted(os.listdir(str(data_dir)))):
             subject = Subject(dir=data_dir.joinpath(subject_dir), output_dir=output_dir.joinpath(subject_dir))
             if self.overwrite:
                 subject.clean()
@@ -58,7 +58,8 @@ class DataPreprocessor:
                               f'{str(subject.gray_phases_dir())}/lvsa_ -sequence'
                     print(command)
                     subprocess.call(command, shell=True)
-
+            if idx > 3:
+                break
         return subjects
 
     # def parallel_run(self, data_dir: Path, n_core: int) -> List[Subject]:
