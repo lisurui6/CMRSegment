@@ -25,7 +25,7 @@ class Segmentor:
             else:
                 command = 'resample ' \
                     f'{str(image.path)} ' \
-                    f'{str(image.resampled)}' \
+                    f'{str(image.resampled)} ' \
                     '-size 1.25 1.25 2'
                 print(command)
                 subprocess.call(command, shell=True)
@@ -35,7 +35,7 @@ class Segmentor:
             else:
                 command = 'enlarge_image ' \
                     f'{str(image.resampled)} ' \
-                    f'{str(image.enlarged)}' \
+                    f'{str(image.enlarged)} ' \
                     '-z 20 -value 0'
                 print(command)
                 subprocess.call(command, shell=True)
@@ -58,8 +58,8 @@ class CineSegmentor:
             image = Image(
                 phase=idx, path=phase_path, output_dir=output_dir.joinpath("segs"),
                 segmented=output_dir.joinpath("segs").joinpath(f"lvsa_{idx}.nii.gz"),
-                resampled=output_dir.joinpath("resampled"),
-                enlarged=output_dir.joinpath("enlarged"),
+                resampled=output_dir.joinpath("resampled").joinpath(f"lvsa_{idx}.nii.gz"),
+                enlarged=output_dir.joinpath("enlarged").joinpath(f"lvsa_{idx}.nii.gz"),
             )
             segmentation = self.__segmentor.apply(image)
             segmentations.append(segmentation)
