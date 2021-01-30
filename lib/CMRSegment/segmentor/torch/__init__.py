@@ -51,7 +51,7 @@ class TorchSegmentor(Segmentor):
         # resized_image = resize_image(image, (self.resize_size[0], self.resize_size[1], self.resize_size[2]), 0)
         # Crop image to 128, 128, 64
         X, Y, Z = image.shape
-        n_slices = 100
+        n_slices = 128
         X2, Y2 = int(math.ceil(X / 32.0)) * 32, int(math.ceil(Y / 32.0)) * 32
         x_pre, y_pre, z_pre = int((X2 - X) / 2), int((Y2 - Y) / 2), int((Z - n_slices) / 2)
         x_post, y_post, z_post = (X2 - X) - x_pre, (Y2 - Y) - y_pre, (Z - n_slices) - z_pre
