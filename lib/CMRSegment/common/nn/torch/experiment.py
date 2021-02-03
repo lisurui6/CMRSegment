@@ -1,7 +1,7 @@
 import torch
 from CMRSegment.common.nn.torch.data import TorchDataset
 from CMRSegment.common.nn.torch.data import MultiDataLoader
-
+from CMRSegment.common.nn.torch.augmentation import augment
 from CMRSegment.common.nn.torch import prepare_tensors
 
 from CMRSegment.common.nn.torch.loss import TorchLoss
@@ -58,7 +58,7 @@ class Experiment:
             self.network.cuda(device=device)
         return self
 
-    def train(self):
+    def train(self, augmentation_config):
         self.network.train()
         train_data_loader = MultiDataLoader(
             *self.training_sets,
@@ -99,6 +99,12 @@ class Experiment:
 
             # train loop
             image, label = self.training_sets[0].test(0)
+            print("Image size: {}".format(image.shape))
+            image, label = augment(
+                image, label, augmentation_config,
+                (64, 256, 256),
+            )
+
             assert 1 == 0
             pbar = tqdm(enumerate(train_data_loader))
             for idx, (inputs, outputs) in pbar:
