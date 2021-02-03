@@ -151,16 +151,21 @@ def augment(image: np.ndarray, label: np.ndarray, config: AugmentationConfig, ou
     # label = np.stack(labels, axis=0)
     print("Image size: {}".format(image.shape), label.shape)
     print("Image values min max", np.min(image), np.max(image))
+    print("label values min max", np.min(label), np.max(label))
     if config.channel_shift:
         image = random_channel_shift(image, config.brightness, config.contrast, config.gamma)
     print("Image values min max", np.min(image), np.max(image))
+    print("label values min max", np.min(label), np.max(label))
     image, label = random_flip(image, label, config.flip)
     image, label = random_rotation(image, label, config.rotation_angles)
     print("Image size after rotation: {}".format(image.shape), label.shape)
+    print("label values min max", np.min(label), np.max(label))
     image, label = random_scaling(image, label, config.scaling_factors)
     print("Image size after scaling: {}".format(image.shape), label.shape)
+    print("label values min max", np.min(label), np.max(label))
     image, label = random_crop(image, label, output_size)
     print("Image size after cropping: {}".format(image.shape), label.shape)
+    print("label values min max", np.min(label), np.max(label))
     image = rescale_intensity(image, (1.0, 99.0))
 
     return image, label
