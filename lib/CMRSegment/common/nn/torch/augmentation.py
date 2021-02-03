@@ -166,6 +166,8 @@ def augment(image: np.ndarray, label: np.ndarray, config: AugmentationConfig, ou
     image, label = random_crop(image, label, output_size)
     print("Image size after cropping: {}".format(image.shape), label.shape)
     print("label values min max", np.min(label), np.max(label))
+    label[label > 0.5] = 1
+    label[label < 0.5] = 0
     image = rescale_intensity(image, (1.0, 99.0))
 
     return image, label
