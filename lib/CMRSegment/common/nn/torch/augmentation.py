@@ -2,7 +2,6 @@ from CMRSegment.common.config import AugmentationConfig
 import numpy as np
 from typing import Tuple
 from scipy.ndimage import zoom, rotate
-from scipy.spatial.transform import Rotation
 
 
 def resize_image(image: np.ndarray, target_shape: Tuple, order: int):
@@ -71,17 +70,10 @@ def random_flip(image: np.ndarray, label: np.ndarray, flip_prob: float):
 
 def random_rotation(image: np.ndarray, label: np.ndarray, angles: Tuple[float]):
     angle = angles[0]
-    # rotation_angle = np.random.uniform(-angle, angle)
-    # image = rotate(image, rotation_angle, axes=(0, 1))
-    # label = rotate(label, rotation_angle, axes=(0, 1))
 
     rotation_angle = np.random.uniform(-angle, angle)
     image = rotate(image, rotation_angle, axes=(1, 2), order=1)
     label = rotate(label, rotation_angle, axes=(2, 3), order=0)
-
-    # rotation_angle = np.random.uniform(-angle, angle)
-    # image = rotate(image, rotation_angle, axes=(0, 2))
-    # label = rotate(label, rotation_angle, axes=(0, 2))
 
     return image, label
 
@@ -122,12 +114,7 @@ def adjust_gamma(image, delta):
 
 
 def random_channel_shift(image, brightness, contrast, gamma):
-    # image = random_brightness(image, brightness)
-    # print("Image values min max after bright", np.min(image), np.max(image))
-    # image = random_contrast(image, contrast)
-    # print("Image values min max after contrast", np.min(image), np.max(image))
     image = adjust_gamma(image, gamma)
-    print("Image values min max after gamma", np.min(image), np.max(image))
     image = np.clip(image, 0, 1)
     return image
 
@@ -144,28 +131,13 @@ def rescale_intensity(image, thres=(1.0, 99.0)):
 
 def augment(image: np.ndarray, label: np.ndarray, config: AugmentationConfig, output_size, seed: int = None):
     """image = (slice, weight, height), label = (class, slice, weight, height)"""
-    # image = zoom(image, (1 + config.scaling_factors[0], 1 + config.scaling_factors[1], 1 + config.scaling_factors[2]), order=1)
-    # labels = []
-    # for i in range(label.shape[0]):
-    #     labels.append(zoom(label[i, :, :, :], (1 + config.scaling_factors[0], 1 + config.scaling_factors[1], 1 + config.scaling_factors[2]), order=0))
-    # label = np.stack(labels, axis=0)
-    print("Image size: {}".format(image.shape), label.shape)
-    print("Image values min max", np.min(image), np.max(image))
-    print("label values min max", np.min(label), np.max(label))
+
     if config.channel_shift:
         image = random_channel_shift(image, config.brightness, config.contrast, config.gamma)
-    print("Image values min max", np.min(image), np.max(image))
-    print("label values min max", np.min(label), np.max(label))
     image, label = random_flip(image, label, config.flip)
     image, label = random_rotation(image, label, config.rotation_angles)
-    print("Image size after rotation: {}".format(image.shape), label.shape)
-    print("label values min max", np.min(label), np.max(label))
     image, label = random_scaling(image, label, config.scaling_factors)
-    print("Image size after scaling: {}".format(image.shape), label.shape)
-    print("label values min max", np.min(label), np.max(label))
     image, label = random_crop(image, label, output_size)
-    print("Image size after cropping: {}".format(image.shape), label.shape)
-    print("label values min max", np.min(label), np.max(label))
     label[label > 0.5] = 1
     label[label < 0.5] = 0
     image = rescale_intensity(image, (1.0, 99.0))
