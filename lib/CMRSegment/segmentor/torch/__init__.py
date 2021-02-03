@@ -75,6 +75,6 @@ class TorchSegmentor(Segmentor):
         nim2 = nib.Nifti1Image(predicted, nim.affine)
         nim2.header['pixdim'] = nim.header['pixdim']
         nib.save(nim2, str(output_path))
-        image = np.squeeze(image, 0)
+        # image = np.squeeze(image, 0)
         # image = image[x_pre:x_pre + X, y_pre:y_pre + Y, z1_ - z1:z1_ - z1 + Z]
         return image, predicted
