@@ -98,7 +98,7 @@ class Experiment:
             #                 self.logger.info("{}".format(metric.description()))
 
             # train loop
-            image, label = self.training_sets[0][0]
+            image, label = self.training_sets[0].test(0)
             assert 1 == 0
             pbar = tqdm(enumerate(train_data_loader))
             for idx, (inputs, outputs) in pbar:
