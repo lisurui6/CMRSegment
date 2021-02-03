@@ -114,8 +114,10 @@ def augment(image: np.ndarray, label: np.ndarray, config: AugmentationConfig, ou
     #     labels.append(zoom(label[i, :, :, :], (1 + config.scaling_factors[0], 1 + config.scaling_factors[1], 1 + config.scaling_factors[2]), order=0))
     # label = np.stack(labels, axis=0)
     print("Image size: {}".format(image.shape))
+    print("Image values min max", np.min(image), np.max(image))
     if config.channel_shift:
         image = random_channel_shift(image, config.brightness, config.contrast, config.gamma)
+    print("Image values min max", np.min(image), np.max(image))
     image, label = random_flip(image, label, config.flip)
     # image, label = random_rotation(image, label, config.rotation_angles)
     # print("Image size after rotation: {}".format(image.shape))

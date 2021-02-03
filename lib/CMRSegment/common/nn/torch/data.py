@@ -252,6 +252,42 @@ class Torch2DSegmentationDataset(TorchDataset):
         image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
         return image, label
 
+    def test_save(self, index, image, label, augmented_image, augmented_label):
+        nim = nib.load(str(self.image_paths[index]))
+        image = np.transpose(image, [1, 2, 0])
+        nim2 = nib.Nifti1Image(image, nim.affine)
+        nim2.header['pixdim'] = nim.header['pixdim']
+        output_path = self.output_dir.joinpath(self.name, "image_{}.nii.gz".format(index))
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        nib.save(nim2, str(output_path))
+
+        augmented_image = np.transpose(augmented_image, [1, 2, 0])
+        nim2 = nib.Nifti1Image(augmented_image, nim.affine)
+        nim2.header['pixdim'] = nim.header['pixdim']
+        output_path = self.output_dir.joinpath(self.name, "image_augmented_{}.nii.gz".format(index))
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        nib.save(nim2, str(output_path))
+
+        final_label = np.zeros((label.shape[1], label.shape[2], label.shape[3]))
+        for i in range(label.shape[0]):
+            final_label[label[i, :, :, :] == 1.0] = i + 1
+        final_label = np.transpose(final_label, [1, 2, 0])
+        nim2 = nib.Nifti1Image(final_label, nim.affine)
+        nim2.header['pixdim'] = nim.header['pixdim']
+        output_path = self.output_dir.joinpath(self.name, "label_{}.nii.gz".format(index))
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        nib.save(nim2, str(output_path))
+
+        final_label = np.zeros((augmented_label.shape[1], augmented_label.shape[2], augmented_label.shape[3]))
+        for i in range(augmented_label.shape[0]):
+            final_label[augmented_label[i, :, :, :] == 1.0] = i + 1
+        final_label = np.transpose(final_label, [1, 2, 0])
+        nim2 = nib.Nifti1Image(final_label, nim.affine)
+        nim2.header['pixdim'] = nim.header['pixdim']
+        output_path = self.output_dir.joinpath(self.name, "label_augmented_{}.nii.gz".format(index))
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        nib.save(nim2, str(output_path))
+
     def save(self, image: np.ndarray, label: np.ndarray, index: int):
         if index % 100 == 0:
             nim = nib.load(str(self.image_paths[index]))

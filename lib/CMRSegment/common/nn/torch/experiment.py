@@ -100,10 +100,11 @@ class Experiment:
             # train loop
             image, label = self.training_sets[0].test(0)
             print("Image size: {}".format(image.shape))
-            image, label = augment(
+            aug_image, aug_label = augment(
                 image, label, augmentation_config,
                 (64, 256, 256),
             )
+            self.training_sets[0].test_save(0, image, label, aug_image, aug_label)
 
             assert 1 == 0
             pbar = tqdm(enumerate(train_data_loader))
