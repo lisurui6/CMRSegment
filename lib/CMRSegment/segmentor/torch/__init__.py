@@ -69,7 +69,7 @@ class TorchSegmentor(Segmentor):
         resized_image = np.expand_dims(resized_image, 0)
         predicted = self.run(resized_image)
         predicted = resize_image(predicted, image.shape, 0)
-        # print("Predicted shape: {}".format(predicted.shape))
+        print("Predicted shape: {}".format(predicted.shape))
         # predicted = predicted[x_pre:x_pre + X, y_pre:y_pre + Y, z1_ - z1:z1_ - z1 + Z]
         # print("Predicted shape after cropping: {}".format(predicted.shape))
         nim2 = nib.Nifti1Image(predicted, nim.affine)
