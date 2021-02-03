@@ -205,7 +205,9 @@ class Torch2DSegmentationDataset(TorchDataset):
 
         labels = []
         for i in range(1, 4):
-            blank_image = np.zeros((feature_size, feature_size, n_slices))
+            # blank_image = np.zeros((feature_size, feature_size, n_slices))
+            blank_image = np.zeros((X, Y, Z))
+
             blank_image[label == i] = 1
             labels.append(blank_image)
         label = np.array(labels)
