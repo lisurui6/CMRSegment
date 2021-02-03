@@ -72,16 +72,16 @@ def random_flip(image: np.ndarray, label: np.ndarray, flip_prob: float):
 def random_rotation(image: np.ndarray, label: np.ndarray, angles: Tuple[float]):
     angle = angles[0]
     rotation_angle = np.random.uniform(-angle, angle)
+    image = rotate(image, rotation_angle, axes=(0, 1))
+    label = rotate(label, rotation_angle, axes=(0, 1))
+
+    rotation_angle = np.random.uniform(-angle, angle)
     image = rotate(image, rotation_angle, axes=(1, 2))
     label = rotate(label, rotation_angle, axes=(1, 2))
 
     rotation_angle = np.random.uniform(-angle, angle)
-    image = rotate(image, rotation_angle, axes=(0, 1))
-    label = rotate(label, rotation_angle, axes=(1, 2))
-
-    rotation_angle = np.random.uniform(-angle, angle)
-    image = rotate(image, np.random.uniform(-angle, angle), axes=(2, 3))
-    label = rotate(label, rotation_angle, axes=(1, 2))
+    image = rotate(image, rotation_angle, axes=(0, 2))
+    label = rotate(label, rotation_angle, axes=(0, 2))
 
     return image, label
 
