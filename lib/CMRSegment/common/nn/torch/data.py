@@ -280,7 +280,7 @@ class Torch2DSegmentationDataset(TorchDataset):
 
         final_label = np.zeros((augmented_label.shape[1], augmented_label.shape[2], augmented_label.shape[3]))
         for i in range(augmented_label.shape[0]):
-            final_label[augmented_label[i, :, :, :] == 1.0] = i + 1
+            final_label[augmented_label[i, :, :, :] > 0.5] = i + 1
         final_label = np.transpose(final_label, [1, 2, 0])
         nim2 = nib.Nifti1Image(final_label, nim.affine)
         nim2.header['pixdim'] = nim.header['pixdim']
