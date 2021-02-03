@@ -267,14 +267,17 @@ class Torch2DSegmentationDataset(TorchDataset):
         #     )
         # else:
         #     image, label = pad_image(image, label)
-        if self.transform is not None:
-            image = self.transform(image)
-            label = self.transform(label)
-        self.save(image, label, index)
         if self.is_3d:
             image = np.expand_dims(image, 0)
-        image = torch.from_numpy(image).float()
-        label = torch.from_numpy(label).float()
+        if self.transform is not None:
+            image = torch.from_numpy(image).float()
+            label = torch.from_numpy(label).float()
+            image = self.transform(image)
+            label = self.transform(label)
+        self.save(image.numpy(), label.numpy(), index)
+
+        # image = torch.from_numpy(image).float()
+        # label = torch.from_numpy(label).float()
         return image, label
 
     def test(self, index):
