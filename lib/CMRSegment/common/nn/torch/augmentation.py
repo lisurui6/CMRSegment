@@ -19,32 +19,35 @@ def random_crop(image: np.ndarray, label: np.ndarray, output_size: Tuple):
     slice, weight, height = image.shape
     s, w, h = output_size
 
-    if slice - s > 0:
+    if (slice - s) // 2 > 0:
         i = np.random.randint(0, (slice - s)//2)
     else:
         i = 0
-        if (s - slice) // 2 > 0:
-            i_ = np.random.randint(0, (s - slice) // 2)
-        else:
+        if (s - slice) // 2 == 0:
             i_ = 0
+        else:
+            i_ = np.random.randint(0, (s - slice) // 2)
+
         image = np.pad(image, ((i_, s - slice - i_), (0, 0), (0, 0)), "constant")
-    if weight - w > 0:
+    if (weight - w) // 2 > 0:
         j = np.random.randint(0, (weight - w)//2)
     else:
         j = 0
-        if (w - weight) // 2 > 0:
-            j_ = np.random.randint(0, (w - weight) // 2)
-        else:
+        if (w - weight) // 2 == 0:
             j_ = 0
+        else:
+            j_ = np.random.randint(0, (w - weight) // 2)
+
         image = np.pad(image, ((0, 0), (j_, w - weight - j_), (0, 0)), "constant")
-    if height - h > 0:
+    if (height - h) // 2 > 0:
         k = np.random.randint(0, (height - h)//2)
     else:
         k = 0
-        if (h - height) // 2 > 0:
-            k_ = np.random.randint(0, (h - height) // 2)
-        else:
+        if (h - height) // 2 == 0:
             k_ = 0
+        else:
+            k_ = np.random.randint(0, (h - height) // 2)
+
         image = np.pad(image, ((0, 0), (0, 0), (k_, h - height - k_)), "constant")
 
     cropped_image = image[i: i + s, j: j + w, k: k + h]
