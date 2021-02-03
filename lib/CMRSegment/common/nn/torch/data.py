@@ -173,20 +173,19 @@ class Torch2DSegmentationDataset(TorchDataset):
         self.output_dir = output_dir
 
     @staticmethod
-    def read_image(image_path: Path, feature_size: int, n_slices: int, crop: bool = False, augment: bool = False) -> np.ndarray:
+    def read_image(image_path: Path, feature_size: int, n_slices: int, crop: bool = False) -> np.ndarray:
         image = nib.load(str(image_path)).get_data()
         if image.ndim == 4:
             image = np.squeeze(image, axis=-1).astype(np.int16)
         image = image.astype(np.float32)
         X, Y, Z = image.shape
         cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
-        if crop:
-            image = Torch2DSegmentationDataset.crop_3D_image(image, cx, cy, feature_size, cz, n_slices)
-        else:
-            image = resize_image(image, (feature_size, feature_size, n_slices), 0)
+        # if crop:
+        #     image = Torch2DSegmentationDataset.crop_3D_image(image, cx, cy, feature_size, cz, n_slices)
+        # else:
+        #     image = resize_image(image, (feature_size, feature_size, n_slices), 0)
         image = np.transpose(image, (2, 0, 1))
-        if not augment:
-            image = rescale_intensity(image, (1.0, 99.0))
+        image = rescale_intensity(image, (1.0, 99.0))
         return image
 
     @staticmethod
@@ -199,10 +198,10 @@ class Torch2DSegmentationDataset(TorchDataset):
         label[label == 4] = 3
         X, Y, Z = label.shape
         cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
-        if crop:
-            label = Torch2DSegmentationDataset.crop_3D_image(label, cx, cy, feature_size, cz, n_slices)
-        else:
-            label = resize_image(label, (feature_size, feature_size, n_slices), 0)
+        # if crop:
+        #     label = Torch2DSegmentationDataset.crop_3D_image(label, cx, cy, feature_size, cz, n_slices)
+        # else:
+        #     label = resize_image(label, (feature_size, feature_size, n_slices), 0)
 
         labels = []
         for i in range(1, 4):
@@ -228,20 +227,15 @@ class Torch2DSegmentationDataset(TorchDataset):
     def __getitem__(self, index: int):
 
         label = self.read_label(self.label_paths[index], self.feature_size, self.n_slices)
+        image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
         if self.augmentation_prob > 0 and self.augmentation_config is not None:
             prob = torch.FloatTensor(1).uniform_(0, 1)
             if prob.item() >= self.augmentation_prob:
-                image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices, augment=True)
                 augment(
                     image, label, self.augmentation_config,
                     (self.n_slices, self.feature_size, self.feature_size),
                     seed=self.seed
                 )
-                image = rescale_intensity(image, (1.0, 99.0))
-            else:
-                image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
-        else:
-            image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
 
         self.save(image, label, index)
         if self.is_3d:
