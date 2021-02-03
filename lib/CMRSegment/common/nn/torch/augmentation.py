@@ -122,5 +122,5 @@ def augment(image: np.ndarray, label: np.ndarray, config: AugmentationConfig, ou
     image, label = random_scaling(image, label, config.scaling_factors)
     print("Image size after scaling: {}".format(image.shape))
     image, label = random_crop(image, label, output_size)
-    print("Image size after cropping".format(image.shape))
+    print("Image size after cropping: {}".format(image.shape))
     return image, label
