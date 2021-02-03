@@ -25,7 +25,7 @@ def random_crop(image: np.ndarray, label: np.ndarray, output_size: Tuple):
         if (s - slice) // 2 == 0:
             i_ = 0
         else:
-            i_ = np.random.randint(0, (s - slice) // 2)
+            i_ = np.random.randint(0, min((s - slice) // 2, 1))
 
         image = np.pad(image, ((i_, s - slice - i_), (0, 0), (0, 0)), "constant")
         label = np.pad(label, ((0, 0), (i_, s - slice - i_), (0, 0), (0, 0)), "constant")
@@ -37,7 +37,7 @@ def random_crop(image: np.ndarray, label: np.ndarray, output_size: Tuple):
         if (w - weight) // 2 == 0:
             j_ = 0
         else:
-            j_ = np.random.randint(0, (w - weight) // 2)
+            j_ = np.random.randint(0, min((w - weight) // 2, 1))
 
         image = np.pad(image, ((0, 0), (j_, w - weight - j_), (0, 0)), "constant")
         label = np.pad(label, ((0, 0), (0, 0), (j_, w - weight - j_), (0, 0)), "constant")
@@ -49,7 +49,7 @@ def random_crop(image: np.ndarray, label: np.ndarray, output_size: Tuple):
         if (h - height) // 2 == 0:
             k_ = 0
         else:
-            k_ = np.random.randint(0, (h - height) // 2)
+            k_ = np.random.randint(0, min((h - height) // 2, 1))
 
         image = np.pad(image, ((0, 0), (0, 0), (k_, h - height - k_)), "constant")
         label = np.pad(label, ((0, 0), (0, 0), (0, 0), (k_, h - height - k_)), "constant")
@@ -135,7 +135,7 @@ def augment(image: np.ndarray, label: np.ndarray, config: AugmentationConfig, ou
     if config.channel_shift:
         image = random_channel_shift(image, config.brightness, config.contrast, config.gamma)
     image, label = random_flip(image, label, config.flip)
-    image, label = random_rotation(image, label, config.rotation_angles)
+    # image, label = random_rotation(image, label, config.rotation_angles)
     image, label = random_scaling(image, label, config.scaling_factors)
     image, label = random_crop(image, label, output_size)
     label[label > 0.5] = 1
