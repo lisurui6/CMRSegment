@@ -19,9 +19,24 @@ def random_crop(image: np.ndarray, label: np.ndarray, output_size: Tuple):
     slice, weight, height = image.shape
     s, w, h = output_size
 
-    i = np.random.randint(0, (slice - s)//2)
-    j = np.random.randint(0, (weight - w)//2)
-    k = np.random.randint(0, (height - h)//2)
+    if slice - s > 0:
+        i = np.random.randint(0, (slice - s)//2)
+    else:
+        i = 0
+        i_ = np.random.randint(0, (s - slice) // 2)
+        image = np.pad(image, ((i_, s - i_), (0, 0), (0, 0)), "constant")
+    if weight - w > 0:
+        j = np.random.randint(0, (weight - w)//2)
+    else:
+        j = 0
+        j_ = np.random.randint(0, (w - weight) // 2)
+        image = np.pad(image, ((0, 0), (j_, w - j_), (0, 0)), "constant")
+    if height - h > 0:
+        k = np.random.randint(0, (height - h)//2)
+    else:
+        k = 0
+        k_ = np.random.randint(0, (h - height) // 2)
+        image = np.pad(image, ((0, 0), (0, 0), (k_, h - k_)), "constant")
 
     cropped_image = image[i: i + s, j: j + w, k: k + h]
     cropped_label = label[:, i: i + s, j: j + w, k: k + h]
