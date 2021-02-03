@@ -1,7 +1,7 @@
 from CMRSegment.common.config import AugmentationConfig
 import numpy as np
 from typing import Tuple
-from scipy.ndimage import zoom
+from scipy.ndimage import zoom, rotate
 from scipy.spatial.transform import Rotation
 
 
@@ -29,6 +29,8 @@ def random_crop(image: np.ndarray, label: np.ndarray, output_size: Tuple):
             i_ = np.random.randint(0, (s - slice) // 2)
 
         image = np.pad(image, ((i_, s - slice - i_), (0, 0), (0, 0)), "constant")
+        label = np.pad(label, ((i_, s - slice - i_), (0, 0), (0, 0)), "constant")
+
     if (weight - w) // 2 > 0:
         j = np.random.randint(0, (weight - w)//2)
     else:
@@ -39,6 +41,8 @@ def random_crop(image: np.ndarray, label: np.ndarray, output_size: Tuple):
             j_ = np.random.randint(0, (w - weight) // 2)
 
         image = np.pad(image, ((0, 0), (j_, w - weight - j_), (0, 0)), "constant")
+        label = np.pad(label, ((0, 0), (j_, w - weight - j_), (0, 0)), "constant")
+
     if (height - h) // 2 > 0:
         k = np.random.randint(0, (height - h)//2)
     else:
@@ -49,6 +53,7 @@ def random_crop(image: np.ndarray, label: np.ndarray, output_size: Tuple):
             k_ = np.random.randint(0, (h - height) // 2)
 
         image = np.pad(image, ((0, 0), (0, 0), (k_, h - height - k_)), "constant")
+        label = np.pad(label, ((0, 0), (0, 0), (k_, h - height - k_)), "constant")
 
     cropped_image = image[i: i + s, j: j + w, k: k + h]
     cropped_label = label[:, i: i + s, j: j + w, k: k + h]
@@ -65,13 +70,19 @@ def random_flip(image: np.ndarray, label: np.ndarray, flip_prob: float):
 
 
 def random_rotation(image: np.ndarray, label: np.ndarray, angles: Tuple[float]):
-    rotation_angles = []
-    for idx, angle in enumerate(angles):
-        rotation_angles.append(np.random.uniform(-angle, angle))
-    rotation = Rotation.from_euler("xyz", angles=rotation_angles, degrees=True)
-    image = rotation.apply(image)
-    # How is it interpolated? Rounding?
-    label = rotation.apply(label)
+    angle = angles[0]
+    rotation_angle = np.random.uniform(-angle, angle)
+    image = rotate(image, rotation_angle, axes=(1, 2))
+    label = rotate(label, rotation_angle, axes=(1, 2))
+
+    rotation_angle = np.random.uniform(-angle, angle)
+    image = rotate(image, rotation_angle, axes=(0, 1))
+    label = rotate(label, rotation_angle, axes=(1, 2))
+
+    rotation_angle = np.random.uniform(-angle, angle)
+    image = rotate(image, np.random.uniform(-angle, angle), axes=(2, 3))
+    label = rotate(label, rotation_angle, axes=(1, 2))
+
     return image, label
 
 
@@ -134,8 +145,8 @@ def augment(image: np.ndarray, label: np.ndarray, config: AugmentationConfig, ou
         image = random_channel_shift(image, config.brightness, config.contrast, config.gamma)
     print("Image values min max", np.min(image), np.max(image))
     image, label = random_flip(image, label, config.flip)
-    # image, label = random_rotation(image, label, config.rotation_angles)
-    # print("Image size after rotation: {}".format(image.shape))
+    image, label = random_rotation(image, label, config.rotation_angles)
+    print("Image size after rotation: {}".format(image.shape))
     image, label = random_scaling(image, label, config.scaling_factors)
     print("Image size after scaling: {}".format(image.shape))
     image, label = random_crop(image, label, output_size)
