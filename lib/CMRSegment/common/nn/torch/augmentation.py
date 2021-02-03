@@ -132,6 +132,16 @@ def random_channel_shift(image, brightness, contrast, gamma):
     return image
 
 
+def rescale_intensity(image, thres=(1.0, 99.0)):
+    """ Rescale the image intensity to the range of [0, 1] """
+    val_l, val_h = np.percentile(image, thres)
+    image2 = image
+    image2[image < val_l] = val_l
+    image2[image > val_h] = val_h
+    image2 = (image2.astype(np.float32) - val_l) / (val_h - val_l)
+    return image2
+
+
 def augment(image: np.ndarray, label: np.ndarray, config: AugmentationConfig, output_size, seed: int = None):
     """image = (slice, weight, height), label = (class, slice, weight, height)"""
     # image = zoom(image, (1 + config.scaling_factors[0], 1 + config.scaling_factors[1], 1 + config.scaling_factors[2]), order=1)
@@ -151,4 +161,6 @@ def augment(image: np.ndarray, label: np.ndarray, config: AugmentationConfig, ou
     print("Image size after scaling: {}".format(image.shape), label.shape)
     image, label = random_crop(image, label, output_size)
     print("Image size after cropping: {}".format(image.shape), label.shape)
+    image = rescale_intensity(image, (1.0, 99.0))
+
     return image, label
