@@ -233,6 +233,7 @@ class Torch2DSegmentationDataset(TorchDataset):
         if self.augmentation_prob > 0 and self.augmentation_config is not None:
             prob = torch.FloatTensor(1).uniform_(0, 1)
             if prob.item() >= self.augmentation_prob:
+                print("Image size: {}".format(image.shape))
                 image, label = augment(
                     image, label, self.augmentation_config,
                     (self.n_slices, self.feature_size, self.feature_size),

@@ -102,7 +102,9 @@ def augment(image: np.ndarray, label: np.ndarray, config: AugmentationConfig, ou
         image = random_channel_shift(image, config.brightness, config.contrast, config.gamma)
     image, label = random_flip(image, label, config.flip)
     image, label = random_rotation(image, label, config.rotation_angles)
+    print("Image size after rotation: {}".format(image.shape))
     image, label = random_scaling(image, label, config.scaling_factors)
+    print("Image size after scaling: {}".format(image.shape))
     image, label = random_crop(image, label, output_size)
-
+    print("Image size after cropping".format(image.shape))
     return image, label
