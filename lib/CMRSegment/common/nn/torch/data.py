@@ -239,6 +239,7 @@ class Torch2DSegmentationDataset(TorchDataset):
                     (self.n_slices, self.feature_size, self.feature_size),
                     seed=self.seed
                 )
+                image = rescale_intensity(image, (1.0, 99.0))
 
         self.save(image, label, index)
         if self.is_3d:

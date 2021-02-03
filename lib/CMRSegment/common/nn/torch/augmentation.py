@@ -76,8 +76,8 @@ def random_rotation(image: np.ndarray, label: np.ndarray, angles: Tuple[float]):
     # label = rotate(label, rotation_angle, axes=(0, 1))
 
     rotation_angle = np.random.uniform(-angle, angle)
-    image = rotate(image, rotation_angle, axes=(1, 2))
-    label = rotate(label, rotation_angle, axes=(2, 3))
+    image = rotate(image, rotation_angle, axes=(1, 2), order=1)
+    label = rotate(label, rotation_angle, axes=(2, 3), order=0)
 
     # rotation_angle = np.random.uniform(-angle, angle)
     # image = rotate(image, rotation_angle, axes=(0, 2))
