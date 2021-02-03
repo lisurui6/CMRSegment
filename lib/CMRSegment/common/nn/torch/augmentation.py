@@ -111,8 +111,8 @@ def adjust_gamma(image, delta):
 
 
 def random_channel_shift(image, brightness, contrast, gamma):
-    image = random_brightness(image, brightness)
-    print("Image values min max after bright", np.min(image), np.max(image))
+    # image = random_brightness(image, brightness)
+    # print("Image values min max after bright", np.min(image), np.max(image))
     image = random_contrast(image, contrast)
     print("Image values min max after contrast", np.min(image), np.max(image))
     image = adjust_gamma(image, gamma)
