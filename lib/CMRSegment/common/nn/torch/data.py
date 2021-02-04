@@ -13,7 +13,7 @@ import torch
 from typing import List, Tuple
 from CMRSegment.common.data_table import DataTable
 from scipy.ndimage import zoom
-from CMRSegment.common.nn.torch.augmentation import augment
+from CMRSegment.common.nn.torch.augmentation import augment, random_crop
 
 
 def construct_training_validation_dataset(
@@ -266,7 +266,7 @@ class Torch2DSegmentationDataset(TorchDataset):
                 seed=self.seed
             )
         else:
-            image, label = pad_image(image, label)
+            image, label = random_crop(image, label, (self.n_slices, self.feature_size, self.feature_size))
         self.save(image, label, index)
 
         if self.is_3d:
