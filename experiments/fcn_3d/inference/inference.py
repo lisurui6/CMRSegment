@@ -90,6 +90,7 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
     z1_, z2_ = max(z1, 0), min(z2, Z)
     image = image[:, z1_: z2_]
     image = np.pad(image, ((x_pre, x_post), (y_pre, y_post), (z1_ - z1, z2 - z2_)), 'constant')
+    image = np.expand_dims(image, 0)
     image = torch.from_numpy(image).float()
     image = torch.unsqueeze(image, 0)
     image = prepare_tensors(image, gpu, device)
