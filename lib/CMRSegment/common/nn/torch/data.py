@@ -168,10 +168,10 @@ def pad_image(image, label):
     x_post, y_post, z_post = (X2 - X) - x_pre, (Y2 - Y) - y_pre, (Z - n_slices) - z_pre
     z1, z2 = int(Z / 2) - int(n_slices / 2), int(Z / 2) + int(n_slices / 2)
     z1_, z2_ = max(z1, 0), min(z2, Z)
-    image = image[:, :, z1_: z2_]
-    label = label[:, :, :, z1_: z2_]
-    image = np.pad(image, ((0, 0), (x_pre, x_post), (y_pre, y_post), (z1_ - z1, z2 - z2_)), 'constant')
-    label = np.pad(label, ((0, 0), (0, 0), (x_pre, x_post), (y_pre, y_post), (z1_ - z1, z2 - z2_)), 'constant')
+    image = image[:, z1_: z2_]
+    label = label[:, :, z1_: z2_]
+    image = np.pad(image, ((x_pre, x_post), (y_pre, y_post), (z1_ - z1, z2 - z2_)), 'constant')
+    label = np.pad(label, ((0, 0), (x_pre, x_post), (y_pre, y_post), (z1_ - z1, z2 - z2_)), 'constant')
     return image, label
 
 
