@@ -159,22 +159,6 @@ def resize_image(image: np.ndarray, target_shape: Tuple, order: int):
     return output
 
 
-def pad_image(image, label):
-    import math
-    X, Y, Z = image.shape
-    n_slices = 96
-    X2, Y2 = int(math.ceil(X / 32.0)) * 32, int(math.ceil(Y / 32.0)) * 32
-    x_pre, y_pre, z_pre = int((X2 - X) / 2), int((Y2 - Y) / 2), int((Z - n_slices) / 2)
-    x_post, y_post, z_post = (X2 - X) - x_pre, (Y2 - Y) - y_pre, (Z - n_slices) - z_pre
-    z1, z2 = int(Z / 2) - int(n_slices / 2), int(Z / 2) + int(n_slices / 2)
-    z1_, z2_ = max(z1, 0), min(z2, Z)
-    image = image[:, z1_: z2_]
-    label = label[:, :, z1_: z2_]
-    image = np.pad(image, ((x_pre, x_post), (y_pre, y_post), (z1_ - z1, z2 - z2_)), 'constant')
-    label = np.pad(label, ((0, 0), (x_pre, x_post), (y_pre, y_post), (z1_ - z1, z2 - z2_)), 'constant')
-    return image, label
-
-
 class Torch2DSegmentationDataset(TorchDataset):
     def __init__(self, name: str, image_paths: List[Path], label_paths: List[Path],
                  n_slices: int, feature_size: int, augmentation_prob: float = 0,
