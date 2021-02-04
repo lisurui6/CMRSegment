@@ -284,6 +284,11 @@ class Torch2DSegmentationDataset(TorchDataset):
     def test(self, index):
         label = self.read_label(self.label_paths[index], self.feature_size, self.n_slices)
         image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
+        image, label = augment(
+            image, label, self.augmentation_config,
+            (self.n_slices, self.feature_size, self.feature_size),
+            seed=self.seed
+        )
         return image, label
 
     def test_save(self, index, image, label, augmented_image, augmented_label):

@@ -49,6 +49,7 @@ def random_crop(image: np.ndarray, label: np.ndarray, output_size: Tuple):
         if (h - height) // 2 == 0:
             k_ = 0
         else:
+            print(h, height, (h-height) // 2)
             k_ = np.random.randint(0, (h - height) // 2 + 1)
 
         image = np.pad(image, ((0, 0), (0, 0), (k_, h - height - k_)), "constant")
