@@ -110,7 +110,7 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
     predicted = np.squeeze(predicted, axis=0)
     # print(predicted.shape)
     print("predicted", predicted.shape)
-    predicted = predicted[z1_ - z1:z1_ - z1 + Z, x_pre:x_pre + X, y_pre:y_pre + Y]
+    predicted = predicted[:, z1_ - z1:z1_ - z1 + Z, x_pre:x_pre + X, y_pre:y_pre + Y]
     print("predicted", predicted.shape)
 
     # map back to original size
