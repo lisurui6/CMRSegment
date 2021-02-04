@@ -78,7 +78,8 @@ def main():
     )
 
 
-def inference(image: torch.Tensor, label: torch.Tensor, image_path: Path, network: torch.nn.Module, output_dir: Path):
+def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network: torch.nn.Module, output_dir: Path,
+              gpu, device):
     import math
     X, Y, Z = image.shape
     n_slices = 96
@@ -89,6 +90,10 @@ def inference(image: torch.Tensor, label: torch.Tensor, image_path: Path, networ
     z1_, z2_ = max(z1, 0), min(z2, Z)
     image = image[:, z1_: z2_]
     image = np.pad(image, ((x_pre, x_post), (y_pre, y_post), (z1_ - z1, z2 - z2_)), 'constant')
+    image = torch.from_numpy(image).float()
+    image = torch.unsqueeze(image, 0)
+    image = prepare_tensors(image, gpu, device)
+
     predicted = network(image)
     predicted = torch.sigmoid(predicted)
     # print("sigmoid", torch.mean(predicted).item(), torch.max(predicted).item())

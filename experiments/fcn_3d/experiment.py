@@ -1,8 +1,6 @@
 from CMRSegment.common.nn.torch.experiment import Experiment
 import numpy as np
 import torch
-from CMRSegment.common.nn.torch import prepare_tensors
-from CMRSegment.common.nn.torch.data import pad_image
 
 
 def read_image(dataset, idx):
@@ -31,13 +29,14 @@ class FCN3DExperiment(Experiment):
                 label_path = val.label_paths[idx]
                 output_dir.joinpath(val.name, image_path.parent.stem).mkdir(exist_ok=True, parents=True)
 
-                image = read_image(val, idx)
+                image = val.read_image(val.image_paths[idx], val.feature_size, val.n_slices)
                 label = val.get_label_tensor_from_index(idx)
-                image = prepare_tensors(image, self.config.gpu, self.config.device)
+                # image = prepare_tensors(image, self.config.gpu, self.config.device)
                 self.logger.info("Inferencing for {} dataset, image {}.".format(val.name, idx))
 
                 self.inference_func(
-                    image, label, image_path, self.network, output_dir.joinpath(val.name, image_path.parent.stem)
+                    image, label, image_path, self.network, output_dir.joinpath(val.name, image_path.parent.stem),
+                    self.config.gpu, self.config.device,
                 )
         for val in self.extra_validation_sets:
             indices = np.random.choice(len(val.image_paths), self.config.n_inference)
@@ -46,11 +45,12 @@ class FCN3DExperiment(Experiment):
                 label_path = val.label_paths[idx]
                 output_dir.joinpath(val.name, image_path.parent.stem).mkdir(exist_ok=True, parents=True)
 
-                image = read_image(val, idx)
+                image = val.read_image(val.image_paths[idx], val.feature_size, val.n_slices)
                 label = val.get_label_tensor_from_index(idx)
-                image = prepare_tensors(image, self.config.gpu, self.config.device)
+                # image = prepare_tensors(image, self.config.gpu, self.config.device)
                 self.logger.info("Inferencing for {} dataset, image {}.".format(val.name, idx))
 
                 self.inference_func(
-                    image, label, image_path, self.network, output_dir.joinpath(val.name, image_path.parent.stem)
+                    image, label, image_path, self.network, output_dir.joinpath(val.name, image_path.parent.stem),
+                    self.config.gpu, self.config.device,
                 )
