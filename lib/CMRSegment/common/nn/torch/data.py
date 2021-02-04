@@ -171,7 +171,7 @@ def pad_image(image, label):
     image = image[:, :, z1_: z2_]
     label = label[:, :, :, z1_: z2_]
     image = np.pad(image, ((x_pre, x_post), (y_pre, y_post), (z1_ - z1, z2 - z2_)), 'constant')
-    label = np.pad(label, ((x_pre, x_post), (y_pre, y_post), (z1_ - z1, z2 - z2_)), 'constant')
+    label = np.pad(label, ((0, 0), (x_pre, x_post), (y_pre, y_post), (z1_ - z1, z2 - z2_)), 'constant')
     return image, label
 
 
