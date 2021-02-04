@@ -8,7 +8,6 @@ from CMRSegment.common.nn.torch.data import pad_image
 def read_image(dataset, idx):
     import math
     image = dataset.read_image(dataset.image_paths[idx], dataset.feature_size, dataset.n_slices)
-    image = np.expand_dims(image, 0)
     X, Y, Z = image.shape
     n_slices = 96
     X2, Y2 = int(math.ceil(X / 32.0)) * 32, int(math.ceil(Y / 32.0)) * 32
