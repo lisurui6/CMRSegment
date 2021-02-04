@@ -82,6 +82,7 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
               gpu, device):
     import math
     Z, X, Y = image.shape
+    print(image.shape)
     n_slices = 96
     X2, Y2 = int(math.ceil(X / 32.0)) * 32, int(math.ceil(Y / 32.0)) * 32
     x_pre, y_pre, z_pre = int((X2 - X) / 2), int((Y2 - Y) / 2), int((Z - n_slices) / 2)
@@ -91,6 +92,7 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
     image = image[:, :, z1_: z2_]
     image = np.pad(image, ((z1_ - z1, z2 - z2_), (x_pre, x_post), (y_pre, y_post)), 'constant')
     image = np.expand_dims(image, 0)
+    print(image.shape)
     image = torch.from_numpy(image).float()
     image = torch.unsqueeze(image, 0)
     image = prepare_tensors(image, gpu, device)
