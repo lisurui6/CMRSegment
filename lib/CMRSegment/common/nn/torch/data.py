@@ -188,18 +188,18 @@ class Torch2DSegmentationDataset(TorchDataset):
         self.augmentation_config = augmentation_config
         self.seed = seed
         self.output_dir = output_dir
-        if self.augmentation_config is not None:
-            self.transform = transforms.Compose([
-                transforms.RandomHorizontalFlip(p=augmentation_config.flip),
-                transforms.RandomVerticalFlip(p=augmentation_config.flip),
-                transforms.RandomAffine(
-                    (-augmentation_config.rotation_angles[0], -augmentation_config.rotation_angles[1]),
-                    scale=(1 - augmentation_config.scaling_factors[0], 1 + augmentation_config.scaling_factors[0])
-                ),
-                transforms.RandomCrop((self.feature_size, self.feature_size), pad_if_needed=True)
-            ])
-        else:
-            self.transform = None
+        # if self.augmentation_config is not None:
+        #     self.transform = transforms.Compose([
+        #         transforms.RandomHorizontalFlip(p=augmentation_config.flip),
+        #         transforms.RandomVerticalFlip(p=augmentation_config.flip),
+        #         transforms.RandomAffine(
+        #             (-augmentation_config.rotation_angles[0], -augmentation_config.rotation_angles[1]),
+        #             scale=(1 - augmentation_config.scaling_factors[0], 1 + augmentation_config.scaling_factors[0])
+        #         ),
+        #         transforms.RandomCrop((self.feature_size, self.feature_size), pad_if_needed=True)
+        #     ])
+        # else:
+        #     self.transform = None
 
     @staticmethod
     def read_image(image_path: Path, feature_size: int, n_slices: int, crop: bool = False) -> np.ndarray:
@@ -259,25 +259,26 @@ class Torch2DSegmentationDataset(TorchDataset):
 
         label = self.read_label(self.label_paths[index], self.feature_size, self.n_slices)
         image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
-        # if self.augmentation_prob > 0 and self.augmentation_config is not None:
-        #     image, label = augment(
-        #         image, label, self.augmentation_config,
-        #         (self.n_slices, self.feature_size, self.feature_size),
-        #         seed=self.seed
-        #     )
-        # else:
-        #     image, label = pad_image(image, label)
+        if self.augmentation_prob > 0 and self.augmentation_config is not None:
+            image, label = augment(
+                image, label, self.augmentation_config,
+                (self.n_slices, self.feature_size, self.feature_size),
+                seed=self.seed
+            )
+        else:
+            image, label = pad_image(image, label)
         if self.is_3d:
             image = np.expand_dims(image, 0)
-        if self.transform is not None:
-            image = torch.from_numpy(image).float()
-            label = torch.from_numpy(label).float()
-            image = self.transform(image)
-            label = self.transform(label)
-        self.save(image.numpy(), label.numpy(), index)
+        # if self.transform is not None:
+        #     image = torch.from_numpy(image).float()
+        #     label = torch.from_numpy(label).float()
+        #     image = self.transform(image)
+        #     label = self.transform(label)
+        # self.save(image.numpy(), label.numpy(), index)
+        self.save(image, label, index)
 
-        # image = torch.from_numpy(image).float()
-        # label = torch.from_numpy(label).float()
+        image = torch.from_numpy(image).float()
+        label = torch.from_numpy(label).float()
         return image, label
 
     def test(self, index):
