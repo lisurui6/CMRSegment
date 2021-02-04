@@ -9,6 +9,7 @@ from CMRSegment.common.nn.torch.loss import FocalLoss, BCELoss, DiceCoeffWithLog
 from CMRSegment.common.config import DataConfig, get_conf, AugmentationConfig
 from pyhocon import ConfigFactory
 from experiments.fcn_3d.inference.inference import inference
+from experiments.fcn_3d.experiments import FCN3DExperiment
 
 TRAIN_CONF_PATH = Path(__file__).parent.joinpath("train.conf")
 
@@ -80,7 +81,7 @@ def main():
         )
     else:
         loss = BCELoss()
-    experiment = Experiment(
+    experiment = FCN3DExperiment(
         config=config,
         network=network,
         training_sets=training_sets,
