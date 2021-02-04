@@ -91,7 +91,7 @@ def main():
         other_validation_metrics=[DiceCoeffWithLogits()],
         inference_func=inference
     )
-    experiment.train(augmentation_config)
+    experiment.train()
 
 
 if __name__ == '__main__':

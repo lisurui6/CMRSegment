@@ -58,7 +58,7 @@ class Experiment:
             self.network.cuda(device=device)
         return self
 
-    def train(self, augmentation_config):
+    def train(self):
         self.network.train()
         train_data_loader = MultiDataLoader(
             *self.training_sets,
@@ -101,7 +101,7 @@ class Experiment:
             pbar = tqdm(enumerate(train_data_loader))
             for idx, (inputs, outputs) in pbar:
                 inputs = prepare_tensors(inputs, self.config.gpu, self.config.device)
-                outputs = (outputs, self.config.gpu, self.config.device)
+                outputs = prepare_tensors(outputs, self.config.gpu, self.config.device)
                 predicted = self.network(inputs)
                 loss = self.loss.cumulate(predicted, outputs)
                 self.optimizer.zero_grad()
