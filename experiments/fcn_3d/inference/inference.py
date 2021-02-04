@@ -111,13 +111,15 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
     # print(predicted.shape)
     print("predicted", predicted.shape)
     predicted = predicted[z1_ - z1:z1_ - z1 + Z, x_pre:x_pre + X, y_pre:y_pre + Y]
+    print("predicted", predicted.shape)
 
     # map back to original size
     final_predicted = np.zeros((original_image.shape[0], original_image.shape[1], original_image.shape[2]))
     # print(predicted.shape, final_predicted.shape)
-
+    print("final", final_predicted.shape)
     for i in range(predicted.shape[0]):
         a = predicted[i, :, :, :] > 0.5
+        print("a", a.shape)
         # print(a.shape)
         final_predicted[predicted[i, :, :, :] > 0.5] = i + 1
     # image = nim.get_data()
