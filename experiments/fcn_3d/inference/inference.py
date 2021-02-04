@@ -81,6 +81,7 @@ def main():
 def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network: torch.nn.Module, output_dir: Path,
               gpu, device):
     import math
+    original_image = image
     Z, X, Y = image.shape
     print(image.shape)
     n_slices = 96
@@ -108,9 +109,10 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
     # Transpose and crop the segmentation to recover the original size
     predicted = np.squeeze(predicted, axis=0)
     # print(predicted.shape)
+    predicted = predicted[x_pre:x_pre + X, y_pre:y_pre + Y, z1_ - z1:z1_ - z1 + Z]
 
     # map back to original size
-    final_predicted = np.zeros((image.shape[2], image.shape[3], image.shape[4]))
+    final_predicted = np.zeros((original_image.shape[2], original_image.shape[3], original_image.shape[4]))
     # print(predicted.shape, final_predicted.shape)
 
     for i in range(predicted.shape[0]):
@@ -119,7 +121,6 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
         final_predicted[predicted[i, :, :, :] > 0.5] = i + 1
     # image = nim.get_data()
     final_predicted = np.transpose(final_predicted, [1, 2, 0])
-    final_predicted = final_predicted[x_pre:x_pre + X, y_pre:y_pre + Y, z1_ - z1:z1_ - z1 + Z]
 
     # print(predicted.shape, final_predicted.shape)
     # final_predicted = np.resize(final_predicted, (image.shape[0], image.shape[1], image.shape[2]))
@@ -137,17 +138,14 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
     output_dir.mkdir(parents=True, exist_ok=True)
     nib.save(nim2, '{0}/seg.nii.gz'.format(str(output_dir)))
 
-    final_image = image.cpu().detach().numpy()
-    final_image = np.squeeze(final_image, 0)
-    final_image = np.squeeze(final_image, 0)
-    final_image = np.transpose(final_image, [1, 2, 0])
+    final_image = np.transpose(original_image, [1, 2, 0])
     # print(final_image.shape)
     nim2 = nib.Nifti1Image(final_image, nim.affine)
     nim2.header['pixdim'] = nim.header['pixdim']
     nib.save(nim2, '{0}/image.nii.gz'.format(str(output_dir)))
     # shutil.copy(str(input_path), str(output_dir.joinpath("image.nii.gz")))
 
-    final_label = np.zeros((image.shape[2], image.shape[3], image.shape[4]))
+    final_label = np.zeros((label.shape[2], label.shape[3], label.shape[4]))
     label = label.cpu().detach().numpy()
     for i in range(label.shape[0]):
         final_label[label[i, :, :, :] == 1.0] = i + 1
@@ -158,3 +156,9 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
     nim2.header['pixdim'] = nim.header['pixdim']
     output_dir.mkdir(parents=True, exist_ok=True)
     nib.save(nim2, '{0}/label.nii.gz'.format(str(output_dir)))
+
+    print(final_image.shape)
+    print(final_label.shape)
+    print(final_predicted.shape)
+    print(original_image.shape)
+
