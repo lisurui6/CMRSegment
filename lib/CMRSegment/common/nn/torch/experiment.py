@@ -77,13 +77,13 @@ class Experiment:
             #     print("-------------Learning rate: {}-------------".format(self.optimizer.param_groups[0]['lr']))
             #     set = True
             # eval first
-            val_metrics = self.eval(self.loss.new(), *self.other_validation_metrics, datasets=self.validation_sets)
-            self.logger.info("Validation loss: {}".format(val_metrics[0].description()))
-            if val_metrics[1:]:
-                self.logger.info("Other metrics on validation set.")
-                for metric in val_metrics[1:]:
-                    self.logger.info("{}".format(metric.description()))
-
+            # val_metrics = self.eval(self.loss.new(), *self.other_validation_metrics, datasets=self.validation_sets)
+            # self.logger.info("Validation loss: {}".format(val_metrics[0].description()))
+            # if val_metrics[1:]:
+            #     self.logger.info("Other metrics on validation set.")
+            #     for metric in val_metrics[1:]:
+            #         self.logger.info("{}".format(metric.description()))
+            #
             # if self.extra_validation_sets:
             #     for val in self.extra_validation_sets:
             #         val_metrics = self.eval(
