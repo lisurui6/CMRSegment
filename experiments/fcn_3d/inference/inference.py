@@ -83,7 +83,6 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
     import math
     original_image = image
     Z, X, Y = image.shape
-    print(image.shape)
     n_slices = 96
     X2, Y2 = int(math.ceil(X / 32.0)) * 32, int(math.ceil(Y / 32.0)) * 32
     x_pre, y_pre, z_pre = int((X2 - X) / 2), int((Y2 - Y) / 2), int((Z - n_slices) / 2)
@@ -93,7 +92,6 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
     image = image[z1_: z2_, :, :]
     image = np.pad(image, ((z1_ - z1, z2 - z2_), (x_pre, x_post), (y_pre, y_post)), 'constant')
     image = np.expand_dims(image, 0)
-    print(image.shape)
     image = torch.from_numpy(image).float()
     image = torch.unsqueeze(image, 0)
     image = prepare_tensors(image, gpu, device)
@@ -109,17 +107,12 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
     # Transpose and crop the segmentation to recover the original size
     predicted = np.squeeze(predicted, axis=0)
     # print(predicted.shape)
-    print("predicted", predicted.shape)
     predicted = predicted[:, z1_ - z1:z1_ - z1 + Z, x_pre:x_pre + X, y_pre:y_pre + Y]
-    print("predicted", predicted.shape)
 
     # map back to original size
     final_predicted = np.zeros((original_image.shape[0], original_image.shape[1], original_image.shape[2]))
     # print(predicted.shape, final_predicted.shape)
-    print("final", final_predicted.shape)
     for i in range(predicted.shape[0]):
-        a = predicted[i, :, :, :] > 0.5
-        print("a", a.shape)
         # print(a.shape)
         final_predicted[predicted[i, :, :, :] > 0.5] = i + 1
     # image = nim.get_data()
@@ -159,8 +152,3 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
     nim2.header['pixdim'] = nim.header['pixdim']
     output_dir.mkdir(parents=True, exist_ok=True)
     nib.save(nim2, '{0}/label.nii.gz'.format(str(output_dir)))
-
-    print(final_image.shape)
-    print(final_label.shape)
-    print(final_predicted.shape)
-    print(original_image.shape)
