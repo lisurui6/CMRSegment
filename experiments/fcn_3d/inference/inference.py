@@ -145,7 +145,7 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
     nib.save(nim2, '{0}/image.nii.gz'.format(str(output_dir)))
     # shutil.copy(str(input_path), str(output_dir.joinpath("image.nii.gz")))
 
-    final_label = np.zeros((label.shape[2], label.shape[3], label.shape[4]))
+    final_label = np.zeros((label.shape[1], label.shape[2], label.shape[3]))
     label = label.cpu().detach().numpy()
     for i in range(label.shape[0]):
         final_label[label[i, :, :, :] == 1.0] = i + 1
