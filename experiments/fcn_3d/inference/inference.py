@@ -109,10 +109,10 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
     # Transpose and crop the segmentation to recover the original size
     predicted = np.squeeze(predicted, axis=0)
     # print(predicted.shape)
-    predicted = predicted[x_pre:x_pre + X, y_pre:y_pre + Y, z1_ - z1:z1_ - z1 + Z]
+    predicted = predicted[z1_ - z1:z1_ - z1 + Z, x_pre:x_pre + X, y_pre:y_pre + Y]
 
     # map back to original size
-    final_predicted = np.zeros((original_image.shape[2], original_image.shape[3], original_image.shape[4]))
+    final_predicted = np.zeros((original_image.shape[0], original_image.shape[1], original_image.shape[2]))
     # print(predicted.shape, final_predicted.shape)
 
     for i in range(predicted.shape[0]):
@@ -161,4 +161,3 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
     print(final_label.shape)
     print(final_predicted.shape)
     print(original_image.shape)
-
