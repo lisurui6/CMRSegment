@@ -85,10 +85,15 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
     print(image.shape)
     n_slices = 96
     X2, Y2 = int(math.ceil(X / 32.0)) * 32, int(math.ceil(Y / 32.0)) * 32
+    print(X2, Y2)
     x_pre, y_pre, z_pre = int((X2 - X) / 2), int((Y2 - Y) / 2), int((Z - n_slices) / 2)
+    print(x_pre, y_pre, z_pre)
     x_post, y_post, z_post = (X2 - X) - x_pre, (Y2 - Y) - y_pre, (Z - n_slices) - z_pre
+    print(x_post, y_post, z_post)
     z1, z2 = int(Z / 2) - int(n_slices / 2), int(Z / 2) + int(n_slices / 2)
+    print(z1, z2)
     z1_, z2_ = max(z1, 0), min(z2, Z)
+    print(z1_, z2_)
     image = image[:, z1_: z2_]
     image = np.pad(image, ((z1_ - z1, z2 - z2_), (x_pre, x_post), (y_pre, y_post)), 'constant')
     image = np.expand_dims(image, 0)
