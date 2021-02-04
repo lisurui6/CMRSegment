@@ -98,9 +98,6 @@ class Experiment:
             #                 self.logger.info("{}".format(metric.description()))
 
             # train loop
-            for idx in range(0, 1000):
-                self.training_sets[0].test(idx)
-            assert 1 == 0
             pbar = tqdm(enumerate(train_data_loader))
             for idx, (inputs, outputs) in pbar:
                 inputs = prepare_tensors(inputs, self.config.gpu, self.config.device)
