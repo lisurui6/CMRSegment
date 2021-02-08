@@ -58,8 +58,6 @@ class DataPreprocessor:
                               f'{str(subject.gray_phases_dir())}/lvsa_ -sequence'
                     print(command)
                     subprocess.call(command, shell=True)
-            if idx > 3:
-                break
         return subjects
 
     # def parallel_run(self, data_dir: Path, n_core: int) -> List[Subject]:
