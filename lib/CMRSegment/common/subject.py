@@ -108,7 +108,7 @@ class Cine:
 
 
 class Subject:
-    def __init__(self, dir: Path, nii_name: str = "lvsa_.nii.gz", output_dir: Path = None):
+    def __init__(self, dir: Path, nii_name: str = "LVSA.nii.gz", output_dir: Path = None):
         self.dir = dir
         self.output_dir = self.dir.joinpath("output") if output_dir is None else output_dir
         self.nii_path = self.dir.joinpath(nii_name)
