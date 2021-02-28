@@ -3,8 +3,8 @@ from pathlib import Path
 from argparse import ArgumentParser
 from pyhocon import ConfigFactory
 from CMRSegment.common.config import get_conf
-from experiments.def_seg_bidir_affine.network import DefSegNet
-from experiments.def_seg_bidir_affine.data import DefSegDataset
+from experiments.def_seg_bidir_affine_single_label_1.network import DefSegNet
+from experiments.def_seg_bidir_affine_single_label_1.data import DefSegDataset
 from CMRSegment.common.config import DatasetConfig, DataConfig
 import numpy as np
 import nibabel as nib

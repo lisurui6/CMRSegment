@@ -3,7 +3,7 @@ import torch.nn as nn
 import numpy as np
 from voxelmorph.torch.networks import VxmDense
 from experiments.fcn_3d.network import UNet
-from experiments.def_seg_bidir_affine.layers import AffineSpatialTransformer
+from experiments.def_seg_bidir_affine_single_label_1.layers import AffineSpatialTransformer
 
 
 def conv_block_2_3d(in_dim, out_dim, activation, batch_norm: bool = True, group_norm=0):
