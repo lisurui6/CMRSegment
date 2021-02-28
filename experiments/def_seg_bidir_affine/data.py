@@ -13,7 +13,7 @@ from typing import List, Tuple
 from CMRSegment.common.data_table import DataTable
 from scipy.ndimage import zoom
 from CMRSegment.common.nn.torch.augmentation import augment
-from CMRSegment.common.nn.torch.data import Torch2DSegmentationDataset, generate_dataframe, read_dataframe
+from CMRSegment.common.nn.torch.data import Torch2DSegmentationDataset, generate_dataframe, read_dataframe, rescale_intensity, resize_image
 
 
 def construct_training_validation_dataset(
@@ -143,6 +143,48 @@ class DefSegDataset(Torch2DSegmentationDataset):
         self.template = self.read_label(template_path, self.feature_size, self.n_slices)
         # self.template_image = self.read_image(template_image_path, self.feature_size, self.n_slices)
 
+    @staticmethod
+    def read_image(image_path: Path, feature_size: int, n_slices: int, crop: bool = False) -> np.ndarray:
+        image = nib.load(str(image_path)).get_data()
+        if image.ndim == 4:
+            image = np.squeeze(image, axis=-1).astype(np.int16)
+        image = image.astype(np.float32)
+        X, Y, Z = image.shape
+        cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
+        if crop:
+            image = Torch2DSegmentationDataset.crop_3D_image(image, cx, cy, feature_size, cz, n_slices)
+        else:
+            image = resize_image(image, (feature_size, feature_size, n_slices), 0)
+        image = np.transpose(image, (2, 0, 1))
+        image = rescale_intensity(image, (1.0, 99.0))
+        return image
+
+    @staticmethod
+    def read_label(label_path: Path, feature_size: int, n_slices: int, crop: bool = False) -> np.ndarray:
+        label = sitk.GetArrayFromImage(sitk.ReadImage(str(label_path)))
+        label = np.transpose(label, axes=(2, 1, 0))
+        if label.ndim == 4:
+            label = np.squeeze(label, axis=-1).astype(np.int16)
+        label = label.astype(np.float32)
+        label[label == 4] = 3
+        X, Y, Z = label.shape
+        cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
+        if crop:
+            label = Torch2DSegmentationDataset.crop_3D_image(label, cx, cy, feature_size, cz, n_slices)
+        else:
+            label = resize_image(label, (feature_size, feature_size, n_slices), 0)
+
+        labels = []
+        for i in range(1, 4):
+            blank_image = np.zeros((feature_size, feature_size, n_slices))
+            # blank_image = np.zeros((X, Y, Z))
+
+            blank_image[label == i] = 1
+            labels.append(blank_image)
+        label = np.array(labels)
+        label = np.transpose(label, (0, 3, 1, 2))
+        return label
+
     def __getitem__(self, index: int):
         image = self.read_image(self.image_paths[index], self.feature_size, self.n_slices)
         label = self.read_label(self.label_paths[index], self.feature_size, self.n_slices)
@@ -151,7 +193,7 @@ class DefSegDataset(Torch2DSegmentationDataset):
         # template = self.read_label(self.label_paths[template_index], self.feature_size, self.n_slices)
         if self.augmentation_prob > 0 and self.augmentation_config is not None:
             prob = torch.FloatTensor(1).uniform_(0, 1)
-            if prob.item() >= self.augmentation_prob:
+            if prob.item() <= self.augmentation_prob:
                 augment(
                     image, label, self.augmentation_config,
                     (self.n_slices, self.feature_size, self.feature_size),

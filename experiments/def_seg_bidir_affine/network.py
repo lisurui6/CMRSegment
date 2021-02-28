@@ -113,7 +113,7 @@ class DefSegNet(torch.nn.Module):
         # warped_maps = torch.clamp(warped_maps, min=0, max=1)
 
         # if not self.training:
-        #     visualise(image, self.template, pred_maps, warped_template)
+        visualise(image, template, pred_maps, warped_template)
 
         return warped_template, warped_maps, pred_maps, flow
 
@@ -140,7 +140,9 @@ def visualise(image, template, pred: torch.Tensor, warped: torch.Tensor):
 
 def maps_to_volume(image: np.ndarray):
     final_predicted = np.zeros((image.shape[1], image.shape[2], image.shape[3]))
-    for i in range(image.shape[0]):
-        final_predicted[image[i, :, :, :] > 0.5] = i + 1
+    # for i in range(image.shape[0]):
+    #     final_predicted[image[i, :, :, :] > 0.5] = i + 1
+    final_predicted[image[1, :, :, :] > 0.5] = 1
+
     return final_predicted
 
