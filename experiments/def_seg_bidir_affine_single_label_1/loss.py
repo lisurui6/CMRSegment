@@ -59,7 +59,7 @@ class DefSegLoss(TorchLoss):
         template_mse_loss = self.template_mse_loss.cumulate(predicted[1], template)
         template_loss = weights[5] * template_dice_loss + weights[6] * template_mse_loss
 
-        loss = pred_map_loss + label_loss + template_loss + grad_loss * self.weights[7] + deform_loss * self.weights[8]
+        loss = pred_map_loss + label_loss + template_loss + grad_loss * weights[7] + deform_loss * weights[8]
         self._cum_loss += loss.item()
         self._count += 1
         return loss
