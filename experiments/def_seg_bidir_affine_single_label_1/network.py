@@ -103,7 +103,7 @@ class DefSegNet(torch.nn.Module):
         image, template = inputs
         pred_maps = self.seg_unet(image)
         pred_maps = torch.sigmoid(pred_maps)
-        affine_input = torch.cat([pred_maps, image])
+        affine_input = torch.cat([pred_maps, image], dim=1)
         affine_theta = self.affine_local(affine_input, template)
         affine_transformed_template = self.affine_transformer(template, affine_theta)
         warped_template, warped_maps, flow, pos_flow, neg_flow = self.vxm_dense(affine_transformed_template, affine_input)
