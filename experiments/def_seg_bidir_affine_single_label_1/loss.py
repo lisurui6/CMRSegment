@@ -32,15 +32,15 @@ class DefLoss(TorchLoss):
         predicted: Union[torch.Tensor, Iterable[torch.Tensor]],
         outputs: Union[torch.Tensor, Iterable[torch.Tensor]],
     ):
-        """predicted = (affine_warped_template, warped template, warped maps, flow)"""
+        """predicted = (affine_warped_template, warped template, flow)"""
         label, template = outputs
         if self.epoch <= 10:
             weights = [1, 0, 0, 0, 0, 0, 0, 0, 0]
         else:
             weights = self.weights
 
-        grad_loss = self.grad_loss.cumulate(predicted[3], None)
-        deform_loss = self.deform_mse_loss.cumulate(predicted[3], torch.zeros(predicted[2].shape).cuda())
+        grad_loss = self.grad_loss.cumulate(predicted[2], None)
+        deform_loss = self.deform_mse_loss.cumulate(predicted[2], torch.zeros(predicted[2].shape).cuda())
 
         affine_label_dice_loss = self.label_dice_loss.cumulate(predicted[0], label)
         affine_label_mse_loss = self.label_mse_loss.cumulate(predicted[0], label)
@@ -172,7 +172,7 @@ class DefSegLoss(TorchLoss):
 class DefWarpedTemplateDice(DiceCoeff, ABC):
     def forward(self, input, target):
         label, template = target
-        # input = (affine template, warped template, warped maps, pred maps, flow)
+        # input = (affine template, warped template, flow)
         pred = (input[1] > 0.5).float()
         return super().forward(pred, label)
 
@@ -180,7 +180,7 @@ class DefWarpedTemplateDice(DiceCoeff, ABC):
 class DefAffineWarpedTemplateDice(DiceCoeff, ABC):
     def forward(self, input, target):
         label, template = target
-        # input = (affine template, warped template, warped maps, pred maps, flow)
+        # input = (affine template, warped template, flow)
         pred = (input[0] > 0.5).float()
         return super().forward(pred, label)
 

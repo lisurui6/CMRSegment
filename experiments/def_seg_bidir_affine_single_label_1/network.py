@@ -365,8 +365,9 @@ class DecoderVxmDense(LoadableModel):
         # configure transformer
         self.transformer = layers.SpatialTransformer(inshape, mode=mode)
 
-    def forward(self, img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge,
-            temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge, registration=False):
+    def forward(self, source, target,
+                img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge,
+                temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge, registration=False):
         '''
         Parameters:
             source: Source image tensor.
@@ -425,7 +426,7 @@ class ImgTemplateEncoderNet(torch.nn.Module):
         )
         self.decoder_vxm = DecoderVxmDense(
             inshape=(n_slices, feature_size, feature_size),
-            n_filters=n_filters, batch_norm=batch_norm, group_norm=group_norm, int_downsize=int_downsize, bidir=bidir
+            n_filters=n_filters, batch_norm=batch_norm, group_norm=group_norm, int_downsize=int_downsize, bidir=False
         )
 
     def forward(self, inputs):
@@ -435,8 +436,9 @@ class ImgTemplateEncoderNet(torch.nn.Module):
         affine_params = self.affine_regressor(img_bridge, temp_bridge)
         affine_warped_template = self.affine_transformer(template, affine_params)
         temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge = self.template_encoder(affine_warped_template)
-        warped_template, warped_maps, flow, pos_flow, neg_flow = self.decoder_vxm(
+        warped_template, flow = self.decoder_vxm(
+            affine_warped_template, None,
             img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge,
             temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge
         )
-        return affine_warped_template, warped_template, warped_maps, flow
+        return affine_warped_template, warped_template, flow
