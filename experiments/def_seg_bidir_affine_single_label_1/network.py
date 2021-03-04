@@ -240,7 +240,7 @@ class AffineRegressor(torch.nn.Module):
 
 
 class FlowDecoder(torch.nn.Module):
-    def __init__(self, num_filters, batch_norm, group_norm, out_dim):
+    def __init__(self, num_filters, batch_norm, group_norm):
         super().__init__()
         activation = torch.nn.ReLU
         self.num_filters = num_filters
@@ -257,9 +257,6 @@ class FlowDecoder(torch.nn.Module):
         self.up_4 = conv_block_2_3d(self.num_filters * 8, self.num_filters * 2, activation, self.batch_norm, group_norm)
         self.trans_5 = conv_trans_block_3d(self.num_filters * 2, self.num_filters * 2, activation, self.batch_norm, group_norm)
         self.up_5 = conv_block_2_3d(self.num_filters * 4, self.num_filters * 1, activation, self.batch_norm, group_norm)
-
-        # Output
-        self.out = nn.Conv3d(self.num_filters, out_dim, kernel_size=1)
 
     def forward(self, img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge,
                temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge):
@@ -386,7 +383,7 @@ class DecoderVxmDense(LoadableModel):
         # ensure correct dimensionality
         ndims = len(inshape)
         assert ndims in [1, 2, 3], 'ndims should be one of 1, 2, or 3. found: %d' % ndims
-        self.flow_decoder = FlowDecoder(n_filters, batch_norm, group_norm, 3)
+        self.flow_decoder = FlowDecoder(n_filters, batch_norm, group_norm)
 
         # configure unet to flow field layer
         Conv = getattr(nn, 'Conv%dd' % ndims)
@@ -478,7 +475,7 @@ class ImgTemplateEncoderNet(torch.nn.Module):
             inshape=(n_slices, feature_size, feature_size),
             n_filters=n_filters, batch_norm=batch_norm, group_norm=group_norm, int_downsize=int_downsize, bidir=False
         )
-        self.seg_decoder = SegDecoder(n_filters, batch_norm, group_norm, 3)
+        self.seg_decoder = SegDecoder(n_filters, batch_norm, group_norm, 1)
 
     def forward(self, inputs):
         image, template = inputs
