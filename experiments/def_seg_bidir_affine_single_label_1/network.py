@@ -229,6 +229,7 @@ class AffineRegressor(torch.nn.Module):
 
 class FlowDecoder(torch.nn.Module):
     def __init__(self, num_filters, batch_norm, group_norm, out_dim):
+        super().__init__()
         activation = torch.nn.ReLU
         self.num_filters = num_filters
         self.batch_norm = batch_norm
@@ -247,7 +248,6 @@ class FlowDecoder(torch.nn.Module):
 
         # Output
         self.out = nn.Conv3d(self.num_filters, out_dim, kernel_size=1)
-        super().__init__()
 
     def foward(self, img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge,
                temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge):
@@ -401,7 +401,6 @@ class DecoderVxmDense(LoadableModel):
 class ImgTemplateEncoderNet(torch.nn.Module):
     def __init__(self, in_channels, n_classes, n_slices, feature_size, n_filters, batch_norm: bool, group_norm, bidir,
                  int_downsize):
-        pass
         super().__init__()
         self.image_encoder = Encoder(in_channels, n_filters, batch_norm=batch_norm, group_norm=group_norm)
         self.template_encoder = Encoder(n_classes, n_filters, batch_norm=batch_norm, group_norm=group_norm)
