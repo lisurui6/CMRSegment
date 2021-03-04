@@ -203,9 +203,9 @@ class AffineRegressor(torch.nn.Module):
         super().__init__()
         activation = torch.nn.ReLU
         self.conv = torch.nn.Sequential(
-            torch.nn.Conv3d(256, 128, kernel_size=1),
-            nn.BatchNorm3d(128),
-            activation(),
+            # torch.nn.Conv3d(256, 128, kernel_size=1),
+            # nn.BatchNorm3d(128),
+            # activation(),
             torch.nn.Conv3d(128, 64, kernel_size=1),
             nn.BatchNorm3d(64),
             activation(),
