@@ -409,7 +409,9 @@ class ImgTemplateEncoderNet(torch.nn.Module):
         self.affine_transformer = AffineSpatialTransformer(
             size=(n_slices, feature_size, feature_size), mode="bilinear"
         )
-        self.decoder_vxm = DecoderVxmDense(n_filters, batch_norm, group_norm, 3, int_downsize=int_downsize, bidir=bidir)
+        self.decoder_vxm = DecoderVxmDense(
+            n_filters=n_filters, batch_norm=batch_norm, group_norm=group_norm, int_downsize=int_downsize, bidir=bidir
+        )
 
     def forward(self, image, template):
         img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge = self.image_encoder(image)
