@@ -124,7 +124,7 @@ def main():
         loss=loss,
         other_validation_metrics=[
             # DefSegWarpedTemplateDice(), DefSegPredDice(),
-            DefAffineWarpedTemplateDice(), DefWarpedTemplateDice,
+            DefAffineWarpedTemplateDice(), DefWarpedTemplateDice(),
         ],
         inference_func=inference
     )
