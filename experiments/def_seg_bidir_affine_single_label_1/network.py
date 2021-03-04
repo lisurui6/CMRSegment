@@ -441,4 +441,4 @@ class ImgTemplateEncoderNet(torch.nn.Module):
         #     img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge,
         #     temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge
         # )
-        return affine_warped_template, affine_warped_template, None
+        return affine_warped_template, affine_warped_template, affine_warped_template
