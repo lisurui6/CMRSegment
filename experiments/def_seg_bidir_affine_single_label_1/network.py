@@ -413,7 +413,8 @@ class ImgTemplateEncoderNet(torch.nn.Module):
             n_filters=n_filters, batch_norm=batch_norm, group_norm=group_norm, int_downsize=int_downsize, bidir=bidir
         )
 
-    def forward(self, image, template):
+    def forward(self, inputs):
+        image, template = inputs
         img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge = self.image_encoder(image)
         temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge = self.template_encoder(template)
         affine_params = self.affine_regressor(img_bridge, temp_bridge)
