@@ -261,7 +261,7 @@ class FlowDecoder(torch.nn.Module):
         # Output
         self.out = nn.Conv3d(self.num_filters, out_dim, kernel_size=1)
 
-    def foward(self, img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge,
+    def forward(self, img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge,
                temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge):
         bridge = torch.cat([img_bridge, temp_bridge], dim=1)
 
