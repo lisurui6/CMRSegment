@@ -292,8 +292,8 @@ class FlowDecoder(torch.nn.Module):
         up_5 = self.up_5(concat_5)  # -> [1, 4, 128, 128, 128]
 
         # Output
-        out = self.out(up_5)  # -> [1, 3, 128, 128, 128]
-        return out
+        # out = self.out(up_5)  # -> [1, 3, 128, 128, 128]
+        return up_5
 
 
 class DecoderVxmDense(LoadableModel):
