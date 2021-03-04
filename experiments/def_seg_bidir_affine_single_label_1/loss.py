@@ -34,11 +34,11 @@ class DefLoss(TorchLoss):
     ):
         """predicted = (affine_warped_template, warped template, flow)"""
         label, template = outputs
-        if self.epoch <= 10:
-            weights = [1, 0, 0, 0, 0, 0, 0, 0, 0]
-        else:
-            weights = self.weights
-
+        # if self.epoch <= 10:
+        #     weights = [1, 0, 0, 0, 0, 0, 0, 0, 0]
+        # else:
+        #     weights = self.weights
+        weights = self.weights
         grad_loss = self.grad_loss.cumulate(predicted[2], None)
         deform_loss = self.deform_mse_loss.cumulate(predicted[2], torch.zeros(predicted[2].shape).cuda())
 
