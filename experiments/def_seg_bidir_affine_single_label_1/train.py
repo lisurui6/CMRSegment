@@ -13,7 +13,7 @@ from CMRSegment.common.nn.torch.loss import FocalLoss, BCELoss, DiceCoeffWithLog
 from CMRSegment.common.config import DataConfig, get_conf, AugmentationConfig
 from pyhocon import ConfigFactory
 from experiments.def_seg_bidir_affine_single_label_1.inference import inference
-from experiments.def_seg_bidir_affine_single_label_1.network import DefSegNet
+from experiments.def_seg_bidir_affine_single_label_1.network import DefSegNet, ImgTemplateEncoderNet
 from experiments.def_seg_bidir_affine_single_label_1.loss import DefSegWarpedTemplateDice, DefSegPredDice, DefSegLoss, \
     DefSegWarpedMapsDice, DefWarpedTemplateDice, DefAffineWarpedTemplateDice, DefLoss
 from experiments.def_seg_bidir_affine_single_label_1.data import construct_training_validation_dataset
@@ -56,16 +56,28 @@ def main():
     )
     augmentation_config = AugmentationConfig.from_conf(conf_path)
     shutil.copy(str(conf_path), str(config.experiment_dir.joinpath("train.conf")))
-    network = DefSegNet(
-        in_channels=get_conf(train_conf, group="network", key="in_channels"),
-        n_classes=get_conf(train_conf, group="network", key="n_classes"),
-        n_filters=get_conf(train_conf, group="network", key="n_filters"),
+    # network = DefSegNet(
+    #     in_channels=get_conf(train_conf, group="network", key="in_channels"),
+    #     n_classes=get_conf(train_conf, group="network", key="n_classes"),
+    #     n_filters=get_conf(train_conf, group="network", key="n_filters"),
+    #     feature_size=get_conf(train_conf, group="network", key="feature_size"),
+    #     n_slices=get_conf(train_conf, group="network", key="n_slices"),
+    #     int_downsize=get_conf(train_conf, group="network", key="integrate_downsize"),
+    #     bidir=True,
+    #     batch_norm=get_conf(train_conf, group="network", key="batch_norm"),
+    #     group_norm=get_conf(train_conf, group="network", key="group_norm"),
+    # )
+
+    network = ImgTemplateEncoderNet(
         feature_size=get_conf(train_conf, group="network", key="feature_size"),
         n_slices=get_conf(train_conf, group="network", key="n_slices"),
-        int_downsize=get_conf(train_conf, group="network", key="integrate_downsize"),
-        bidir=True,
+        n_filters=get_conf(train_conf, group="network", key="n_filters"),
         batch_norm=get_conf(train_conf, group="network", key="batch_norm"),
         group_norm=get_conf(train_conf, group="network", key="group_norm"),
+        int_downsize=get_conf(train_conf, group="network", key="integrate_downsize"),
+        bidir=True,
+        in_channels=get_conf(train_conf, group="network", key="in_channels"),
+        n_classes=get_conf(train_conf, group="network", key="n_classes"),
     )
 
     training_sets, validation_sets, extra_validation_sets = construct_training_validation_dataset(

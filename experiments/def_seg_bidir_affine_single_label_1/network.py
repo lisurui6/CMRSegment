@@ -399,16 +399,17 @@ class DecoderVxmDense(LoadableModel):
 
 
 class ImgTemplateEncoderNet(torch.nn.Module):
-    def __init__(self,n_slices, feature_size, n_filters, batch_norm: bool, group_norm):
+    def __init__(self, in_channels, n_classes, n_slices, feature_size, n_filters, batch_norm: bool, group_norm, bidir,
+                 int_downsize):
         pass
         super().__init__()
-        self.image_encoder = Encoder(1, n_filters, batch_norm=batch_norm, group_norm=group_norm)
-        self.template_encoder = Encoder(1, n_filters, batch_norm=batch_norm, group_norm=group_norm)
+        self.image_encoder = Encoder(in_channels, n_filters, batch_norm=batch_norm, group_norm=group_norm)
+        self.template_encoder = Encoder(n_classes, n_filters, batch_norm=batch_norm, group_norm=group_norm)
         self.affine_regressor = AffineRegressor()
         self.affine_transformer = AffineSpatialTransformer(
             size=(n_slices, feature_size, feature_size), mode="bilinear"
         )
-        self.decoder_vxm = DecoderVxmDense(n_filters, batch_norm, group_norm, 3)
+        self.decoder_vxm = DecoderVxmDense(n_filters, batch_norm, group_norm, 3, int_downsize=int_downsize, bidir=bidir)
 
     def forward(self, image, template):
         img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge = self.image_encoder(image)
