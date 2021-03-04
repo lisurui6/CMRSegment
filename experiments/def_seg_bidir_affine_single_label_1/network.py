@@ -220,7 +220,7 @@ class AffineRegressor(torch.nn.Module):
     def forward(self, image_code, template_code):
         x = torch.cat([image_code, template_code], dim=1)
 
-        out = self.conv3(x)
+        out = self.conv(x)
         out = out.view(out.shape[0], -1)
         theta = self.regress(out)
         theta = theta.view(theta.shape[0], 3, 4)
