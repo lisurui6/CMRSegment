@@ -365,7 +365,8 @@ class DecoderVxmDense(LoadableModel):
         # configure transformer
         self.transformer = layers.SpatialTransformer(inshape, mode=mode)
 
-    def forward(self, source, target, registration=False):
+    def forward(self, img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge,
+            temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge, registration=False):
         '''
         Parameters:
             source: Source image tensor.
@@ -374,8 +375,10 @@ class DecoderVxmDense(LoadableModel):
         '''
 
         # concatenate inputs and propagate unet
-        x = torch.cat([source, target], dim=1)
-        x = self.flow_decoder(x)
+        x = self.flow_decoder(
+            img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge,
+            temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge
+        )
         # transform into flow field
         flow_field = self.flow(x)
 
