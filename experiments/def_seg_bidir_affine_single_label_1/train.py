@@ -15,7 +15,7 @@ from pyhocon import ConfigFactory
 from experiments.def_seg_bidir_affine_single_label_1.inference import inference
 from experiments.def_seg_bidir_affine_single_label_1.network import DefSegNet, ImgTemplateEncoderNet
 from experiments.def_seg_bidir_affine_single_label_1.loss import DefSegWarpedTemplateDice, DefSegPredDice, DefSegLoss, \
-    DefSegWarpedMapsDice, DefWarpedTemplateDice, DefAffineWarpedTemplateDice, DefLoss
+    DefSegWarpedMapsDice, DefWarpedTemplateDice, DefAffineWarpedTemplateDice, DefLoss, DefPredDice
 from experiments.def_seg_bidir_affine_single_label_1.data import construct_training_validation_dataset
 from experiments.def_seg_bidir_affine_single_label_1.experiment import DefSegExperiment
 
@@ -124,7 +124,7 @@ def main():
         loss=loss,
         other_validation_metrics=[
             # DefSegWarpedTemplateDice(), DefSegPredDice(),
-            DefAffineWarpedTemplateDice(), DefWarpedTemplateDice(),
+            DefAffineWarpedTemplateDice(), DefWarpedTemplateDice(), DefPredDice(),
         ],
         inference_func=inference
     )

@@ -296,6 +296,56 @@ class FlowDecoder(torch.nn.Module):
         return up_5
 
 
+class SegDecoder(torch.nn.Module):
+    def __init__(self, num_filters, batch_norm, group_norm, out_dim):
+        super().__init__()
+        activation = torch.nn.ReLU
+        self.num_filters = num_filters
+        self.batch_norm = batch_norm
+        self.out_dim = out_dim
+
+        # Up sampling
+        self.trans_1 = conv_trans_block_3d(self.num_filters * 8, self.num_filters * 8, activation, self.batch_norm, group_norm)
+        self.up_1 = conv_block_2_3d(self.num_filters * 16, self.num_filters * 8, activation, self.batch_norm, group_norm)
+        self.trans_2 = conv_trans_block_3d(self.num_filters * 8, self.num_filters * 8, activation, self.batch_norm, group_norm)
+        self.up_2 = conv_block_2_3d(self.num_filters * 16, self.num_filters * 8, activation, self.batch_norm, group_norm)
+        self.trans_3 = conv_trans_block_3d(self.num_filters * 8, self.num_filters * 8, activation, self.batch_norm, group_norm)
+        self.up_3 = conv_block_2_3d(self.num_filters * 12, self.num_filters * 4, activation, self.batch_norm, group_norm)
+        self.trans_4 = conv_trans_block_3d(self.num_filters * 4, self.num_filters * 4, activation, self.batch_norm, group_norm)
+        self.up_4 = conv_block_2_3d(self.num_filters * 6, self.num_filters * 2, activation, self.batch_norm, group_norm)
+        self.trans_5 = conv_trans_block_3d(self.num_filters * 2, self.num_filters * 2, activation, self.batch_norm, group_norm)
+        self.up_5 = conv_block_2_3d(self.num_filters * 3, self.num_filters * 1, activation, self.batch_norm, group_norm)
+
+        # Output
+        self.out = nn.Conv3d(self.num_filters, self.out_dim, kernel_size=1)
+
+    def forward(self, img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge):
+        # Up sampling
+        trans_1 = self.trans_1(img_bridge)  # -> [None, 512, 4, 8, 8]
+        concat_1 = torch.cat([trans_1, img_down5], dim=1)  # -> [1, 192, 8, 8, 8]
+        up_1 = self.up_1(concat_1)  # -> [1, 64, 8, 8, 8]
+
+        trans_2 = self.trans_2(up_1)  # -> [1, 64, 16, 16, 16]
+        concat_2 = torch.cat([trans_2, img_down4], dim=1)  # -> [1, 192, 8, 8, 8]
+        up_2 = self.up_2(concat_2)  # -> [1, 32, 16, 16, 16]
+
+        trans_3 = self.trans_3(up_2)  # -> [1, 32, 32, 32, 32]
+        concat_3 = torch.cat([trans_3, img_down3], dim=1)  # -> [1, 48, 32, 32, 32]
+        up_3 = self.up_3(concat_3)  # -> [1, 16, 32, 32, 32]
+
+        trans_4 = self.trans_4(up_3)  # -> [1, 16, 64, 64, 64]
+        concat_4 = torch.cat([trans_4, img_down2], dim=1)  # -> [1, 24, 64, 64, 64]
+        up_4 = self.up_4(concat_4)  # -> [1, 8, 64, 64, 64]
+
+        trans_5 = self.trans_5(up_4)  # -> [1, 8, 128, 128, 128]
+        concat_5 = torch.cat([trans_5, img_down1], dim=1)  # -> [1, 12, 128, 128, 128]
+        up_5 = self.up_5(concat_5)  # -> [1, 4, 128, 128, 128]
+
+        # Output
+        out = self.out(up_5)  # -> [1, 3, 128, 128, 128]
+        return out
+
+
 class DecoderVxmDense(LoadableModel):
     """
     VoxelMorph network for (unsupervised) nonlinear registration between two images.
@@ -428,17 +478,21 @@ class ImgTemplateEncoderNet(torch.nn.Module):
             inshape=(n_slices, feature_size, feature_size),
             n_filters=n_filters, batch_norm=batch_norm, group_norm=group_norm, int_downsize=int_downsize, bidir=False
         )
+        self.seg_decoder = SegDecoder(n_filters, batch_norm, group_norm, 3)
 
     def forward(self, inputs):
         image, template = inputs
         img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge = self.image_encoder(image)
+        pred_maps = self.seg_decoder(img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge)
+        pred_maps = torch.sigmoid(pred_maps)
+
         temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge = self.template_encoder(template)
         affine_params = self.affine_regressor(img_bridge, temp_bridge)
         affine_warped_template = self.affine_transformer(template, affine_params)
-        # temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge = self.template_encoder(affine_warped_template)
-        # warped_template, flow = self.decoder_vxm(
-        #     affine_warped_template, None,
-        #     img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge,
-        #     temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge
-        # )
-        return affine_warped_template, affine_warped_template, affine_warped_template
+        temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge = self.template_encoder(affine_warped_template)
+        warped_template, flow = self.decoder_vxm(
+            affine_warped_template, None,
+            img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge,
+            temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge
+        )
+        return affine_warped_template, warped_template, pred_maps, flow
