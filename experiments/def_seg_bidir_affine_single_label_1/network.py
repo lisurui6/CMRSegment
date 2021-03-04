@@ -435,10 +435,10 @@ class ImgTemplateEncoderNet(torch.nn.Module):
         temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge = self.template_encoder(template)
         affine_params = self.affine_regressor(img_bridge, temp_bridge)
         affine_warped_template = self.affine_transformer(template, affine_params)
-        temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge = self.template_encoder(affine_warped_template)
-        warped_template, flow = self.decoder_vxm(
-            affine_warped_template, None,
-            img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge,
-            temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge
-        )
-        return affine_warped_template, warped_template, flow
+        # temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge = self.template_encoder(affine_warped_template)
+        # warped_template, flow = self.decoder_vxm(
+        #     affine_warped_template, None,
+        #     img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge,
+        #     temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge
+        # )
+        return affine_warped_template, affine_warped_template, None

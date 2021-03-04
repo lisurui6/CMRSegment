@@ -39,8 +39,8 @@ class DefLoss(TorchLoss):
         # else:
         #     weights = self.weights
         weights = self.weights
-        grad_loss = self.grad_loss.cumulate(predicted[2], None)
-        deform_loss = self.deform_mse_loss.cumulate(predicted[2], torch.zeros(predicted[2].shape).cuda())
+        # grad_loss = self.grad_loss.cumulate(predicted[2], None)
+        # deform_loss = self.deform_mse_loss.cumulate(predicted[2], torch.zeros(predicted[2].shape).cuda())
 
         affine_label_dice_loss = self.label_dice_loss.cumulate(predicted[0], label)
         affine_label_mse_loss = self.label_mse_loss.cumulate(predicted[0], label)
@@ -50,7 +50,8 @@ class DefLoss(TorchLoss):
         label_mse_loss = self.label_mse_loss.cumulate(predicted[1], label)
         label_loss = weights[3] * label_dice_loss + weights[4] * label_mse_loss + affine_label_loss
 
-        loss = label_loss + grad_loss * weights[7] + deform_loss * weights[8]
+        # loss = label_loss + grad_loss * weights[7] + deform_loss * weights[8]
+        loss = label_loss
         self._cum_loss += loss.item()
         self._count += 1
         return loss
