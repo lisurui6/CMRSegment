@@ -247,16 +247,16 @@ class FlowDecoder(torch.nn.Module):
         self.batch_norm = batch_norm
 
         # Up sampling
-        self.trans_1 = conv_trans_block_3d(self.num_filters * 8, self.num_filters * 8, activation, self.batch_norm, group_norm)
-        self.up_1 = conv_block_2_3d(self.num_filters * 16, self.num_filters * 8, activation, self.batch_norm, group_norm)
+        self.trans_1 = conv_trans_block_3d(self.num_filters * 16, self.num_filters * 8, activation, self.batch_norm, group_norm)
+        self.up_1 = conv_block_2_3d(self.num_filters * 24, self.num_filters * 8, activation, self.batch_norm, group_norm)
         self.trans_2 = conv_trans_block_3d(self.num_filters * 8, self.num_filters * 8, activation, self.batch_norm, group_norm)
-        self.up_2 = conv_block_2_3d(self.num_filters * 16, self.num_filters * 8, activation, self.batch_norm, group_norm)
+        self.up_2 = conv_block_2_3d(self.num_filters * 24, self.num_filters * 8, activation, self.batch_norm, group_norm)
         self.trans_3 = conv_trans_block_3d(self.num_filters * 8, self.num_filters * 8, activation, self.batch_norm, group_norm)
-        self.up_3 = conv_block_2_3d(self.num_filters * 12, self.num_filters * 4, activation, self.batch_norm, group_norm)
+        self.up_3 = conv_block_2_3d(self.num_filters * 16, self.num_filters * 4, activation, self.batch_norm, group_norm)
         self.trans_4 = conv_trans_block_3d(self.num_filters * 4, self.num_filters * 4, activation, self.batch_norm, group_norm)
-        self.up_4 = conv_block_2_3d(self.num_filters * 6, self.num_filters * 2, activation, self.batch_norm, group_norm)
+        self.up_4 = conv_block_2_3d(self.num_filters * 8, self.num_filters * 2, activation, self.batch_norm, group_norm)
         self.trans_5 = conv_trans_block_3d(self.num_filters * 2, self.num_filters * 2, activation, self.batch_norm, group_norm)
-        self.up_5 = conv_block_2_3d(self.num_filters * 3, self.num_filters * 1, activation, self.batch_norm, group_norm)
+        self.up_5 = conv_block_2_3d(self.num_filters * 4, self.num_filters * 1, activation, self.batch_norm, group_norm)
 
         # Output
         self.out = nn.Conv3d(self.num_filters, out_dim, kernel_size=1)
