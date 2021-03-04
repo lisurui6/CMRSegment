@@ -14,7 +14,8 @@ from CMRSegment.common.config import DataConfig, get_conf, AugmentationConfig
 from pyhocon import ConfigFactory
 from experiments.def_seg_bidir_affine_single_label_1.inference import inference
 from experiments.def_seg_bidir_affine_single_label_1.network import DefSegNet
-from experiments.def_seg_bidir_affine_single_label_1.loss import DefSegWarpedTemplateDice, DefSegPredDice, DefSegLoss, DefSegWarpedMapsDice
+from experiments.def_seg_bidir_affine_single_label_1.loss import DefSegWarpedTemplateDice, DefSegPredDice, DefSegLoss, \
+    DefSegWarpedMapsDice, DefWarpedTemplateDice, DefAffineWarpedTemplateDice, DefLoss
 from experiments.def_seg_bidir_affine_single_label_1.data import construct_training_validation_dataset
 from experiments.def_seg_bidir_affine_single_label_1.experiment import DefSegExperiment
 
@@ -89,11 +90,18 @@ def main():
             network.parameters(), lr=get_conf(train_conf, group="optimizer", key="learning_rate")
         )
 
-    loss = DefSegLoss(
+    # loss = DefSegLoss(
+    #     penalty="l2",
+    #     loss_mult=get_conf(train_conf, group="network", key="integrate_downsize"),
+    #     weights=get_conf(train_conf, group="loss", key="weights"),
+    # )
+
+    loss = DefLoss(
         penalty="l2",
         loss_mult=get_conf(train_conf, group="network", key="integrate_downsize"),
         weights=get_conf(train_conf, group="loss", key="weights"),
     )
+
     experiment = DefSegExperiment(
         config=config,
         network=network,
@@ -103,7 +111,8 @@ def main():
         optimizer=optimizer,
         loss=loss,
         other_validation_metrics=[
-            DefSegWarpedTemplateDice(), DefSegPredDice(),
+            # DefSegWarpedTemplateDice(), DefSegPredDice(),
+            DefAffineWarpedTemplateDice(), DefWarpedTemplateDice,
         ],
         inference_func=inference
     )
