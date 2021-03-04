@@ -410,6 +410,7 @@ class ImgTemplateEncoderNet(torch.nn.Module):
             size=(n_slices, feature_size, feature_size), mode="bilinear"
         )
         self.decoder_vxm = DecoderVxmDense(
+            inshape=(n_slices, feature_size, feature_size),
             n_filters=n_filters, batch_norm=batch_norm, group_norm=group_norm, int_downsize=int_downsize, bidir=bidir
         )
 
