@@ -44,8 +44,8 @@ class DefSegExperiment(Experiment):
                 predicted = self.network(inputs, atlas_label)  # pass updated atlas in
                 template = predicted[1].cpu().detach().numpy()
                 image = predicted[-1].cpu().detach().numpy()
-                warped_templates.append(np.squeeze(template, axis=0))
-                warped_images.append(np.squeeze(image))
+                warped_templates.append(template)
+                warped_images.append(np.squeeze(image, axis=1))
                 loss = self.loss.cumulate(predicted, outputs)
                 self.optimizer.zero_grad()
                 loss.backward()
