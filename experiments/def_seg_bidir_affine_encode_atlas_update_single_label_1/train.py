@@ -65,6 +65,8 @@ def main():
         in_channels=get_conf(train_conf, group="network", key="in_channels"),
         n_classes=get_conf(train_conf, group="network", key="n_classes"),
         batch_size=get_conf(train_conf, group="experiment", key="batch_size"),
+        gpu=get_conf(train_conf, group="experiment", key="gpu"),
+        device=get_conf(train_conf, group="experiment", key="device"),
     )
 
     training_sets, validation_sets, extra_validation_sets = construct_training_validation_dataset(

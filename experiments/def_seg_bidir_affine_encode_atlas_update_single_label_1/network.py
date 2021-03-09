@@ -4,6 +4,7 @@ import numpy as np
 from voxelmorph.torch.networks import VxmDense, LoadableModel, store_config_args, Normal, layers
 from experiments.fcn_3d.network import UNet, max_pooling_3d, conv_trans_block_3d
 from experiments.def_seg_bidir_affine_encode_atlas_update_single_label_1.layers import AffineSpatialTransformer
+from CMRSegment.common.nn.torch import prepare_tensors
 
 
 def conv_block_2_3d(in_dim, out_dim, activation, batch_norm: bool = True, group_norm=0):
@@ -347,17 +348,17 @@ class DecoderVxmDense(LoadableModel):
         preint_flow = pos_flow
 
         # negate flow for bidirectional model
-        neg_flow = -pos_flow if self.bidir else None
+        neg_flow = -pos_flow
 
         # integrate to produce diffeomorphic warp
         if self.integrate:
             pos_flow = self.integrate(pos_flow)
-            neg_flow = self.integrate(neg_flow) if self.bidir else None
+            neg_flow = self.integrate(neg_flow)
 
             # resize to final resolution
             if self.fullsize:
                 pos_flow = self.fullsize(pos_flow)
-                neg_flow = self.fullsize(neg_flow) if self.bidir else None
+                neg_flow = self.fullsize(neg_flow)
 
         # warp image with flow field
         y_source = self.transformer(source, pos_flow)
@@ -365,14 +366,14 @@ class DecoderVxmDense(LoadableModel):
 
         # return non-integrated flow field if training
         if not registration:
-            return (y_source, y_target, preint_flow, pos_flow, neg_flow) if self.bidir else (y_source, preint_flow, pos_flow)
+            return (y_source, y_target, preint_flow, pos_flow, neg_flow) if self.bidir else (y_source, preint_flow, pos_flow, neg_flow)
         else:
             return y_source, pos_flow
 
 
 class ImgTemplateEncoderNet(torch.nn.Module):
     def __init__(self, in_channels, n_classes, n_slices, feature_size, n_filters, batch_norm: bool, group_norm, bidir,
-                 int_downsize, batch_size):
+                 int_downsize, batch_size, gpu, device):
         super().__init__()
         self.image_encoder = Encoder(in_channels, n_filters, batch_norm=batch_norm, group_norm=group_norm)
         self.template_encoder = Encoder(n_classes, n_filters, batch_norm=batch_norm, group_norm=group_norm)
@@ -387,9 +388,12 @@ class ImgTemplateEncoderNet(torch.nn.Module):
         self.seg_decoder = SegDecoder(n_filters, batch_norm, group_norm, 1)
         self.batch_size = batch_size
         self.batch_atlas = None
+        self.batch_affine_added = None
+        self.gpu = gpu
+        self.device = device
 
     def forward(self, inputs, atlas):
-        image, __ = inputs
+        image, label = inputs
         img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge = self.image_encoder(image)
         pred_maps = self.seg_decoder(img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge)
         pred_maps = torch.sigmoid(pred_maps)
@@ -397,9 +401,16 @@ class ImgTemplateEncoderNet(torch.nn.Module):
         if image.shape[0] == self.batch_size:
             if self.batch_atlas is None:
                 self.batch_atlas = torch.stack([atlas for _ in range(self.batch_size)], dim=0)
+                self.batch_affine_added = prepare_tensors(
+                    torch.stack([torch.from_numpy(np.array([[0, 0, 0, 1]])) for _ in range(image.shape[0])], dim=0),
+                    self.gpu, self.device
+                )
+
             batch_atlas = self.batch_atlas
+            batch_affine_added = self.batch_affine_added
         else:
             batch_atlas = torch.stack([atlas for _ in range(image.shape[0])], dim=0)
+            batch_affine_added = torch.cat([torch.from_numpy(np.array([0, 0, 0, 1])) for _ in range(image.shape[0])])
 
         temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge = self.template_encoder(batch_atlas)
         affine_params = self.affine_regressor(img_bridge, temp_bridge)
@@ -407,10 +418,21 @@ class ImgTemplateEncoderNet(torch.nn.Module):
         affine_warped_template = self.affine_transformer(batch_atlas, affine_params)
 
         temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge = self.template_encoder(affine_warped_template)
-        warped_template, preint_flow, pos_flow = self.decoder_vxm(
+        warped_template, preint_flow, pos_flow, neg_flow = self.decoder_vxm(
             affine_warped_template, None,
             img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge,
             temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge
         )
         warped_image = self.decoder_vxm.transformer(affine_warped_image, pos_flow)
-        return affine_warped_template, warped_template, pred_maps, preint_flow, warped_image
+
+        # inverse transform of label to template space
+        inverse_affine_par = inverse_affine_params(affine_params, batch_affine_added)
+        affine_warped_label = self.affine_transformer(label, inverse_affine_par)
+        warped_label = self.decoder_vxm.transformer(affine_warped_label, neg_flow)
+        return affine_warped_template, warped_template, pred_maps, preint_flow, warped_image, warped_label
+
+
+def inverse_affine_params(affine_params, affine_added):
+    theta = torch.cat([affine_params, affine_added], dim=1)
+    inverse_theta = torch.inverse(theta)
+    return inverse_theta[:, :3, :]

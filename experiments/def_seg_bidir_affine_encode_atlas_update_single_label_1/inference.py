@@ -94,7 +94,7 @@ def inference(image: torch.Tensor, label: torch.Tensor, image_path: Path, networ
     image, template = image
     # warped_template, warped_maps, pred_maps, flow = network((image, template))
     # warped_template, warped_maps, pred_maps, flow = network((image, template))
-    affine_warped_template, warped_template, pred_maps, flow, warped_image = network((image, template), atlas)
+    affine_warped_template, warped_template, pred_maps, flow, warped_image, warped_label = network((image, template), atlas)
 
     # for prefix, predicted in zip(["warped_template", "pred_maps"], [warped_template, pred_maps]):
     nim = nib.load(str(image_path))

@@ -199,7 +199,7 @@ class DefSegDataset(Torch2DSegmentationDataset):
         template = torch.from_numpy(self.template).float()
         # template_image = np.expand_dims(self.template_image, 0)
         # template_image = torch.from_numpy(template_image).float()
-        return (image, template), (label, template)
+        return (image, label), (label, template)
 
     def save(self, image: np.ndarray, label: np.ndarray, index: int):
         if index % 100 == 0:

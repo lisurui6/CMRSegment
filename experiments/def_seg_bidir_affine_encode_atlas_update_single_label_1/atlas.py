@@ -40,11 +40,11 @@ class Atlas:
     def label(self):
         return self._label
 
-    def update(self, warped_images: List[np.ndarray], warped_templates: List[np.ndarray]):
+    def update(self, warped_images: List[np.ndarray], warped_labels: List[np.ndarray]):
         mean_image = np.concatenate(warped_images, axis=0)
         mean_image = np.mean(mean_image, axis=0)
 
-        mean_atlas = np.concatenate(warped_templates, axis=0)
+        mean_atlas = np.concatenate(warped_labels, axis=0)
         mean_atlas = np.mean(mean_atlas, axis=0)
         mean_image = (1 - self.eta) * self.image() + self.eta * mean_image
         mean_atlas = (1 - self.eta) * self.label() + self.eta * mean_atlas
