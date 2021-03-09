@@ -403,14 +403,17 @@ class ImgTemplateEncoderNet(torch.nn.Module):
                 self.batch_atlas = torch.stack([atlas for _ in range(self.batch_size)], dim=0)
                 self.batch_affine_added = prepare_tensors(
                     torch.stack([torch.from_numpy(np.array([[0, 0, 0, 1]])) for _ in range(image.shape[0])], dim=0),
-                    self.gpu, self.device
+                    self.gpu, self.device,
                 )
 
             batch_atlas = self.batch_atlas
             batch_affine_added = self.batch_affine_added
         else:
             batch_atlas = torch.stack([atlas for _ in range(image.shape[0])], dim=0)
-            batch_affine_added = torch.cat([torch.from_numpy(np.array([0, 0, 0, 1])) for _ in range(image.shape[0])])
+            batch_affine_added = prepare_tensors(
+                torch.cat([torch.from_numpy(np.array([0, 0, 0, 1])) for _ in range(image.shape[0])]),
+                self.gpu, self.device,
+            )
 
         temp_down1, temp_down2, temp_down3, temp_down4, temp_down5, temp_bridge = self.template_encoder(batch_atlas)
         affine_params = self.affine_regressor(img_bridge, temp_bridge)
