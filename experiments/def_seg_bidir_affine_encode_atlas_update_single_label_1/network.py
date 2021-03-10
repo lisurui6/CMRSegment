@@ -388,12 +388,12 @@ class ImgTemplateEncoderNet(torch.nn.Module):
         self.seg_decoder = SegDecoder(n_filters, batch_norm, group_norm, 1)
         self.batch_size = batch_size
         self.batch_atlas = None
+        self.gpu = gpu
+        self.device = device
         self.batch_affine_added = prepare_tensors(
             torch.stack([torch.from_numpy(np.array([[0, 0, 0, 1]])) for _ in range(self.batch_size)], dim=0),
             self.gpu, self.device,
         )
-        self.gpu = gpu
-        self.device = device
 
     def update_batch_atlas(self, atlas):
         self.batch_atlas = torch.stack([atlas for _ in range(self.batch_size)], dim=0)
