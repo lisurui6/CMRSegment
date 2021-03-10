@@ -411,7 +411,7 @@ class ImgTemplateEncoderNet(torch.nn.Module):
         else:
             batch_atlas = torch.stack([atlas for _ in range(image.shape[0])], dim=0)
             batch_affine_added = prepare_tensors(
-                torch.cat([torch.from_numpy(np.array([0, 0, 0, 1])) for _ in range(image.shape[0])]),
+                torch.stack([torch.from_numpy(np.array([[0, 0, 0, 1]])) for _ in range(image.shape[0])], dim=0),
                 self.gpu, self.device,
             )
 

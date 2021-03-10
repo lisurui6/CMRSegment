@@ -57,7 +57,8 @@ class DefSegExperiment(Experiment):
             atlas.update(warped_images, warped_labels)
             atlas.save(output_dir=self.config.experiment_dir.joinpath("atlas").joinpath("epoch_{}".format(epoch)))
             self.logger.info("Epoch finished !")
-            val_metrics = self.eval(self.loss.new(), *self.other_validation_metrics, datasets=self.validation_sets, atlas=atlas_label)
+            val_metrics = self.eval(self.loss.new(), *self.other_validation_metrics, datasets=self.validation_sets,
+                                    atlas=atlas_label)
             self.logger.info("Validation loss: {}".format(val_metrics[0].description()))
             if val_metrics[1:]:
                 self.logger.info("Other metrics on validation set.")
