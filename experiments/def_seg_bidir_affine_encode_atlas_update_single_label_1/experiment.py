@@ -38,6 +38,7 @@ class DefSegExperiment(Experiment):
             warped_labels = []
             warped_images = []
             atlas_label = prepare_tensors(torch.from_numpy(atlas.label()), self.config.gpu, self.config.device)
+            self.network.update_batch_atlas(atlas_label)
             for idx, (inputs, outputs) in pbar:
                 inputs = prepare_tensors(inputs, self.config.gpu, self.config.device)
                 outputs = prepare_tensors(outputs, self.config.gpu, self.config.device)

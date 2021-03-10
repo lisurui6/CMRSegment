@@ -392,6 +392,9 @@ class ImgTemplateEncoderNet(torch.nn.Module):
         self.gpu = gpu
         self.device = device
 
+    def update_batch_atlas(self, atlas):
+        self.batch_atlas = torch.stack([atlas for _ in range(self.batch_size)], dim=0)
+
     def forward(self, inputs, atlas):
         image, label = inputs
         img_down1, img_down2, img_down3, img_down4, img_down5, img_bridge = self.image_encoder(image)
