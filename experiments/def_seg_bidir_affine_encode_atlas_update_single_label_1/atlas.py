@@ -6,6 +6,7 @@ import nibabel as nib
 import numpy as np
 from CMRSegment.common.nn.torch import prepare_tensors
 from CMRSegment.common.nn.torch.data import MultiDataLoader
+from matplotlib import pyplot as plt
 
 
 def mean_image_label(data_loader: MultiDataLoader):
@@ -29,7 +30,7 @@ def mean_image_label(data_loader: MultiDataLoader):
 
 
 class Atlas:
-    def __init__(self, image: np.ndarray, label: np.ndarray, eta: float = 0.01):
+    def __init__(self, image: np.ndarray, label: np.ndarray, eta: float = 0.1):
         self._image = image
         self._label = label
         self.eta = eta
@@ -78,3 +79,17 @@ class Atlas:
         nim2 = nib.Nifti1Image(final_label, None)
         output_dir.mkdir(parents=True, exist_ok=True)
         nib.save(nim2, '{0}/label.nii.gz'.format(str(output_dir)))
+
+        mean_atlas = self._label
+        slice = mean_atlas[0, 30, :, :]
+        plt.figure()
+        plt.imshow(slice)
+        plt.savefig(str(output_dir.joinpath("slice_1.png")))
+        slice = mean_atlas[0, :, 64, :]
+        plt.figure()
+        plt.imshow(slice)
+        plt.savefig(str(output_dir.joinpath("slice_2.png")))
+        slice = mean_atlas[0, :, :, 64]
+        plt.figure()
+        plt.imshow(slice)
+        plt.savefig(str(output_dir.joinpath("slice_3.png")))

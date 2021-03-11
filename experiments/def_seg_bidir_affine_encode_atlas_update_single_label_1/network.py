@@ -431,7 +431,7 @@ class ImgTemplateEncoderNet(torch.nn.Module):
         inverse_affine_par = inverse_affine_params(affine_params, batch_affine_added)
         affine_warped_label = self.affine_transformer(label, inverse_affine_par)
         warped_label = self.decoder_vxm.transformer(affine_warped_label, neg_flow)
-        return affine_warped_template, warped_template, pred_maps, preint_flow, warped_image, warped_label
+        return affine_warped_template, warped_template, pred_maps, preint_flow, warped_image, warped_label, affine_warped_label, batch_atlas
 
 
 def inverse_affine_params(affine_params, affine_added):

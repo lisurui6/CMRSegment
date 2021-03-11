@@ -13,6 +13,20 @@ from typing import Iterable, Tuple, List
 
 
 class DefSegExperiment(Experiment):
+
+    def update_atlas(self, train_data_loader, atlas_label, atlas):
+        pbar = tqdm(enumerate(train_data_loader))
+        warped_labels = []
+        warped_images = []
+        for idx, (inputs, outputs) in pbar:
+            inputs = prepare_tensors(inputs, self.config.gpu, self.config.device)
+            predicted = self.network(inputs, atlas_label)  # pass updated atlas in
+            warped_label = predicted[-3].cpu().detach().numpy()
+            image = predicted[-4].cpu().detach().numpy()
+            warped_labels.append(warped_label)
+            warped_images.append(np.squeeze(image, axis=1))
+        atlas.update(warped_images, warped_labels)
+
     def train(self):
         self.network.train()
         train_data_loader = MultiDataLoader(
@@ -35,18 +49,12 @@ class DefSegExperiment(Experiment):
             #     set = True
 
             pbar = tqdm(enumerate(train_data_loader))
-            warped_labels = []
-            warped_images = []
             atlas_label = prepare_tensors(torch.from_numpy(atlas.label()), self.config.gpu, self.config.device)
             self.network.update_batch_atlas(atlas_label)
             for idx, (inputs, outputs) in pbar:
                 inputs = prepare_tensors(inputs, self.config.gpu, self.config.device)
                 outputs = prepare_tensors(outputs, self.config.gpu, self.config.device)
                 predicted = self.network(inputs, atlas_label)  # pass updated atlas in
-                warped_label = predicted[-1].cpu().detach().numpy()
-                image = predicted[-2].cpu().detach().numpy()
-                warped_labels.append(warped_label)
-                warped_images.append(np.squeeze(image, axis=1))
                 loss = self.loss.cumulate(predicted, outputs)
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -55,7 +63,8 @@ class DefSegExperiment(Experiment):
                     "{:.2f} --- {}".format((idx + 1) / len(train_data_loader), self.loss.description())
                 )
             # update atlas
-            atlas.update(warped_images, warped_labels)
+            self.network.eval()
+            self.update_atlas(train_data_loader, atlas_label, atlas)
             atlas.save(output_dir=self.config.experiment_dir.joinpath("atlas").joinpath("epoch_{}".format(epoch)))
             self.logger.info("Epoch finished !")
             val_metrics = self.eval(self.loss.new(), *self.other_validation_metrics, datasets=self.validation_sets,

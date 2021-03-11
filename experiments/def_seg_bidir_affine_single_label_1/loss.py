@@ -43,8 +43,8 @@ class DefLoss(TorchLoss):
         # else:
         #     weights = self.weights
         weights = self.weights
-        grad_loss = self.grad_loss.cumulate(predicted[2], None)
-        deform_loss = self.deform_mse_loss.cumulate(predicted[2], torch.zeros(predicted[2].shape).cuda())
+        grad_loss = self.grad_loss.cumulate(predicted[3], None)
+        deform_loss = self.deform_mse_loss.cumulate(predicted[3], torch.zeros(predicted[2].shape).cuda())
 
         pred_map_bce_loss = self.pred_maps_bce_loss.cumulate(predicted[2], label)
         pred_map_dice_loss = self.pred_maps_dice_loss.cumulate(predicted[2], label)

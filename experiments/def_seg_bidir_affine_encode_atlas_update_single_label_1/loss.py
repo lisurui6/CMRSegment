@@ -21,8 +21,14 @@ class DefLoss(TorchLoss):
         self.label_dice_loss = DiceLoss()
         self.label_mse_loss = MSELoss()
 
+        self.label_dice_loss_affine = DiceLoss()
+        self.label_mse_loss_affine = MSELoss()
+
         self.template_dice_loss = DiceLoss()
         self.template_mse_loss = MSELoss()
+
+        self.atlas_mse_loss = MSELoss()
+        self.atlas_mse_loss_affine = MSELoss()
 
         # self.label_bce_loss = BCELoss(logit=False)
         # self.template_bce_loss = BCELoss(logit=False)
@@ -33,30 +39,26 @@ class DefLoss(TorchLoss):
         predicted: Union[torch.Tensor, Iterable[torch.Tensor]],
         outputs: Union[torch.Tensor, Iterable[torch.Tensor]],
     ):
-        """predicted = (affine_warped_template, warped template, pred_maps, flow, warped_image)"""
+        """predicted = affine_warped_template, warped_template, pred_maps, preint_flow, warped_image, warped_label, affine_warped_label, batch_atlas"""
         label, template = outputs
-        # if self.epoch <= 10:
-        #     weights = [1, 0, 0, 0, 0, 0, 0, 0, 0]
-        # else:
-        #     weights = self.weights
         weights = self.weights
-        grad_loss = self.grad_loss.cumulate(predicted[2], None)
-        deform_loss = self.deform_mse_loss.cumulate(predicted[2], torch.zeros(predicted[2].shape).cuda())
+        grad_loss = self.grad_loss.cumulate(predicted[3], None)
+        deform_loss = self.deform_mse_loss.cumulate(predicted[3], torch.zeros(predicted[3].shape).cuda())
 
-        pred_map_bce_loss = self.pred_maps_bce_loss.cumulate(predicted[2], label)
-        pred_map_dice_loss = self.pred_maps_dice_loss.cumulate(predicted[2], label)
         pred_map_mse_loss = self.pred_maps_mse_loss.cumulate(predicted[2], label)
-        pred_map_loss = weights[0] * pred_map_bce_loss + weights[1] * pred_map_dice_loss + weights[2] * pred_map_mse_loss
+        pred_map_loss = weights[0] * pred_map_mse_loss
 
-        affine_label_dice_loss = self.label_dice_loss.cumulate(predicted[0], label)
-        affine_label_mse_loss = self.label_mse_loss.cumulate(predicted[0], label)
-        affine_label_loss = weights[3] * affine_label_dice_loss + weights[4] * affine_label_mse_loss
+        affine_label_mse_loss = self.label_mse_loss_affine.cumulate(predicted[0], label)
+        affine_label_loss = weights[1] * affine_label_mse_loss
 
-        label_dice_loss = self.label_dice_loss.cumulate(predicted[1], label)
         label_mse_loss = self.label_mse_loss.cumulate(predicted[1], label)
-        label_loss = weights[3] * label_dice_loss + weights[4] * label_mse_loss + affine_label_loss
+        label_loss = weights[1] * label_mse_loss + affine_label_loss
 
-        loss = label_loss + grad_loss * weights[7] + deform_loss * weights[8] + pred_map_loss
+        atlas_mse_loss = self.atlas_mse_loss.cumulate(predicted[5], predicted[7])
+        atlas_mse_loss_affine = self.atlas_mse_loss_affine.cumulate(predicted[6], predicted[7])
+        atlas_loss = atlas_mse_loss * weights[4] + atlas_mse_loss_affine * weights[4]
+        loss = label_loss + grad_loss * weights[2] + deform_loss * weights[3] + pred_map_loss + atlas_loss
+
         # loss = label_loss
         self._cum_loss += loss.item()
         self._count += 1
@@ -71,10 +73,10 @@ class DefLoss(TorchLoss):
         return new_loss
 
     def description(self):
-        return "total {:.4f}, pred map {}, pred map {}, pred map {}, label {}, label {}, grad {}, deform {}, ".format(
+        return "total {:.4f}, pred map {}, label {}, grad {}, deform {}, ".format(
             self.log(),
-            self.pred_maps_bce_loss.description(), self.pred_maps_dice_loss.description(), self.pred_maps_mse_loss.description(),
-            self.label_dice_loss.description(), self.label_mse_loss.description(),
+            self.pred_maps_mse_loss.description(),
+            self.label_mse_loss.description(),
             self.grad_loss.description(), self.deform_mse_loss.description(),
         )
 
@@ -89,8 +91,8 @@ class DefLoss(TorchLoss):
         self.deform_mse_loss.reset()
         self.label_dice_loss.reset()
         self.label_mse_loss.reset()
-        self.template_mse_loss.reset()
-        self.template_dice_loss.reset()
+        self.label_dice_loss_affine.reset()
+        self.label_mse_loss_affine.reset()
 
 
 class DefWarpedTemplateDice(DiceCoeff, ABC):
