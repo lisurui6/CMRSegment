@@ -30,7 +30,7 @@ def mean_image_label(data_loader: MultiDataLoader):
 
 
 class Atlas:
-    def __init__(self, image: np.ndarray, label: np.ndarray, eta: float = 0.01):
+    def __init__(self, image: np.ndarray, label: np.ndarray, eta: float = 0.1):
         self._image = image
         self._label = label
         self.eta = eta
