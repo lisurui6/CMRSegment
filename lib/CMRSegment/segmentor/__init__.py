@@ -42,10 +42,9 @@ class CineSegmentor:
             segmentations.append(segmentation)
         nim = nib.load(str(segmentations[-1].path))
         # batch * height * width * channels (=slices)
-        print(segmentations[0].get_data().shape, cine[0].get_data().shape)
         segt_labels = np.array([seg.get_data() for seg in segmentations], dtype=np.int32)
         segt_labels = np.transpose(segt_labels, (1, 2, 3, 0))
-        images = np.array([image.get_data() for image in cine], dtype=np.float32)  # b
+        images = np.array([np.squeeze(image.get_data(), axis=3) for image in cine], dtype=np.float32)  # b
         images = np.transpose(images, (1, 2, 3, 0))
         nim2 = nib.Nifti1Image(segt_labels, nim.affine)
         nim2.header['pixdim'] = nim.header['pixdim']
