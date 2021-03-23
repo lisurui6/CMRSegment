@@ -106,10 +106,10 @@ class DataPreprocessor:
         output_path.parent.mkdir(exist_ok=True, parents=True)
         if self.overwrite or not output_path.exists():
             if not self.use_irtk:
-                mirtk.enlarge_image(str(image.resampled), str(output_path), z=20, value=0)
+                mirtk.enlarge_image(str(image.path), str(output_path), z=20, value=0)
             else:
                 command = 'enlarge_image ' \
-                    f'{str(image.resampled)} ' \
+                    f'{str(image.path)} ' \
                     f'{str(output_path)} ' \
                     '-z 20 -value 0'
                 print(command)
