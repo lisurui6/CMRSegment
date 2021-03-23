@@ -5,6 +5,7 @@ import nibabel as nib
 from typing import Tuple
 from pathlib import Path
 from CMRSegment.segmentor import Segmentor
+from CMRSegment.segmentor.utils import refined_mask
 from CMRSegment.common.nn.torch.data import resize_image, rescale_intensity
 from CMRSegment.common.nn.torch import prepare_tensors
 
@@ -71,6 +72,7 @@ class TorchSegmentor(Segmentor):
         # predicted = resize_image(predicted, image.shape, 0)
         # print("Predicted shape: {}".format(predicted.shape))
         predicted = predicted[x_pre:x_pre + X, y_pre:y_pre + Y, z1_ - z1:z1_ - z1 + Z]
+        predicted = refined_mask(predicted, phase_path, output_path.parent.joinpath("tmp"), self.use_irtk)
         # print("Predicted shape after cropping: {}".format(predicted.shape))
         nim2 = nib.Nifti1Image(predicted, nim.affine)
         nim2.header['pixdim'] = nim.header['pixdim']

@@ -99,7 +99,7 @@ class NiiData(ImageResource):
 
 
 class PhaseImage(ImageResource):
-    def __init__(self, path: Path, phase: Union[Phase, str, int]):
+    def __init__(self, path: Path, phase: Union[Phase, int]):
         self.path = path
         self.phase = phase
         super().__init__(path)
