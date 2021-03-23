@@ -34,6 +34,7 @@ class CineSegmentor:
 
     def apply(self, cine: CineImages, output_dir: Path) -> List[Segmentation]:
         segmentations = []
+        output_dir.joinpath("segs").mkdir(parents=True, exist_ok=True)
         for idx, image in enumerate(cine):
             segmentation = self.__segmentor.apply(
                 image, output_path=output_dir.joinpath("segs").joinpath(f"lvsa_{idx}.nii.gz")
