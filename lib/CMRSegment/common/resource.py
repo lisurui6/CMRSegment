@@ -112,13 +112,17 @@ class PhaseImage(ImageResource):
 class EDImage(PhaseImage):
     @classmethod
     def from_dir(cls, dir: Path, filename: str = "lvsa_ED.nii.gz"):
-        return super().from_dir(dir, filename)
+        assert dir.is_dir(), "{} is not a directory.".format(str(dir))
+        nii_path = dir.joinpath(filename)
+        return cls(nii_path, Phase.ED)
 
 
 class ESImage(PhaseImage):
     @classmethod
     def from_dir(cls, dir: Path, filename: str = "lvsa_ES.nii.gz"):
-        return super().from_dir(dir, filename)
+        assert dir.is_dir(), "{} is not a directory.".format(str(dir))
+        nii_path = dir.joinpath(filename)
+        return cls(nii_path, Phase.ED)
 
 
 class CineImages:
