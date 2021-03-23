@@ -61,6 +61,7 @@ class DataPreprocessor:
             )
 
             gray_phase_dir = subject_output_dir.joinpath("gray_phases")
+            gray_phase_dir.mkdir(parents=True, exist_ok=True)
             cine = CineImages.from_dir(gray_phase_dir)
             if self.overwrite or len(cine) == 0:
                 print(" ... Split sequence")

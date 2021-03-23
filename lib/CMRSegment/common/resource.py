@@ -131,7 +131,7 @@ class CineImages:
 
     @classmethod
     def from_dir(cls, dir: Path):
-        assert dir.is_dir()
+        assert dir.is_dir(), "{} is not a directory.".format(str(dir))
         images = []
         for idx, phase_name in enumerate(os.listdir(str(dir))):
             phase_path = dir.joinpath(phase_name)
