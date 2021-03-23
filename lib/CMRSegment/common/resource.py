@@ -145,6 +145,9 @@ class CineImages:
     def __iter__(self):
         return iter(self.images)
 
+    def __getitem__(self, index: int):
+        return self.images[index]
+
 
 @dataclass
 class Template:
