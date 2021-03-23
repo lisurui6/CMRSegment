@@ -16,11 +16,10 @@ class DataPreprocessor:
     def run(self, data_dir: Path, output_dir: Path) -> Iterable[Tuple[EDImage, ESImage, CineImages, Path]]:
         for idx, subject_dir in enumerate(sorted(os.listdir(str(data_dir)))):
             subject_output_dir = output_dir.joinpath(subject_dir)
-            subject_output_dir.mkdir(exist_ok=True, parents=True)
             nii_data = NiiData.from_dir(dir=data_dir.joinpath(subject_dir))
             if self.overwrite:
                 shutil.rmtree(str(subject_output_dir), ignore_errors=True)
-
+            subject_output_dir.mkdir(exist_ok=True, parents=True)
             print(subject_dir)
             shutil.copy(str(nii_data), str(subject_output_dir))
             ed_image = EDImage.from_dir(subject_output_dir)
