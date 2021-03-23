@@ -116,10 +116,10 @@ class PhaseImage(ImageResource):
             filename = "lvsa_{}.nii.gz".format(phase)
         assert filename is not None
         nii_path = dir.joinpath(filename)
-        return cls(nii_path, Phase.ED)
+        return cls(nii_path, phase)
 
     def __repr__(self):
-        return "PhaseImage(\n\tpath={}, \n\tphase={}\n)".format(self.path, self.phase)
+        return "PhaseImage(path={}, phase={})".format(self.path, self.phase)
 
 
 class CineImages:
