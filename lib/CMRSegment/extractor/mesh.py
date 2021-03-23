@@ -1,5 +1,5 @@
 import mirtk
-from CMRSegment.common.subject import Mesh, Segmentation
+from CMRSegment.common.resource import Mesh, Segmentation
 from pathlib import Path
 from CMRSegment.common.utils import extract_lv_label, extract_rv_label
 import shutil

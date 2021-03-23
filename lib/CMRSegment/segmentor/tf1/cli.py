@@ -1,6 +1,6 @@
 from pathlib import Path
 from argparse import ArgumentParser
-from CMRSegment.common.subject import Image
+from CMRSegment.common.resource import PhaseImage
 from CMRSegment.segmentor.tf1.HR import TF13DSegmentor
 
 
@@ -21,7 +21,8 @@ def main():
     model_path = Path(args.model_path)
     with TF13DSegmentor(model_path=model_path, overwrite=args.overwrite) as segmentor:
         segmentation = segmentor.apply(
-            image=Image(phase=args.phase, output_dir=output_dir, path=Path(args.input_path))
+            image=PhaseImage(phase=args.phase, path=Path(args.input_path)),
+            output_path=output_dir.joinpath("seg.nii.gz")
         )
 
 

@@ -1,7 +1,7 @@
 from pathlib import Path
 from argparse import ArgumentParser
 from CMRSegment.coregister import Coregister
-from CMRSegment.common.subject import Mesh, Segmentation, Phase
+from CMRSegment.common.resource import Mesh, Segmentation, Phase
 
 
 def parse_args():

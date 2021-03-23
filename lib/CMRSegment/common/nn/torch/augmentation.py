@@ -11,6 +11,49 @@ def resize_image(image: np.ndarray, target_shape: Tuple, order: int):
     return output
 
 
+def soi_crop(image: np.ndarray, label: np.ndarray, output_size: Tuple):
+    """
+    Crop around region of segmentation
+    image size = (slice, weight, height)
+    label size = (n_class, slice, w, h)
+    """
+    slice, weight, height = image.shape
+    s, w, h = output_size
+    label_s = int(np.mean(np.where(label == 1)[1]))
+    label_w = int(np.mean(np.where(label == 1)[2]))
+    label_h = int(np.mean(np.where(label == 1)[3]))
+    lb_s = label_s - s//2
+    lb_w = label_w - w//2
+    lb_h = label_h - h//2
+
+    ub_s = s + lb_s
+    ub_w = w + lb_w
+    ub_h = h + lb_h
+    if lb_s < 0:
+        lb_s = 0
+        ub_s = s
+        label = np.pad(label, ((0, 0), (s//2 - label_s, 0), (0, 0), (0, 0)))
+    if lb_w < 0:
+        lb_w = 0
+        ub_w = w
+        label = np.pad(label, ((0, 0), (0, 0), (w//2 - label_w, 0), (0, 0)))
+    if lb_h < 0:
+        lb_h = 0
+        ub_h = h
+        label = np.pad(label, ((0, 0), (0, 0), (0, 0), (h//2 - label_h, 0)))
+
+    if ub_s > slice:
+        label = np.pad(label, ((0, 0), (0, ub_s - slice), (0, 0), (0, 0)))
+    if ub_w > weight:
+        label = np.pad(label, ((0, 0), (0, 0), (0, ub_w - weight), (0, 0)))
+    if ub_h > height:
+        label = np.pad(label, ((0, 0), (0, 0), (0, 0), (0, ub_h - height)))
+
+    cropped_label = label[:, lb_s: ub_s, lb_w: ub_w, lb_h: ub_h]
+    cropped_image = image[lb_s: ub_s, lb_w: ub_w, lb_h: ub_h]
+    return cropped_image, cropped_label
+
+
 def random_crop(image: np.ndarray, label: np.ndarray, output_size: Tuple):
     """
     image size = (slice, weight, height)

@@ -3,7 +3,7 @@ import shutil
 import logging
 from pathlib import Path
 
-from CMRSegment.common.subject import Mesh, Segmentation, Template, Phase
+from CMRSegment.common.resource import Mesh, Segmentation, Template, Phase
 from CMRSegment.common.utils import extract_lv_label, extract_rv_label
 
 logging.basicConfig(level=logging.INFO)

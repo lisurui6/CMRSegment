@@ -6,7 +6,6 @@ from CMRSegment.coregister import Coregister
 from CMRSegment.extractor.mesh import MeshExtractor
 
 from CMRSegment.extractor.landmark import extract_landmarks
-from CMRSegment.common.subject import Image, Phase, Cine
 from CMRSegment.pipeline.config import PipelineConfig
 
 
@@ -45,28 +44,21 @@ class CMRPipeline:
             if self.config.segment_config.segment_cine:
                 cine_segmentor = CineSegmentor(phase_segmentor=hr_segmentor)
         subjects = preprocessor.run(data_dir=data_dir, output_dir=self.config.output_dir)
-        for subject in tqdm(subjects):
+        for ed_image, es_image, cine, output_dir in subjects:
             if self.config.segment and self.config.segment_config.segment_cine:
-                cine = Cine(dir=subject.gray_phases_dir())
-                # cine_segmentor.apply(cine, output_dir=subject.output_dir.joinpath("segmentation", "phases"))
-                cine_segmentor.apply(cine, output_dir=subject.output_dir)
+                cine_segmentor.apply(cine, output_dir=output_dir)
 
-            for phase, phase_path in zip([Phase.ED, Phase.ES], [subject.ed_path, subject.es_path]):
-                image = Image(
-                    path=phase_path, phase=phase,
-                    output_dir=subject.output_dir,
-                    segmented=subject.output_dir.joinpath(f"seg_lvsa_SR_{phase}.nii.gz"),
-                    resampled=subject.output_dir.joinpath(f"lvsa_SR_{phase}.nii.gz"),
-                    enlarged=subject.output_dir.joinpath(f"lvsa_SR_{phase}.nii.gz"),
-                )
+            for phase_image in [ed_image, es_image]:
                 if self.config.segment:
-                    segmentation = hr_segmentor.apply(image)
+                    segmentation = hr_segmentor.apply(
+                        phase_image, output_path=output_dir.joinpath(f"seg_lvsa_SR_{phase_image.phase}.nii.gz")
+                    )
                 if self.config.extract:
                     landmark_path = extract_landmarks(
-                        segmentation.path, output_path=subject.landmark_path, labels=[2, 3]
+                        segmentation.path, output_path=output_dir.joinpath("landmark.vtk"), labels=[2, 3]
                     )
-                    mesh = mesh_extractor.run(segmentation, subject.output_dir.joinpath("mesh"))
+                    mesh = mesh_extractor.run(segmentation, output_dir.joinpath("mesh"))
                 if self.config.coregister:
                     coregister.run(
-                        mesh, segmentation, landmark_path, output_dir=subject.output_dir.joinpath("registration")
+                        mesh, segmentation, landmark_path, output_dir=output_dir.joinpath("registration")
                     )

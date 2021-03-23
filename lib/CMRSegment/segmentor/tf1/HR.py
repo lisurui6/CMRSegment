@@ -9,7 +9,6 @@ from scipy.ndimage import label
 
 from CMRSegment.segmentor.tf1 import TF1Segmentor
 from CMRSegment.common.utils import rescale_intensity
-from CMRSegment.common.subject import Image, Segmentation
 
 
 class TF13DSegmentor(TF1Segmentor):
@@ -52,14 +51,6 @@ class TF13DSegmentor(TF1Segmentor):
         else:
             pred_segt = nib.load(str(output_path)).get_data()
         return image, pred_segt
-
-    def apply(self, image: Image) -> Segmentation:
-        if self.overwrite or not image.resampled.exists():
-            mirtk.resample_image(str(image.path), str(image.resampled), '-size', 1.25, 1.25, 2)
-        if self.overwrite or not image.enlarged.exists():
-            mirtk.enlarge_image(str(image.resampled), str(image.enlarged), z=20, value=0)
-        image.path = image.enlarged
-        return super().apply(image)
 
 
 def get_labels(seg, label):

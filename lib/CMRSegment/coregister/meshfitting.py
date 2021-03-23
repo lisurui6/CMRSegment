@@ -1,7 +1,7 @@
 import os
 from multiprocessing import Pool
 from functools import partial
-from CMRSegment.common.subject import Subject
+from CMRSegment.common.resource import Subject
 import mirtk
 from pathlib import Path
 import shutil

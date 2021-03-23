@@ -14,7 +14,7 @@ def parse_args():
 def main():
     args = parse_args()
     preprocessor = DataPreprocessor(overwrite=args.overwrite)
-    subjects = preprocessor.run(data_dir=Path(args.data_dir), output_dir=args.output_dir)
+    subjects = list(preprocessor.run(data_dir=Path(args.data_dir), output_dir=args.output_dir))
 
 
 if __name__ == '__main__':

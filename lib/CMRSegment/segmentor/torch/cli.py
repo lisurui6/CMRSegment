@@ -4,7 +4,7 @@ from pathlib import Path
 from pyhocon import ConfigFactory
 from argparse import ArgumentParser
 
-from CMRSegment.common.subject import Image
+from CMRSegment.common.resource import PhaseImage
 from CMRSegment.common.config import get_conf
 from CMRSegment.segmentor.torch.network import UNet
 from CMRSegment.segmentor.torch import TorchSegmentor
@@ -52,7 +52,8 @@ def main():
     segmentor = TorchSegmentor(model_path=model_path, device=args.device, overwrite=args.overwrite)
     shutil.copy(str(Path(args.input_path)), str(output_dir))
     segmentation = segmentor.apply(
-        image=Image(phase=args.phase, output_dir=output_dir, path=Path(args.input_path))
+        image=PhaseImage(phase=args.phase, path=Path(args.input_path)),
+        output_path=output_dir.joinpath("seg.nii.gz")
     )
 
 
