@@ -118,6 +118,9 @@ class PhaseImage(ImageResource):
         nii_path = dir.joinpath(filename)
         return cls(nii_path, Phase.ED)
 
+    def __repr__(self):
+        return "PhaseImage(path={}, phase={})".format(self.path, self.phase)
+
 
 class CineImages:
     def __init__(self, images: List[PhaseImage]):
