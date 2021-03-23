@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Iterable, Tuple
 import shutil
 import mirtk
-from CMRSegment.common.resource import NiiData, EDImage, ESImage, CineImages, PhaseImage
+from CMRSegment.common.resource import NiiData, CineImages, PhaseImage, Phase
 
 
 class DataPreprocessor:
@@ -13,7 +13,7 @@ class DataPreprocessor:
         self.use_irtk = use_irtk
         self.overwrite = overwrite
 
-    def run(self, data_dir: Path, output_dir: Path) -> Iterable[Tuple[EDImage, ESImage, CineImages, Path]]:
+    def run(self, data_dir: Path, output_dir: Path) -> Iterable[Tuple[PhaseImage, PhaseImage, CineImages, Path]]:
         for idx, subject_dir in enumerate(sorted(os.listdir(str(data_dir)))):
             subject_output_dir = output_dir.joinpath(subject_dir)
             nii_data = NiiData.from_dir(dir=data_dir.joinpath(subject_dir))
@@ -22,8 +22,8 @@ class DataPreprocessor:
             subject_output_dir.mkdir(exist_ok=True, parents=True)
             print(subject_dir)
             shutil.copy(str(nii_data), str(subject_output_dir))
-            ed_image = EDImage.from_dir(subject_output_dir)
-            es_image = ESImage.from_dir(subject_output_dir)
+            ed_image = PhaseImage.from_dir(subject_output_dir, phase=Phase.ED)
+            es_image = PhaseImage.from_dir(subject_output_dir, phase=Phase.ES)
             contrasted_nii_path = subject_output_dir.joinpath("contrasted_{}".format(nii_data.name))
             if not ed_image.exists() or not es_image.exists() or not contrasted_nii_path.exists():
                 print(' Detecting ED/ES phases {}...'.format(str(nii_data)))

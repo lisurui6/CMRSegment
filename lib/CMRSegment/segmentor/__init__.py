@@ -4,6 +4,7 @@ import numpy as np
 import nibabel as nib
 from pathlib import Path
 from typing import List, Tuple
+from tqdm import tqdm
 
 from CMRSegment.common.resource import PhaseImage, Segmentation, CineImages
 
@@ -35,7 +36,7 @@ class CineSegmentor:
     def apply(self, cine: CineImages, output_dir: Path) -> List[Segmentation]:
         segmentations = []
         output_dir.joinpath("segs").mkdir(parents=True, exist_ok=True)
-        for idx, image in enumerate(cine):
+        for idx, image in enumerate(tqdm(cine)):
             segmentation = self.__segmentor.apply(
                 image, output_path=output_dir.joinpath("segs").joinpath(f"lvsa_{idx}.nii.gz")
             )

@@ -64,12 +64,6 @@ class ImageResource:
     def __init__(self, path: Path):
         self.path = path
 
-    @classmethod
-    def from_dir(cls, dir: Path, filename: str):
-        assert dir.is_dir(), "{} is not a directory.".format(str(dir))
-        nii_path = dir.joinpath(filename)
-        return cls(nii_path)
-
     def __str__(self):
         return str(self.path)
 
@@ -98,8 +92,10 @@ class Segmentation(ImageResource):
 
 class NiiData(ImageResource):
     @classmethod
-    def from_dir(cls, dir: Path, filename: str = "LVSA.nii.gz"):
-        return super().from_dir(dir, filename)
+    def from_dir(cls, dir: Path):
+        assert dir.is_dir(), "{} is not a directory.".format(str(dir))
+        nii_path = dir.joinpath("LVSA.nii.gz")
+        return cls(nii_path)
 
 
 class PhaseImage(ImageResource):
@@ -108,19 +104,17 @@ class PhaseImage(ImageResource):
         self.phase = phase
         super().__init__(path)
 
-
-class EDImage(PhaseImage):
     @classmethod
-    def from_dir(cls, dir: Path, filename: str = "lvsa_ED.nii.gz"):
+    def from_dir(cls, dir: Path, phase: Union[Phase, int]):
         assert dir.is_dir(), "{} is not a directory.".format(str(dir))
-        nii_path = dir.joinpath(filename)
-        return cls(nii_path, Phase.ED)
-
-
-class ESImage(PhaseImage):
-    @classmethod
-    def from_dir(cls, dir: Path, filename: str = "lvsa_ES.nii.gz"):
-        assert dir.is_dir(), "{} is not a directory.".format(str(dir))
+        filename = None
+        if phase == Phase.ED and filename is None:
+            filename = "lvsa_ED.nii.gz"
+        if phase == Phase.ES and filename is None:
+            filename = "lvsa_ES.nii.gz"
+        if type(phase) is int:
+            filename = "lvsa_{}.nii.gz".format(phase)
+        assert filename is not None
         nii_path = dir.joinpath(filename)
         return cls(nii_path, Phase.ED)
 
