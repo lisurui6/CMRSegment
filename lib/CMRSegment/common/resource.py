@@ -66,7 +66,7 @@ class ImageResource:
 
     @classmethod
     def from_dir(cls, dir: Path, filename: str):
-        assert dir.is_dir()
+        assert dir.is_dir(), "{} is not a directory.".format(str(dir))
         nii_path = dir.joinpath(filename)
         return cls(nii_path)
 
