@@ -24,7 +24,7 @@ class DataPreprocessor:
             shutil.copy(str(nii_data), str(subject_output_dir))
             ed_image = PhaseImage.from_dir(subject_output_dir, phase=Phase.ED)
             es_image = PhaseImage.from_dir(subject_output_dir, phase=Phase.ES)
-            print("ED ES image:\n\t{}\n\t{}".format(ed_image, es_image))
+            print("ED ES image:\n\t{}\n\t{}".format(repr(ed_image), repr(es_image)))
             contrasted_nii_path = subject_output_dir.joinpath("contrasted_{}".format(nii_data.name))
             if not ed_image.exists() or not es_image.exists() or not contrasted_nii_path.exists():
                 print(' Detecting ED/ES phases {}...'.format(str(nii_data)))

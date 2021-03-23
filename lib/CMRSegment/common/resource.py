@@ -119,7 +119,7 @@ class PhaseImage(ImageResource):
         return cls(nii_path, Phase.ED)
 
     def __repr__(self):
-        return "PhaseImage(path={}, phase={})".format(self.path, self.phase)
+        return "PhaseImage(\n\tpath={}, \n\tphase={}\n)".format(self.path, self.phase)
 
 
 class CineImages:
