@@ -60,7 +60,7 @@ class Mesh:
             raise FileNotFoundError(f"LV myo mesh does not exists at {self.lv_myo}.")
 
 
-class ImageResource:
+class Resource:
     def __init__(self, path: Path):
         self.path = path
 
@@ -74,13 +74,91 @@ class ImageResource:
                 return getattr(self.path, key)
         raise AttributeError("{} has no attribute named '{}'".format(type(self).__name__, name))
 
+    def exists(self):
+        return self.path.exists()
+
+
+class MeshResource(Resource):
+    pass
+
+
+class RVMesh:
+    def __init__(self, mesh: MeshResource, epicardium: MeshResource):
+        self.rv = mesh
+        self.epicardium = epicardium
+
+    @classmethod
+    def from_dir(cls, dir: Path, phase: Phase):
+        rv = MeshResource(dir.joinpath(f"RV_{phase}.vtk"))
+        epi = MeshResource(dir.joinpath(f"RVepi_{phase}.vtk"))
+        return cls(rv, epi)
+
+    def exists(self):
+        return self.rv.exists() and self.epicardium.exists()
+
+    def check_valid(self):
+        if self.exists():
+            return True
+        if not self.rv.exists():
+            raise FileNotFoundError(f"RV mesh does not exists at {self.rv}.")
+        if not self.epicardium.exists():
+            raise FileNotFoundError(f"RV epi mesh does not exists at {self.epicardium}.")
+
+
+class LVMesh:
+    def __init__(self, epicardium: MeshResource, endocardium: MeshResource, myocardium: MeshResource):
+        self.epicardium = epicardium
+        self.endocardium = endocardium
+        self.myocardium = myocardium
+
+    @classmethod
+    def from_dir(cls, dir: Path, phase: Phase):
+        epi = MeshResource(dir.joinpath(f"LVepi_{phase}.vtk"))
+        endo = MeshResource(dir.joinpath(f"LVendo_{phase}.vtk"))
+        myo = MeshResource(dir.joinpath(f"LVmyo_{phase}.vtk"))
+        return cls(epi, endo, myo)
+
+    def exists(self):
+        return self.endocardium.exists() and self.epicardium.exists() and self.myocardium.exists()
+
+    def check_valid(self):
+        if self.exists():
+            return True
+        if not self.endocardium.exists():
+            raise FileNotFoundError(f"LV endo mesh does not exists at {self.endocardium}.")
+        if not self.epicardium.exists():
+            raise FileNotFoundError(f"LV epi mesh does not exists at {self.epicardium}.")
+        if not self.myocardium.exists():
+            raise FileNotFoundError(f"LV myo mesh does not exists at {self.myocardium}.")
+
+
+class PhaseMesh:
+    def __init__(self, rv: RVMesh, lv: LVMesh, phase: Phase):
+        self.rv = rv
+        self.lv = lv
+        self.phase = phase
+
+    @classmethod
+    def from_dir(cls, dir: Path, phase: Phase):
+        rv = RVMesh.from_dir(dir, phase)
+        lv = LVMesh.from_dir(dir, phase)
+        return cls(rv, lv, phase)
+
+    def exists(self):
+        return self.rv.exists() and self.lv.exists()
+
+    def check_valid(self):
+        if self.exists():
+            return True
+        self.rv.check_valid()
+        self.lv.check_valid()
+
+
+class ImageResource(Resource):
     def get_data(self) -> np.ndarray:
         nim = nib.load(str(self.path))
         seg = nim.get_data()
         return seg
-
-    def exists(self):
-        return self.path.exists()
 
 
 class Segmentation(ImageResource):

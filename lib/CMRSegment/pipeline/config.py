@@ -38,10 +38,23 @@ class CoregisterConfig(PipelineModuleConfig):
             self.template_dir = ROOT_DIR.joinpath("input", "params")
 
 
+@dataclasses.dataclass
+class MotionTrackerConfig(PipelineModuleConfig):
+    param_dir: Path = None
+    template_dir: Path = None
+
+    def __post_init__(self):
+        if self.param_dir is None:
+            self.param_dir = LIB_DIR.joinpath("CMRSegment", "resource")
+        if self.template_dir is None:
+            self.template_dir = ROOT_DIR.joinpath("input", "params")
+
+
 class PipelineConfig:
-    def __init__(self, segment: bool, extract: bool, coregister: bool, output_dir: Path, overwrite: bool = False,
-                 model_path: Path = None, segment_cine: bool = None, torch: bool = True, iso_value: int = 120,
-                 blur: int = 2, param_dir: Path = None, template_dir: Path = None, use_irtk: bool = False):
+    def __init__(self, segment: bool, extract: bool, coregister: bool, track_motion: bool, output_dir: Path,
+                 overwrite: bool = False, model_path: Path = None, segment_cine: bool = None, torch: bool = True,
+                 iso_value: int = 120, blur: int = 2, param_dir: Path = None, template_dir: Path = None,
+                 use_irtk: bool = False):
         self.output_dir = output_dir
         self.overwrite = overwrite
         if segment:
@@ -70,6 +83,15 @@ class PipelineConfig:
             self.coregister_config = None
         self.use_irtk = use_irtk
 
+        if track_motion:
+            self.motion_tracker_config = MotionTrackerConfig(
+                overwrite=overwrite, param_dir=param_dir, template_dir=template_dir
+            )
+            self.track_motion = True
+        else:
+            self.track_motion = False
+            self.motion_tracker_config = None
+
     @staticmethod
     def argument_parser() -> ArgumentParser:
         parser = ArgumentParser()
@@ -80,6 +102,7 @@ class PipelineConfig:
         parser.add_argument("--segment", dest="segment", action="store_true")
         parser.add_argument("--extract", dest="extract", action="store_true")
         parser.add_argument("--coregister", dest="coregister", action="store_true")
+        parser.add_argument("--track-motion", dest="track_motion", action="store_true")
 
         segment_parser = parser.add_argument_group("segment")
         segment_parser.add_argument("--model-path", dest="model_path", default=None, type=str)
@@ -93,6 +116,7 @@ class PipelineConfig:
         coregister_parser = parser.add_argument_group("coregister")
         coregister_parser.add_argument("--template-dir", dest="template_dir", default=None, type=str)
         coregister_parser.add_argument("--param-dir", dest="param_dir", default=None, type=str)
+
         return parser
 
     @classmethod
@@ -101,6 +125,7 @@ class PipelineConfig:
             segment=args.segment,
             extract=args.extract,
             coregister=args.coregister,
+            track_motion=args.track_motion,
             output_dir=Path(args.output_dir),
             overwrite=args.overwrite,
             model_path=Path(args.model_path) if args.model_path is not None else None,

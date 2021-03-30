@@ -7,6 +7,8 @@ from CMRSegment.extractor.mesh import MeshExtractor
 
 from CMRSegment.extractor.landmark import extract_landmarks
 from CMRSegment.pipeline.config import PipelineConfig
+from CMRSegment.common.resource import Segmentation, PhaseMesh
+from CMRSegment.motion_tracker import MotionTracker
 
 
 class CMRPipeline:
@@ -43,24 +45,48 @@ class CMRPipeline:
                 )
             if self.config.segment_config.segment_cine:
                 cine_segmentor = CineSegmentor(phase_segmentor=hr_segmentor)
+        if self.config.track_motion:
+            motion_tracker = MotionTracker(
+                template_dir=self.config.motion_tracker_config.template_dir,
+                param_dir=self.config.motion_tracker_config.param_dir
+            )
         subjects = preprocessor.run(data_dir=data_dir, output_dir=self.config.output_dir)
         for ed_image, es_image, cine, output_dir in subjects:
             if self.config.segment and self.config.segment_config.segment_cine:
                 print("Segmenting all {} cine images...".format(len(cine)))
                 cine_segmentor.apply(cine, output_dir=output_dir)
-
+            meshes = []
             for phase_image in [ed_image, es_image]:
                 if self.config.segment:
                     print("Segmenting {} image...".format(phase_image.phase))
                     segmentation = hr_segmentor.apply(
                         phase_image, output_path=output_dir.joinpath(f"seg_lvsa_SR_{phase_image.phase}.nii.gz")
                     )
+                else:
+                    segmentation = Segmentation(
+                        phase=phase_image.phase, path=output_dir.joinpath(f"seg_lvsa_SR_{phase_image.phase}.nii.gz")
+                    )
                 if self.config.extract:
+                    print("Extracting {} segmentation...".format(phase_image.phase))
                     landmark_path = extract_landmarks(
                         segmentation.path, output_path=output_dir.joinpath("landmark.vtk"), labels=[2, 3]
                     )
                     mesh = mesh_extractor.run(segmentation, output_dir.joinpath("mesh"))
+                else:
+                    mesh = PhaseMesh.from_dir(output_dir.joinpath("mesh"), phase=phase_image.phase)
+                    landmark_path = output_dir.joinpath("landmark.vtk")
+                meshes.append(mesh)
                 if self.config.coregister:
+                    print("Coregistering")
                     coregister.run(
                         mesh, segmentation, landmark_path, output_dir=output_dir.joinpath("registration")
                     )
+            if self.config.track_motion:
+                print("Tracking motion")
+                motion_tracker.run(
+                    cine=cine,
+                    landmark_path=landmark_path,
+                    ED_mesh=meshes[0],
+                    output_dir=output_dir.joinpath("motion"),
+                    overwrite=self.config.overwrite,
+                )

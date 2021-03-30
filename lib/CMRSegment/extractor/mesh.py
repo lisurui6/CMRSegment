@@ -1,5 +1,5 @@
 import mirtk
-from CMRSegment.common.resource import Mesh, Segmentation
+from CMRSegment.common.resource import Segmentation, PhaseMesh
 from pathlib import Path
 from CMRSegment.common.utils import extract_lv_label, extract_rv_label
 import shutil
@@ -11,22 +11,23 @@ class MeshExtractor:
         self.blur = blur
         self.overwrite = overwrite
 
-    def run(self, segmentation: Segmentation, output_dir: Path) -> Mesh:
+    def run(self, segmentation: Segmentation, output_dir: Path) -> PhaseMesh:
         temp_dir = output_dir.joinpath("temp")
         if self.overwrite:
             if temp_dir.exists():
                 shutil.rmtree(str(temp_dir), ignore_errors=True)
             if output_dir.exists():
                 shutil.rmtree(str(output_dir), ignore_errors=True)
-        mesh = Mesh(dir=output_dir, phase=segmentation.phase)
+        mesh = PhaseMesh.from_dir(dir=output_dir, phase=segmentation.phase)
         if not mesh.exists() or self.overwrite:
-            self.rv(segmentation, mesh.rv)
-            self.rv_epi(segmentation, mesh.rv_epi)
-            self.lv_endo(segmentation, mesh.lv_endo)
-            self.lv_epi(segmentation, mesh.lv_epi)
-            self.lv_myo(segmentation, mesh.lv_myo)
+            self.rv(segmentation, mesh.rv.rv.path)
+            self.rv_epi(segmentation, mesh.rv.epicardium.path)
+            self.lv_endo(segmentation, mesh.lv.endocardium.path)
+            self.lv_epi(segmentation, mesh.lv.epicardium.path)
+            self.lv_myo(segmentation, mesh.lv.myocardium.path)
         if temp_dir.exists():
             shutil.rmtree(str(temp_dir), ignore_errors=True)
+        mesh.check_valid()
         return mesh
 
     def rv(self, segmentation: Segmentation, output_path: Path):
@@ -81,7 +82,6 @@ class MeshExtractor:
 
     def lv_epi(self, segmentation: Segmentation, output_path: Path):
         if not output_path.exists() or self.overwrite:
-
             temp_dir = output_path.parent.joinpath("temp")
             temp_dir.mkdir(exist_ok=True, parents=True)
             mirtk.calculate_element_wise(
