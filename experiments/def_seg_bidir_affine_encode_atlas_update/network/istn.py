@@ -201,25 +201,18 @@ class STN(torch.nn.Module):
 
     def forward(self, pred_maps, atlas):
         x = torch.cat([pred_maps, atlas], dim=1)
-        print("cat", x.shape)
         x = self.down1(x)
-        print("down 1", x.shape)
         map1 = self.down_conv1(x)
         x = self.down2(map1)
-        print("down 2", x.shape)
         map2 = self.down_conv2(x)
         x = self.down3(map2)
-        print("down 3", x.shape)
         map3 = self.down_conv3(x)
-        print("map 3", map3.shape)
+
         affine = self.affine_down(map3)
-        print("affine", affine.shape)
         affine_map = self.affine_conv(affine)
         affine1 = self.affine_down2(affine_map)
         affine_map = self.affine_conv2(affine1)
-        print("affine map", affine_map.shape)
         out = affine_map.view(affine_map.shape[0], -1)
-        print(out.shape)
         affine_params = self.affine_regressor(out)
         affine_params = affine_params.view(affine_params.shape[0], 3, 4)
 
