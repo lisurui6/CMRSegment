@@ -187,8 +187,8 @@ class STN(torch.nn.Module):
         self.affine_regressor[-2].weight.data.zero_()
         self.affine_regressor[-2].bias.data.copy_(bias)
 
-        self.up0 = nn.Upsample(scale_factor=2, mode='nearest')
-        self.up1 = nn.Upsample(scale_factor=2, mode='nearest')
+        # self.up0 = nn.Upsample(scale_factor=2, mode='nearest')
+        self.up1 = nn.Upsample(scale_factor=4, mode='nearest')
         self.up_conv1 = conv_block_2_3d(num_filters*4, num_filters*2, activation, group_norm=group_norm)
         self.up2 = nn.Upsample(scale_factor=2, mode="nearest")
         self.up_conv2 = conv_block_2_3d(num_filters*3, num_filters, activation, group_norm=group_norm)
@@ -223,7 +223,7 @@ class STN(torch.nn.Module):
         affine_params = self.affine_regressor(out)
         affine_params = affine_params.view(affine_params.shape[0], 3, 4)
 
-        x = torch.cat([map3, self.up1(self.up0(affine_map))], dim=1)
+        x = torch.cat([map3, self.up1(affine_map)], dim=1)
         x = self.up_conv1(x)
         x = torch.cat([map2, self.up2(x)], dim=1)
         x = self.up_conv2(x)
