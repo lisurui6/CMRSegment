@@ -1,3 +1,4 @@
+import math
 from CMRSegment.common.config import AugmentationConfig
 import numpy as np
 from typing import Tuple
@@ -9,6 +10,57 @@ def resize_image(image: np.ndarray, target_shape: Tuple, order: int):
     factors = [float(target_shape[i]) / image_shape[i] for i in range(len(image_shape))]
     output = zoom(image, factors, order=order)
     return output
+
+
+def central_crop_with_padding(image: np.ndarray, label: np.ndarray, output_size: Tuple):
+    """
+    Crop around the center of the image
+    image size = (slice, weight, height)
+    label size = (n_class, slice, w, h)
+    """
+    if image is not None:
+        slice, weight, height = image.shape
+    if label is not None:
+        __, slice, weight, height = label.shape
+    s, w, h = output_size
+
+    if w > weight:
+        if image is not None:
+            image = np.pad(image, ((0, 0), (math.floor(w/2-weight/2), math.ceil(w/2-weight/2)), (0, 0)))
+        if label is not None:
+            label = np.pad(label, ((0, 0), (0, 0), (math.floor(w/2-weight/2), math.ceil(w/2-weight/2)), (0, 0)))
+    if s > slice:
+        if image is not None:
+            image = np.pad(image, ((math.floor(s / 2 - slice / 2), math.ceil(s / 2 - slice / 2)), (0, 0), (0, 0)))
+        if label is not None:
+            label = np.pad(label, ((0, 0), (math.floor(s / 2 - slice / 2), math.ceil(s / 2 - slice / 2)), (0, 0), (0, 0)))
+    if h > height:
+        if image is not None:
+            image = np.pad(image, ((0, 0), (0, 0), (math.floor(h/2-height/2), math.ceil(h/2-height/2))))
+        if label is not None:
+            label = np.pad(label, ((0, 0), (0, 0), (0, 0), (math.floor(h/2-height/2), math.ceil(h/2-height/2))))
+    if image is not None:
+        slice, weight, height = image.shape
+    if label is not None:
+        __, slice, weight, height = label.shape
+    if image is not None:
+        cropped_image = image[
+            math.floor((slice-s)/2):math.floor((s+slice)/2),
+            math.floor((weight-w)/2):math.floor((w+weight)/2),
+            math.floor((height-h)/2):math.floor((h+height)/2),
+        ]
+    else:
+        cropped_image = None
+    if label is not None:
+        cropped_label = label[
+            :,
+            math.floor((slice-s)/2):math.floor((s+slice)/2),
+            math.floor((weight-w)/2):math.floor((w+weight)/2),
+            math.floor((height-h)/2):math.floor((h+height)/2),
+        ]
+    else:
+        cropped_label = None
+    return cropped_image, cropped_label
 
 
 def soi_crop(image: np.ndarray, label: np.ndarray, output_size: Tuple):
