@@ -21,6 +21,7 @@ def mean_image_label(data_loader: MultiDataLoader):
 
         mean_labels.append(mean_label)
         mean_images.append(mean_image)
+        break
     mean_labels = torch.stack(mean_labels, dim=0)
     mean_label = torch.mean(mean_labels, dim=0)
     mean_images = torch.stack(mean_images, dim=0)

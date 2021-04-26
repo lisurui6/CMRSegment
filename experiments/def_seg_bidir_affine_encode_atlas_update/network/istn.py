@@ -207,7 +207,7 @@ class STN(torch.nn.Module):
         affine = self.affine_down(map3)
         affine_map = self.affine_conv(affine)
         out = affine_map.view(affine_map.shape[0], -1)
-
+        print(out.shape)
         affine_params = self.affine_regressor(out)
         affine_params = affine_params.view(affine_params.shape[0], 3, 4)
 
