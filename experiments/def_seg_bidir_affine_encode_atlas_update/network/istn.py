@@ -172,12 +172,15 @@ class STN(torch.nn.Module):
 
         self.affine_down = max_pooling_3d()
         self.affine_conv = conv_block_2_3d(num_filters*2, num_filters*2, activation, group_norm=group_norm)
+        self.affine_down2 = max_pooling_3d()
+        self.affine_conv2 = conv_block_2_3d(num_filters*2, num_filters, activation, group_norm=group_norm)
+
         self.affine_regressor = torch.nn.Sequential(
-            torch.nn.Linear(6400, 2000),
+            torch.nn.Linear(1024, 400),
             # nn.BatchNorm1d(200),
-            nn.GroupNorm(group_norm, 2000),
+            nn.GroupNorm(group_norm, 400),
             activation(),
-            torch.nn.Linear(2000, 12),
+            torch.nn.Linear(400, 12),
             torch.nn.Tanh()  # affine grid seems to want [-1, 1]
         )
         bias = torch.from_numpy(np.array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0])).float()
@@ -211,6 +214,8 @@ class STN(torch.nn.Module):
         affine = self.affine_down(map3)
         print("affine", affine.shape)
         affine_map = self.affine_conv(affine)
+        affine1 = self.affine_down2(affine_map)
+        affine_map = self.affine_conv2(affine1)
         print("affine map", affine_map.shape)
         out = affine_map.view(affine_map.shape[0], -1)
         print(out.shape)
