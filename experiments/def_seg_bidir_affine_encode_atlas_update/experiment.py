@@ -69,7 +69,6 @@ class DefSegExperiment(Experiment):
                 pbar.set_description(
                     "{:.2f} --- {}".format((idx + 1) / len(train_data_loader), self.loss.description())
                 )
-                break
             # update atlas
             self.network.eval()
             atlas = self.update_atlas(train_data_loader, atlas_label, atlas, eta=atlas_eta)

@@ -21,7 +21,6 @@ def mean_image_label(data_loader: MultiDataLoader):
 
         images.append(np.squeeze(image.cpu().detach().numpy(), axis=1))
         labels.append(label.cpu().detach().numpy())
-        break
     labels = np.concatenate(labels, axis=0)
     mean_label = np.mean(labels, axis=0)
     images = np.concatenate(images, axis=0)
