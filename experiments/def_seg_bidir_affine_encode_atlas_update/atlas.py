@@ -19,8 +19,8 @@ def mean_image_label(data_loader: MultiDataLoader):
         # mean_label = torch.squeeze(torch.mean(label, dim=0))
         # mean_image = torch.squeeze(torch.mean(image, dim=0))
 
-        labels.append(image.cpu().detach().numpy())
-        images.append(label.cpu().detach().numpy())
+        images.append(np.squeeze(image.cpu().detach().numpy(), axis=1))
+        labels.append(label.cpu().detach().numpy())
         break
     labels = np.concatenate(labels, axis=0)
     mean_label = np.mean(labels, axis=0)
