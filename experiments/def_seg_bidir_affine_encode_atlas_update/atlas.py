@@ -11,20 +11,25 @@ from matplotlib import pyplot as plt
 
 def mean_image_label(data_loader: MultiDataLoader):
     pbar = tqdm(enumerate(data_loader))
-    mean_labels = []
-    mean_images = []
+    labels = []
+    images = []
     for idx, (inputs, outputs) in pbar:
         image, __ = inputs
         label = outputs
-        mean_label = torch.squeeze(torch.mean(label, dim=0))
-        mean_image = torch.squeeze(torch.mean(image, dim=0))
+        # mean_label = torch.squeeze(torch.mean(label, dim=0))
+        # mean_image = torch.squeeze(torch.mean(image, dim=0))
 
-        mean_labels.append(mean_label)
-        mean_images.append(mean_image)
-    mean_labels = torch.stack(mean_labels, dim=0)
-    mean_label = torch.mean(mean_labels, dim=0)
-    mean_images = torch.stack(mean_images, dim=0)
-    mean_image = torch.mean(mean_images, dim=0)
+        labels.append(image.cpu().detach().numpy())
+        images.append(label.cpu().detach().numpy())
+        break
+    labels = np.concatenate(labels, axis=0)
+    mean_label = np.mean(labels, axis=0)
+    images = np.concatenate(images, axis=0)
+    mean_image = np.mean(images, axis=0)
+    # mean_labels = torch.stack(mean_labels, dim=0)
+    # mean_label = torch.mean(mean_labels, dim=0)
+    # mean_images = torch.stack(mean_images, dim=0)
+    # mean_image = torch.mean(mean_images, dim=0)
     return mean_image, mean_label
 
 
@@ -53,8 +58,8 @@ class Atlas:
     @classmethod
     def from_data_loader(cls, data_loader: MultiDataLoader):
         image, label = mean_image_label(data_loader)
-        image = image.detach().numpy()
-        label = label.detach().numpy()
+        # image = image.cpu().detach().numpy()
+        # label = label.cpu().detach().numpy()
         return cls(image, label)
 
     def save(self, output_dir: Path):
