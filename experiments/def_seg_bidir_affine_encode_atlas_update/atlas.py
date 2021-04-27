@@ -11,20 +11,34 @@ from matplotlib import pyplot as plt
 
 def mean_image_label(data_loader: MultiDataLoader):
     pbar = tqdm(enumerate(data_loader))
-    labels = []
-    images = []
+    labels = None
+    images = None
+    n = 0
     for idx, (inputs, outputs) in pbar:
         image, __ = inputs
         label = outputs
+        n += image.shape[0]
+
         # mean_label = torch.squeeze(torch.mean(label, dim=0))
         # mean_image = torch.squeeze(torch.mean(image, dim=0))
+        image = np.squeeze(image.cpu().detach().numpy(), axis=1)
+        image = np.sum(image, axis=0)
+        label = label.cpu().detach().numpy()
+        label = np.sum(label, axis=0)
 
-        images.append(np.squeeze(image.cpu().detach().numpy(), axis=1))
-        labels.append(label.cpu().detach().numpy())
-    labels = np.concatenate(labels, axis=0)
-    mean_label = np.mean(labels, axis=0)
-    images = np.concatenate(images, axis=0)
-    mean_image = np.mean(images, axis=0)
+        if images is None:
+            images = np.zeros((image.shape[0], image.shape[1], image.shape[2]))
+        if labels is None:
+            labels = np.zeros((label.shape[0], label.shape[1], label.shape[2], label.shape[3]))
+        images += image
+        labels += label
+    mean_image = images / n
+    mean_label = labels / n
+    print(n)
+    # labels = np.concatenate(labels, axis=0)
+    # mean_label = np.mean(labels, axis=0)
+    # images = np.concatenate(images, axis=0)
+    # mean_image = np.mean(images, axis=0)
     # mean_labels = torch.stack(mean_labels, dim=0)
     # mean_label = torch.mean(mean_labels, dim=0)
     # mean_images = torch.stack(mean_images, dim=0)
@@ -43,12 +57,7 @@ class Atlas:
     def label(self):
         return self._label
 
-    def update(self, warped_images: List[np.ndarray], warped_labels: List[np.ndarray], eta: float = 0.01):
-        mean_image = np.concatenate(warped_images, axis=0)
-        mean_image = np.mean(mean_image, axis=0)
-
-        mean_atlas = np.concatenate(warped_labels, axis=0)
-        mean_atlas = np.mean(mean_atlas, axis=0)
+    def update(self, mean_image: np.ndarray, mean_atlas: np.ndarray, eta: float = 0.01):
         mean_image = (1 - eta) * self.image() + eta * mean_image
         mean_atlas = (1 - eta) * self.label() + eta * mean_atlas
         self._image = mean_image

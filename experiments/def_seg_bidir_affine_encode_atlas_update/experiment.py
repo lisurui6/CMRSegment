@@ -16,16 +16,28 @@ from typing import Iterable, Tuple, List
 class DefSegExperiment(Experiment):
     def update_atlas(self, train_data_loader, atlas_label, atlas, eta: float = 0.01):
         pbar = tqdm(enumerate(train_data_loader))
-        warped_labels = []
-        warped_images = []
+        warped_labels = None
+        warped_images = None
+        n = 0
         for idx, (inputs, outputs) in pbar:
             inputs = prepare_tensors(inputs, self.config.gpu, self.config.device)
             predicted = self.network(inputs, atlas_label)  # pass updated atlas in
             warped_label = predicted[-4].cpu().detach().numpy()
-            image = predicted[-5].cpu().detach().numpy()
-            warped_labels.append(warped_label)
-            warped_images.append(np.squeeze(image, axis=1))
-        atlas.update(warped_images, warped_labels, eta=eta)
+            image = np.squeeze(predicted[-5].cpu().detach().numpy(), axis=1)
+            n += image.shape[0]
+            image = np.sum(image, axis=0)
+            warped_label = np.sum(warped_label, axis=0)
+            if warped_images is None:
+                warped_images = np.zeros((image.shape[0], image.shape[1], image.shape[2]))
+            if warped_labels is None:
+                warped_labels = np.zeros((warped_label.shape[0], warped_label.shape[1], warped_label.shape[2], warped_label.shape[3]))
+            warped_images += image
+            warped_labels += warped_label
+        print(n)
+
+        mean_image = warped_images / n
+        mean_label = warped_labels / n
+        atlas.update(mean_image, mean_label, eta=eta)
         return atlas
 
     def train(self, starting_epoch: int = 0, atlas: Atlas = None, atlas_eta: float = 0.01):
