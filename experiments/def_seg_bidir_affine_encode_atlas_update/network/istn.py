@@ -176,7 +176,7 @@ class STN(torch.nn.Module):
         self.affine_conv2 = conv_block_2_3d(num_filters*2, num_filters*2, activation, group_norm=group_norm)
 
         self.affine_regressor = torch.nn.Sequential(
-            torch.nn.Linear(800, 400),
+            torch.nn.Linear(2048, 400),
             # nn.BatchNorm1d(200),
             nn.GroupNorm(group_norm, 400),
             activation(),
