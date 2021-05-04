@@ -70,7 +70,6 @@ class DefSegExperiment(Experiment):
             pbar = tqdm(enumerate(train_data_loader))
             atlas_label = prepare_tensors(torch.from_numpy(atlas.label()).float(), self.config.gpu, self.config.device)
             self.network.update_batch_atlas(atlas_label)
-            atlas = self.update_atlas(train_data_loader, atlas_label, atlas, eta=atlas_eta)
 
             for idx, (inputs, outputs) in pbar:
                 inputs = prepare_tensors(inputs, self.config.gpu, self.config.device)
