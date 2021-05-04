@@ -30,11 +30,7 @@ class DefLoss(TorchLoss):
         """predicted = affine_warped_template 0, warped_template 1, pred_maps 2, preint_flow 3, warped_image 4,
         warped_label 5, affine_warped_label 6, batch_atlas 7"""
         label = outputs
-        # weights = self.weights
-        if self.epoch <= 7:
-            weights = [1, 0, 0, 0, 0, 0, 0, 0, 0]
-        else:
-            weights = self.weights
+        weights = self.weights
 
         grad_loss = self.grad_loss.cumulate(predicted[3], None)
         deform_loss = self.deform_mse_loss.cumulate(predicted[3], torch.zeros(predicted[3].shape).cuda())

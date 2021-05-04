@@ -22,11 +22,9 @@ class DefSegExperiment(Experiment):
         for idx, (inputs, outputs) in pbar:
             inputs = prepare_tensors(inputs, self.config.gpu, self.config.device)
             predicted = self.network(inputs, atlas_label)  # pass updated atlas in
-            warped_label = predicted[-4].cpu().detach().numpy()
-            image = np.squeeze(predicted[-5].cpu().detach().numpy(), axis=1)
-            n += image.shape[0]
-            image = np.sum(image, axis=0)
-            warped_label = np.sum(warped_label, axis=0)
+            warped_label = torch.sum(predicted[-4], dim=0).cpu().detach().numpy()
+            image = np.squeeze(torch.sum(predicted[-5], dim=0).cpu().detach().numpy(), axis=0)
+            n += predicted[-5].shape[0]
             if warped_images is None:
                 warped_images = np.zeros((image.shape[0], image.shape[1], image.shape[2]))
             if warped_labels is None:
@@ -54,7 +52,7 @@ class DefSegExperiment(Experiment):
         if atlas is None:
             atlas = Atlas.from_data_loader(train_data_loader)
             atlas.save(output_dir=self.config.experiment_dir.joinpath("atlas").joinpath("init"))
-
+        real_weights = self.loss.weights
         for epoch in range(self.config.num_epochs):
             if epoch < starting_epoch:
                 continue
@@ -65,10 +63,14 @@ class DefSegExperiment(Experiment):
                 self.optimizer.param_groups[0]['lr'] /= 10
                 print("-------------Learning rate: {}-------------".format(self.optimizer.param_groups[0]['lr']))
                 set = True
+                self.loss.weights = real_weights
+            else:
+                self.loss.weights = [1, 0, 0, 0, 0, 0, 0, 0, 0]
 
             pbar = tqdm(enumerate(train_data_loader))
             atlas_label = prepare_tensors(torch.from_numpy(atlas.label()).float(), self.config.gpu, self.config.device)
             self.network.update_batch_atlas(atlas_label)
+            atlas = self.update_atlas(train_data_loader, atlas_label, atlas, eta=atlas_eta)
 
             for idx, (inputs, outputs) in pbar:
                 inputs = prepare_tensors(inputs, self.config.gpu, self.config.device)

@@ -21,10 +21,8 @@ def mean_image_label(data_loader: MultiDataLoader):
 
         # mean_label = torch.squeeze(torch.mean(label, dim=0))
         # mean_image = torch.squeeze(torch.mean(image, dim=0))
-        image = np.squeeze(image.cpu().detach().numpy(), axis=1)
-        image = np.sum(image, axis=0)
-        label = label.cpu().detach().numpy()
-        label = np.sum(label, axis=0)
+        image = np.squeeze(torch.sum(image, dim=0).cpu().detach().numpy(), axis=0)
+        label = torch.sum(label, dim=0).cpu().detach().numpy()
 
         if images is None:
             images = np.zeros((image.shape[0], image.shape[1], image.shape[2]))
