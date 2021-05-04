@@ -61,10 +61,10 @@ class DefSegExperiment(Experiment):
             self.network.train()
             self.logger.info("{}: starting epoch {}/{}".format(datetime.now(), epoch, self.config.num_epochs))
             self.loss.reset()
-            # if epoch > 10 and not set:
-            #     self.optimizer.param_groups[0]['lr'] /= 10
-            #     print("-------------Learning rate: {}-------------".format(self.optimizer.param_groups[0]['lr']))
-            #     set = True
+            if epoch > 7 and not set:
+                self.optimizer.param_groups[0]['lr'] /= 10
+                print("-------------Learning rate: {}-------------".format(self.optimizer.param_groups[0]['lr']))
+                set = True
 
             pbar = tqdm(enumerate(train_data_loader))
             atlas_label = prepare_tensors(torch.from_numpy(atlas.label()).float(), self.config.gpu, self.config.device)
