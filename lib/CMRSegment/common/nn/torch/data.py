@@ -413,10 +413,18 @@ class MultiDataLoader:
     def __next__(self):
         all_inputs = []
         all_outputs = []
+        all_stops = []
         for loader_iter in self.loader_iters:
-            inputs, outputs = next(loader_iter)
-            all_inputs.append(inputs)
-            all_outputs.append(outputs)
+            try:
+                inputs, outputs = next(loader_iter)
+            except StopIteration:
+                all_stops.append(True)
+            else:
+                all_stops.append(False)
+                all_inputs.append(inputs)
+                all_outputs.append(outputs)
+        if all(all_stops):
+            raise StopIteration
 
         if isinstance(all_inputs[0], tuple) or isinstance(all_inputs[0], list):
             all_inputs = zip(*all_inputs)
