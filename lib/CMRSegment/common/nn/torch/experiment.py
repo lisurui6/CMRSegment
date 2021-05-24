@@ -79,6 +79,7 @@ class Experiment:
 
             # train loop
             pbar = tqdm(enumerate(train_data_loader))
+            n = 0
             for idx, (inputs, outputs) in pbar:
                 inputs = prepare_tensors(inputs, self.config.gpu, self.config.device)
                 outputs = prepare_tensors(outputs, self.config.gpu, self.config.device)
@@ -90,6 +91,8 @@ class Experiment:
                 pbar.set_description(
                     "{:.2f} --- {}".format((idx + 1) / len(train_data_loader), self.loss.description())
                 )
+                n += inputs.shape[0]
+            self.logger.info(f"{n} data processed.")
             self.logger.info("Epoch finished !")
             val_metrics = self.eval(self.loss.new(), *self.other_validation_metrics, datasets=self.validation_sets)
             self.logger.info("Validation loss: {}".format(val_metrics[0].description()))

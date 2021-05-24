@@ -432,7 +432,8 @@ class MultiDataLoader:
         return all_inputs, all_outputs
 
     def __len__(self):
-        return len(self.loaders[0])
+        lengths = [len(loader) for loader in self.loaders]
+        return max(lengths)
 
 
 def generate_dataframe(dataset_config: DatasetConfig):
