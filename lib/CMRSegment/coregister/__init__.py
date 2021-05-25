@@ -75,8 +75,6 @@ class Coregister:
         self.logger.info("\n ... Mesh Generation - step [3] -")
         self.compute_wall_thickness(nonrigid_transformed_mesh, output_dir)
         self.compute_curvature(nonrigid_transformed_mesh, output_dir)
-        if temp_dir.exists():
-            shutil.rmtree(str(temp_dir), ignore_errors=True)
 
     def initialize_registration(self, landmark_path: Path, output_dir: Path):
         """Use landmark to initialise the registration"""

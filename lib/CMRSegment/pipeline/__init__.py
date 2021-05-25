@@ -54,7 +54,13 @@ class CMRPipeline:
         for ed_image, es_image, cine, output_dir in subjects:
             if self.config.segment and self.config.segment_config.segment_cine:
                 print("Segmenting all {} cine images...".format(len(cine)))
-                cine_segmentor.apply(cine, output_dir=output_dir)
+                cine_segmentations = cine_segmentor.apply(cine, output_dir=output_dir)
+            else:
+                cine_segmentations = [
+                    Segmentation(
+                        path=output_dir.joinpath("segs").joinpath(f"lvsa_{idx}.nii.gz"), phase=idx
+                    ) for idx in range(len(cine))
+                ]
             meshes = []
             for phase_image in [ed_image, es_image]:
                 if self.config.segment:
@@ -85,6 +91,7 @@ class CMRPipeline:
                 print("Tracking motion")
                 motion_tracker.run(
                     cine=cine,
+                    cine_segmentations=cine_segmentations,
                     landmark_path=landmark_path,
                     ED_mesh=meshes[0],
                     output_dir=output_dir.joinpath("motion"),

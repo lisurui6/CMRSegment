@@ -1,7 +1,8 @@
 from pathlib import Path
-from CMRSegment.common.resource import CineImages, Template, Phase, PhaseMesh, MeshResource
+from CMRSegment.common.resource import CineImages, Template, Phase, PhaseMesh, MeshResource, Segmentation
 from tqdm import tqdm
 import mirtk
+from typing import List
 
 
 class MotionTracker:
@@ -11,8 +12,8 @@ class MotionTracker:
         self.ffd_refine_cfg = self.param_dir.joinpath("ffd_refine.cfg")
         self.template = Template(dir=template_dir)
 
-    def run(self, cine: CineImages, landmark_path: Path, ED_mesh: PhaseMesh, output_dir: Path,
-            overwrite: bool = False):
+    def run(self, cine: CineImages, cine_segmentations: List[Segmentation], landmark_path: Path, ED_mesh: PhaseMesh,
+            output_dir: Path, overwrite: bool = False):
         # Forward image registration
         forward_dofs = {}
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -126,6 +127,20 @@ class MotionTracker:
             output_dir=output_dir.joinpath("rv"),
             overwrite=overwrite
         )
+        output_dir.joinpath("seg").mkdir(parents=True, exist_ok=True)
+        for fr in tqdm(range(0, len(cine) - 1)):
+            # os.system('mirtk transform-image {0}/lvsa_seg_fr00.nii.gz '
+            #           '{2}/lvsa_seg_wrap_ffd_fr{1:02d}.nii.gz '
+            #           '-dofin {3}/ffd_00_to_{1:02d}.dof.gz '
+            #           '-invert -interp NN'
+            #           .format(seg_slice_path, fr, pred_path, dof_path))
+            mirtk.transform_image(
+                str(cine_segmentations[fr]),
+                str(output_dir.joinpath("seg").joinpath(f"lvsa_{fr}.nii.gz")),
+                "-invert", "-v",
+                interp="NN",
+                dofin=refine_dofs[fr + 1]
+            )
 
     @staticmethod
     def transform_mesh(source_mesh: MeshResource, target_mesh: MeshResource, landmark_init_dof: Path,
@@ -187,7 +202,7 @@ class MotionTracker:
     def motion_mesh(frame_0_mesh: MeshResource, motion_dofs: dict, output_dir: Path, overwrite: bool = False):
         vtks = [frame_0_mesh]
         for fr in tqdm(range(1, len(motion_dofs.keys()) + 1)):
-            vtk = output_dir.joinpath("fr{:02d}.vtk".format(fr))
+            vtk = output_dir.joinpath("vtk", "fr{:02d}.vtk".format(fr))
             if not vtk.exists() or overwrite:
                 mirtk.transform_points(
                     str(frame_0_mesh),

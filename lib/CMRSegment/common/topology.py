@@ -66,11 +66,14 @@ class Point:
     def inner_product(self, other):
         if self.dim() != other.dim():
             raise ValueError("Dimension not the same: cannot compare dim {} to dim {} point.".format(self.dim(), other.dim()))
-        x = [xi * yi for xi, yi in zip(self, other)]
+        x = [ix * jx for ix, jx in zip(self, other)]
         return sum(x)
 
     def norm(self):
         return self.inner_product(self)
+
+    def normalise(self):
+        return self / self.inner_product(self)
 
 
 def l2_distance(point1: Point, point2: Point):
@@ -181,6 +184,9 @@ class PointSequence:
         return self.points.index(point)
 
     def tangent(self, point: Point):
+        return self.first_derivative(point).normalise()
+
+    def first_derivative(self, point: Point):
         index = self.index(point)
         if index == 0:
             # tangent = (C[1].y - C[0].y) / (C[1].x - C[0].x)
@@ -196,11 +202,9 @@ class PointSequence:
             this_point = self[index - 1]
         dx = next_point[0] - this_point[0]
         dy = next_point[1] - this_point[1]
-        ds = math.sqrt(dx ** 2 + dy ** 2)
-        tangent = [dx/ds, dy/ds]
-        return Point(tuple(tangent))
+        return Point((dx, dy))
 
-    def normal(self, point: Point):
+    def second_derivative(self, point: Point):
         index = self.index(point)
         if index == 0:
             # tangent = (C[1].y - C[0].y) / (C[1].x - C[0].x)
@@ -214,15 +218,14 @@ class PointSequence:
             # tangent = (C[i+1].y - C[i-1].y) / (C[i+1].x - C[i-1].x)
             next_point = self[index + 1]
             this_point = self[index - 1]
-        next_tangent = self.tangent(next_point)
-        this_tangent = self.tangent(this_point)
-
+        next_tangent = self.first_derivative(next_point)
+        this_tangent = self.first_derivative(this_point)
         dx = next_tangent[0] - this_tangent[0]
         dy = next_tangent[1] - this_tangent[1]
-        ds = math.sqrt(dx ** 2 + dy ** 2)
+        return Point((dx, dy))
 
-        normal = [dx/ds, dy/ds]
-        return Point(tuple(normal))
+    def normal(self, point: Point):
+        return self.second_derivative(point).normalise()
 
 
 class Arc(PointSequence):
@@ -274,27 +277,23 @@ class Curve(Arc):
             new_points.append(self[i])
         return Arc(new_points)
 
-    def tangent(self, point: Point):
+    def first_derivative(self, point: Point):
         index = self.index(point)
         next_point = self[index + 1]
         this_point = self[index - 1]
         dx = next_point[0] - this_point[0]
         dy = next_point[1] - this_point[1]
-        ds = math.sqrt(dx ** 2 + dy ** 2)
-        tangent = [dx / ds, dy / ds]
-        return Point(tuple(tangent))
+        return Point((dx, dy))
 
-    def normal(self, point: Point):
+    def second_derivative(self, point: Point):
         index = self.index(point)
         next_point = self[index + 1]
         this_point = self[index - 1]
-        next_tangent = self.tangent(next_point)
-        this_tangent = self.tangent(this_point)
+        next_tangent = self.first_derivative(next_point)
+        this_tangent = self.first_derivative(this_point)
         dx = next_tangent[0] - this_tangent[0]
         dy = next_tangent[1] - this_tangent[1]
-        ds = math.sqrt(dx ** 2 + dy ** 2)
-        normal = [dx / ds, dy / ds]
-        return Point(tuple(normal))
+        return Point((dx, dy))
 
 
 class OpenBall:
@@ -324,3 +323,22 @@ class OpenBall:
             if self.distance(point, self.point) < self.radius:
                 new_set.append(point)
         return PointSet(*new_set)
+
+
+def tangent(this_point: Point, next_point: Point):
+    """tangent vector of two points"""
+    dx = next_point[0] - this_point[0]
+    dy = next_point[1] - this_point[1]
+    ds = math.sqrt(dx ** 2 + dy ** 2)
+    tangent = [dx / ds, dy / ds]
+    return Point(tuple(tangent))
+
+
+def normal(this_tangent, next_tangent):
+    """normal vector of two tangents"""
+    dx = next_tangent[0] - this_tangent[0]
+    dy = next_tangent[1] - this_tangent[1]
+    ds = math.sqrt(dx ** 2 + dy ** 2)
+
+    normal = [dx / ds, dy / ds]
+    return Point(tuple(normal))
