@@ -9,6 +9,7 @@ from CMRSegment.extractor.landmark import extract_landmarks
 from CMRSegment.pipeline.config import PipelineConfig
 from CMRSegment.common.resource import Segmentation, PhaseMesh
 from CMRSegment.motion_tracker import MotionTracker
+from CMRSegment.segmentor.atlas import SegmentationCorrector
 
 
 class CMRPipeline:
@@ -30,6 +31,11 @@ class CMRPipeline:
                 overwrite=self.config.overwrite
             )
         if self.config.segment:
+            if self.config.segment_config.refine:
+                segmentation_corrector = SegmentationCorrector(
+                    atlas_dir=self.config.segment_config.refine_atlas_dir,
+                    param_path=None,
+                )
             if not self.config.segment_config.torch:
                 from CMRSegment.segmentor.tf1.HR import TF13DSegmentor
 
@@ -61,6 +67,26 @@ class CMRPipeline:
                         path=output_dir.joinpath("segs").joinpath(f"lvsa_{idx}.nii.gz"), phase=idx
                     ) for idx in range(len(cine))
                 ]
+                if self.config.segment_config.refine:
+                    corrected_segmentations = []
+                    for i, segmentation, image in enumerate(zip(cine_segmentations, cine)):
+                        landmark_path = extract_landmarks(
+                            segmentation.path,
+                            output_path=output_dir.joinpath("segs", "landmarks", f"landmark_{i}.vtk"),
+                            labels=[2, 3]
+                        )
+
+                        output = segmentation_corrector.run(
+                            subject_seg=segmentation,
+                            subject_image=image,
+                            output_dir=output_dir.joinpath("segs"),
+                            subject_landmarks=landmark_path,
+                            n_top=3,
+                            force=True,
+                        )
+                        corrected_segmentations.append(output)
+                    cine_segmentations = corrected_segmentations
+
             meshes = []
             for phase_image in [ed_image, es_image]:
                 if self.config.segment:
@@ -81,12 +107,23 @@ class CMRPipeline:
                 else:
                     mesh = PhaseMesh.from_dir(output_dir.joinpath("mesh"), phase=phase_image.phase)
                     landmark_path = output_dir.joinpath("landmark.vtk")
-                meshes.append(mesh)
+                if self.config.segment_config.refine:
+                    segmentation = segmentation_corrector.run(
+                        subject_image=phase_image,
+                        subject_seg=segmentation,
+                        subject_landmarks=landmark_path,
+                        output_dir=output_dir,
+                        n_top=self.config.segment_config.refine_n_top,
+                        force=True,
+                    )
+
                 if self.config.coregister:
                     print("Coregistering")
                     coregister.run(
                         mesh, segmentation, landmark_path, output_dir=output_dir.joinpath("registration")
                     )
+                meshes.append(mesh)
+
             if self.config.track_motion:
                 print("Tracking motion")
                 motion_tracker.run(

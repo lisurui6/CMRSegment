@@ -14,6 +14,8 @@ class SegmentorConfig(PipelineModuleConfig):
     model_path: Path = None
     segment_cine: bool = True
     torch: bool = True
+    refine: bool = False
+    refine_atlas_dir: Path = None
 
     def __post_init__(self):
         if self.model_path is None:
@@ -51,15 +53,39 @@ class MotionTrackerConfig(PipelineModuleConfig):
 
 
 class PipelineConfig:
-    def __init__(self, segment: bool, extract: bool, coregister: bool, track_motion: bool, output_dir: Path,
-                 overwrite: bool = False, model_path: Path = None, segment_cine: bool = None, torch: bool = True,
-                 iso_value: int = 120, blur: int = 2, param_dir: Path = None, template_dir: Path = None,
-                 use_irtk: bool = False):
+    def __init__(
+        self,
+        segment: bool,
+        extract: bool,
+        coregister: bool,
+        track_motion: bool,
+        output_dir: Path,
+        overwrite: bool = False,
+        model_path: Path = None,
+        segment_cine: bool = None,
+        torch: bool = True,
+        refine: bool = False,
+        refine_atlas_dir: Path = None,
+        refine_n_top: int = 3,
+        iso_value: int = 120,
+        blur: int = 2,
+        param_dir: Path = None,
+        template_dir: Path = None,
+        use_irtk: bool = False
+    ):
         self.output_dir = output_dir
         self.overwrite = overwrite
         if segment:
+            if refine:
+                assert refine_atlas_dir is not None, "Need to provide atlas directory if using refine."
             self.segment_config = SegmentorConfig(
-                model_path=model_path, segment_cine=segment_cine, overwrite=overwrite, torch=torch
+                model_path=model_path,
+                segment_cine=segment_cine,
+                overwrite=overwrite,
+                torch=torch,
+                refine=refine,
+                refine_atlas_dir=refine_atlas_dir,
+                refine_n_top=refine_n_top,
             )
             self.segment = True
         else:
@@ -108,6 +134,15 @@ class PipelineConfig:
         segment_parser.add_argument("--model-path", dest="model_path", default=None, type=str)
         segment_parser.add_argument("--segment-cine", action="store_true")
         segment_parser.add_argument("--torch", dest="torch", action="store_true")
+        segment_parser.add_argument("--refine", dest="refine", action="store_true")
+        segment_parser.add_argument(
+            "--refine-atlas-dir", dest="refine_atlas_dir", type=str, default=None,
+            help="Directory where all the atlases will be used for refinement."
+        )
+        segment_parser.add_argument(
+            "--refine-n-top", dest="refine_n_top", type=int, default=3,
+            help="Number of top similar atlases, selected for refinement"
+        )
 
         extract_parser = parser.add_argument_group("extract")
         extract_parser.add_argument("--iso-value", dest="iso_value", default=120, type=int)
@@ -131,6 +166,9 @@ class PipelineConfig:
             model_path=Path(args.model_path) if args.model_path is not None else None,
             segment_cine=args.segment_cine,
             torch=args.torch,
+            refine=args.refine,
+            refine_atlas_dir=Path(args.refine_atlas_dir) if args.refine_atlas_dir is not None else None,
+            refine_n_top=args.refine_n_top,
             iso_value=args.iso_value,
             blur=args.blur,
             param_dir=Path(args.param_dir) if args.param_dir is not None else None,
