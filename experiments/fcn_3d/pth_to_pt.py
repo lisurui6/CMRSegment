@@ -4,7 +4,7 @@ from pyhocon import ConfigFactory
 from argparse import ArgumentParser
 
 from CMRSegment.common.config import get_conf
-from experiments.fcn_3d.network import UNet
+from CMRSegment.segmentor.torch.network import UNet
 
 
 def parse_args():
