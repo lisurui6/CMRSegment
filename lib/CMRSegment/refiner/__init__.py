@@ -82,6 +82,8 @@ class SegmentationRefiner:
     def run(self, subject_image: PhaseImage, subject_seg: Segmentation, subject_landmarks: Path, output_dir: Path,
             n_top: int, force: bool) -> Segmentation:
         tmp_dir = output_dir.joinpath("tmp")
+        tmp_dir.mkdir(exist_ok=True, parents=True)
+
         top_atlases, top_dofs = self.select_altases(
             subject_seg=subject_seg.path,
             subject_landmarks=subject_landmarks,
@@ -89,7 +91,6 @@ class SegmentationRefiner:
             n_top=n_top,
             force=force,
         )
-        tmp_dir.mkdir(exist_ok=True, parents=True)
         atlas_labels = []
         phase = str(subject_seg.phase)
         for i, atlas, dof in enumerate(zip(top_atlases, top_dofs)):
