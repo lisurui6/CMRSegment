@@ -63,6 +63,7 @@ class CMRPipeline:
                 if self.config.refine:
                     refined_segmentations = []
                     for i, (segmentation, image) in enumerate(zip(cine_segmentations, cine)):
+                        output_dir.joinpath("segs", "landmarks").mkdir(parents=True, exist_ok=True)
                         landmark_path = extract_landmarks(
                             segmentation.path,
                             output_path=output_dir.joinpath("segs", "landmarks", f"landmark_{i}.vtk"),
