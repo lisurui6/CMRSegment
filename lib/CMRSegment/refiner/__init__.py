@@ -96,7 +96,7 @@ class SegmentationRefiner:
         )
         atlas_labels = []
         phase = str(subject_seg.phase)
-        for i, atlas, dof in enumerate(zip(top_atlases, top_dofs)):
+        for i, (atlas, dof) in enumerate(zip(top_atlases, top_dofs)):
             if not tmp_dir.joinpath(f"shapeffd_{i}_{str(phase)}.dof.gz").exists() or force:
                 mirtk.register(
                     str(subject_seg),
