@@ -19,10 +19,15 @@ class SegmentationRefiner:
         assert csv_path.exists(), "Path to csv file containing list of atlases must exist. "
         data_table = DataTable.from_csv(csv_path)
         label_paths = data_table.select_column("label_path")
-        label_paths = [Path(path) for idx, path in enumerate(label_paths) if idx % 2 == 0]
-        landmarks = [label_path.parent.joinpath("landmarks2.vtk") for label_path in label_paths]
-
-        self.atlases = label_paths
+        landmarks = []
+        atlases = []
+        for idx, path in enumerate(label_paths):
+            if idx % 2 == 0:
+                if Path(path).parent.joinpath("landmarks2.vtk").exists():
+                    atlases.append(Path(path))
+                    landmarks.append(Path(path).parent.joinpath("landmarks2.vtk"))
+        print("Total {} atlases with landmarks...".format(len(atlases)))
+        self.atlases = atlases
         self.landmarks = landmarks
         if param_path is None:
             param_path = RESOURCE_DIR.joinpath("ffd_label_1.cfg")
