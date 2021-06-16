@@ -48,7 +48,7 @@ class CMRPipeline:
                 cine_segmentor = CineSegmentor(phase_segmentor=hr_segmentor)
         if self.config.refine:
             segmentation_corrector = SegmentationRefiner(
-                atlas_dir=self.config.refine_config.atlas_dir,
+                csv_path=self.config.refine_config.csv_path,
             )
         if self.config.track_motion:
             motion_tracker = MotionTracker(

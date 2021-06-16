@@ -10,21 +10,19 @@ import SimpleITK as sitk
 import os
 from matplotlib import pyplot as plt
 from CMRSegment.common.resource import Segmentation, PhaseImage, Phase
+from CMRSegment.common.data_table import DataTable
 
 
 class SegmentationRefiner:
     """Use multi-altas registration to refine predicted segmentation"""
-    def __init__(self, atlas_dir: Path, param_path: Path = None):
-        assert atlas_dir.is_dir(), "Atlas dir needs to a directory"
-        atlases = []
-        landmarks = []
-        for subject in os.listdir(str(atlas_dir)):
-            subject_dir = atlas_dir.joinpath(subject)
-            atlas = subject_dir.joinpath("seg_lvsa_SR_ED.nii.gz")
-            landmark = subject_dir.joinpath("landmarks2.vtk")
-            atlases.append(atlas)
-            landmarks.append(landmark)
-        self.atlases = atlases
+    def __init__(self, csv_path: Path, param_path: Path = None):
+        assert csv_path.exists(), "Path to csv file containing list of atlases must exist. "
+        data_table = DataTable.from_csv(csv_path)
+        label_paths = data_table.select_column("label_path")
+        label_paths = [Path(path) for idx, path in enumerate(label_paths) if idx % 2 == 0]
+        landmarks = [label_path.parent.joinpath("landmarks2.vtk") for label_path in label_paths]
+
+        self.atlases = label_paths
         self.landmarks = landmarks
         if param_path is None:
             param_path = RESOURCE_DIR.joinpath("ffd_label_1.cfg")

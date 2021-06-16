@@ -22,12 +22,12 @@ class SegmentorConfig(PipelineModuleConfig):
 
 @dataclasses.dataclass
 class RefinerConfig(PipelineModuleConfig):
-    atlas_dir: Path = None
+    csv_path: Path = None
     n_top_atlas: int = 3
 
     def __post_init__(self):
-        if self.atlas_dir is None:
-            raise TypeError("__init__ missing 1 required argument: 'atlas_dir'")
+        if self.csv_path is None:
+            raise TypeError("__init__ missing 1 required argument: 'csv_path'")
 
 
 @dataclasses.dataclass
@@ -73,7 +73,7 @@ class PipelineConfig:
         model_path: Path = None,
         segment_cine: bool = None,
         torch: bool = True,
-        refine_atlas_dir: Path = None,
+        refine_csv_path: Path = None,
         refine_n_top: int = 3,
         iso_value: int = 120,
         blur: int = 2,
@@ -96,10 +96,10 @@ class PipelineConfig:
             self.segment = False
             self.segment_config = None
         if refine:
-            assert refine_atlas_dir is not None, "Need to provide atlas directory if using refine."
+            assert refine_csv_path is not None, "Need to provide atlas directory if using refine."
             self.refine = True
             self.refine_config = RefinerConfig(
-                atlas_dir=refine_atlas_dir,
+                csv_path=refine_csv_path,
                 n_top_atlas=refine_n_top,
             )
         else:
@@ -161,8 +161,8 @@ class PipelineConfig:
 
         segment_parser = parser.add_argument_group("refine")
         segment_parser.add_argument(
-            "--atlas-dir", dest="refine_atlas_dir", type=str, default=None,
-            help="Directory where all the atlases will be used for refinement."
+            "--csv-path", dest="refine_csv_path", type=str, default=None,
+            help="Path to a csv file where all the atlases will be used for refinement."
         )
         segment_parser.add_argument(
             "--n-top", dest="refine_n_top", type=int, default=3,
@@ -192,7 +192,7 @@ class PipelineConfig:
             model_path=Path(args.model_path) if args.model_path is not None else None,
             segment_cine=args.segment_cine,
             torch=args.torch,
-            refine_atlas_dir=Path(args.refine_atlas_dir) if args.refine_atlas_dir is not None else None,
+            refine_csv_path=Path(args.refine_csv_path) if args.refine_csv_path is not None else None,
             refine_n_top=args.refine_n_top,
             iso_value=args.iso_value,
             blur=args.blur,
