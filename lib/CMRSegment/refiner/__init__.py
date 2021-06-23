@@ -41,9 +41,9 @@ class SegmentationRefiner:
 
         n_atlases = len(self.atlases)
 
-        if force:
-            for f in output_dir.glob("shapenmi*.txt"):
-                f.unlink()
+        # if force:
+        #     for f in output_dir.glob("shapenmi*.txt"):
+        #         f.unlink()
         output_dofs = []
         top_atlas_dofs = []
         for i in range(n_atlases):

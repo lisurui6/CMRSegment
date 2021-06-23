@@ -113,7 +113,7 @@ class CMRPipeline:
                         subject_image=phase_image,
                         subject_seg=segmentation,
                         subject_landmarks=landmark_path,
-                        output_dir=output_dir,
+                        output_dir=output_dir.joinpath("refine"),
                         n_top=self.config.refine_config.n_top_atlas,
                         force=True,
                     )
