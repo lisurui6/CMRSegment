@@ -98,15 +98,7 @@ class CMRPipeline:
                     segmentation = Segmentation(
                         phase=phase_image.phase, path=output_dir.joinpath(f"seg_lvsa_SR_{phase_image.phase}.nii.gz")
                     )
-                if self.config.refine:
-                    segmentation = segmentation_corrector.run(
-                        subject_image=phase_image,
-                        subject_seg=segmentation,
-                        subject_landmarks=landmark_path,
-                        output_dir=output_dir,
-                        n_top=self.config.refine_config.n_top_atlas,
-                        force=True,
-                    )
+
                 if self.config.extract:
                     print("Extracting {} segmentation...".format(phase_image.phase))
                     landmark_path = extract_landmarks(
@@ -116,7 +108,15 @@ class CMRPipeline:
                 else:
                     mesh = PhaseMesh.from_dir(output_dir.joinpath("mesh"), phase=phase_image.phase)
                     landmark_path = output_dir.joinpath("landmark.vtk")
-
+                if self.config.refine:
+                    segmentation = segmentation_corrector.run(
+                        subject_image=phase_image,
+                        subject_seg=segmentation,
+                        subject_landmarks=landmark_path,
+                        output_dir=output_dir,
+                        n_top=self.config.refine_config.n_top_atlas,
+                        force=True,
+                    )
                 if self.config.coregister:
                     print("Coregistering")
                     coregister.run(

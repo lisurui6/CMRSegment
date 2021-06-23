@@ -84,7 +84,7 @@ class SegmentationRefiner:
 
     def run(self, subject_image: PhaseImage, subject_seg: Segmentation, subject_landmarks: Path, output_dir: Path,
             n_top: int, force: bool) -> Segmentation:
-        tmp_dir = output_dir.joinpath("tmp")
+        tmp_dir = output_dir.joinpath("tmp", str(subject_seg.phase))
         tmp_dir.mkdir(exist_ok=True, parents=True)
 
         top_atlases, top_dofs = self.select_altases(
@@ -124,7 +124,7 @@ class SegmentationRefiner:
         voter = sitk.LabelVotingImageFilter()
         voter.SetLabelForUndecidedPixels(0)
         fused_label = voter.Execute(*labels)
-        output_path = output_dir.joinpath(subject_seg.path.name + "_refined.nii.gz")
+        output_path = output_dir.joinpath(subject_seg.path.stem + "_refined.nii.gz")
         sitk.WriteImage(
             fused_label, str(output_path), imageIO="NiftiImageIO"
         )
