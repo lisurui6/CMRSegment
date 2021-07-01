@@ -123,7 +123,9 @@ class SegmentationRefiner:
                     target=str(subject_image),
                     interp="NN",
                 )
-            label = sitk.ReadImage(str(label_path), imageIO="NiftiImageIO", outputPixelType=sitk.sitkUInt8)
+            label = sitk.GetArrayFromImage(
+                sitk.ReadImage(str(label_path), imageIO="NiftiImageIO", outputPixelType=sitk.sitkUInt8)
+            )
             label[label == 4] = 3
             sitk.WriteImage(label, str(label_path), imageIO="NiftiImageIO")
             atlas_labels.append(label_path)
