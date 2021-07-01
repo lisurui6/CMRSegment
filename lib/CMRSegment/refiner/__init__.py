@@ -114,16 +114,19 @@ class SegmentationRefiner:
                     dofin=str(dof),
                     dofout=tmp_dir.joinpath(f"shapeffd_{i}_{phase}.dof.gz")
                 )
-            if not tmp_dir.joinpath(f"seg_{i}_{phase}.nii.gz").exists() or force:
+            label_path = tmp_dir.joinpath(f"seg_{i}_{phase}.nii.gz")
+            if not label_path.exists() or force:
                 mirtk.transform_image(
                     str(atlas),
-                    str(tmp_dir.joinpath(f"seg_{i}_{phase}.nii.gz")),
+                    str(label_path),
                     dofin=str(tmp_dir.joinpath(f"shapeffd_{i}_{phase}.dof.gz")),
                     target=str(subject_image),
                     interp="NN",
                 )
-
-            atlas_labels.append(tmp_dir.joinpath(f"seg_{i}_{phase}.nii.gz"))
+            label = sitk.ReadImage(str(label_path), imageIO="NiftiImageIO", outputPixelType=sitk.sitkUInt8)
+            label[label == 4] = 3
+            sitk.WriteImage(label, str(label_path), imageIO="NiftiImageIO")
+            atlas_labels.append(label_path)
 
         # apply label fusion
         labels = []
