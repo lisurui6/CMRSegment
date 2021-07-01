@@ -61,26 +61,6 @@ class CMRPipeline:
             if self.config.segment and self.config.segment_config.segment_cine:
                 print("Segmenting all {} cine images...".format(len(cine)))
                 cine_segmentations = cine_segmentor.apply(cine, output_dir=output_dir)
-                if self.config.refine:
-                    refined_segmentations = []
-                    for i, (segmentation, image) in enumerate(zip(cine_segmentations, cine)):
-                        output_dir.joinpath("segs", "landmarks").mkdir(parents=True, exist_ok=True)
-                        landmark_path = extract_landmarks(
-                            segmentation.path,
-                            output_path=output_dir.joinpath("segs", "landmarks", f"landmark_{i}.vtk"),
-                            labels=[2, 3]
-                        )
-
-                        output = segmentation_corrector.run(
-                            subject_seg=segmentation,
-                            subject_image=image,
-                            output_dir=output_dir.joinpath("segs"),
-                            subject_landmarks=landmark_path,
-                            n_top=self.config.refine_config.n_top_atlas,
-                            force=True,
-                        )
-                        refined_segmentations.append(output)
-                    cine_segmentations = refined_segmentations
             else:
                 cine_segmentations = [
                     Segmentation(
