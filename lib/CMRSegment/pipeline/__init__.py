@@ -49,6 +49,7 @@ class CMRPipeline:
         if self.config.refine:
             segmentation_corrector = SegmentationRefiner(
                 csv_path=self.config.refine_config.csv_path,
+                n_atlas=self.config.refine_config.n_atlas,
             )
         if self.config.track_motion:
             motion_tracker = MotionTracker(

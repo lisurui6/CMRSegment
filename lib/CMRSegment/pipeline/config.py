@@ -23,7 +23,8 @@ class SegmentorConfig(PipelineModuleConfig):
 @dataclasses.dataclass
 class RefinerConfig(PipelineModuleConfig):
     csv_path: Path = None
-    n_top_atlas: int = 3
+    n_top_atlas: int = 7
+    n_atlas: int = 500
 
     def __post_init__(self):
         if self.csv_path is None:
@@ -74,7 +75,8 @@ class PipelineConfig:
         segment_cine: bool = None,
         torch: bool = True,
         refine_csv_path: Path = None,
-        refine_n_top: int = 3,
+        refine_n_top: int = 7,
+        refine_n_atlas: int = 500,
         iso_value: int = 120,
         blur: int = 2,
         param_dir: Path = None,
@@ -101,6 +103,7 @@ class PipelineConfig:
             self.refine_config = RefinerConfig(
                 csv_path=refine_csv_path,
                 n_top_atlas=refine_n_top,
+                n_atlas=refine_n_atlas,
             )
         else:
             self.refine = False
@@ -165,9 +168,14 @@ class PipelineConfig:
             help="Path to a csv file where all the atlases will be used for refinement."
         )
         segment_parser.add_argument(
-            "--n-top", dest="refine_n_top", type=int, default=3,
+            "--n-top", dest="refine_n_top", type=int, default=7,
             help="Number of top similar atlases, selected for refinement"
         )
+        segment_parser.add_argument(
+            "--n-atlas", dest="refine_n_atlas", type=int, default=500,
+            help="Number of atlases in total for for refinement"
+        )
+
 
         extract_parser = parser.add_argument_group("extract")
         extract_parser.add_argument("--iso-value", dest="iso_value", default=120, type=int)
@@ -194,6 +202,7 @@ class PipelineConfig:
             torch=args.torch,
             refine_csv_path=Path(args.refine_csv_path) if args.refine_csv_path is not None else None,
             refine_n_top=args.refine_n_top,
+            refine_n_atlas=args.refine_n_atlas,
             iso_value=args.iso_value,
             blur=args.blur,
             param_dir=Path(args.param_dir) if args.param_dir is not None else None,

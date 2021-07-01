@@ -15,7 +15,7 @@ from CMRSegment.common.data_table import DataTable
 
 class SegmentationRefiner:
     """Use multi-altas registration to refine predicted segmentation"""
-    def __init__(self, csv_path: Path, param_path: Path = None):
+    def __init__(self, csv_path: Path, n_atlas: int = None, param_path: Path = None):
         assert csv_path.exists(), "Path to csv file containing list of atlases must exist. "
         data_table = DataTable.from_csv(csv_path)
         label_paths = data_table.select_column("label_path")
@@ -27,6 +27,15 @@ class SegmentationRefiner:
                     atlases.append(Path(path))
                     landmarks.append(Path(path).parent.joinpath("landmarks2.vtk"))
         print("Total {} atlases with landmarks...".format(len(atlases)))
+        if n_atlas is not None:
+            print("Randomly choosing {} atlases...".format(n_atlas))
+            indices = np.random.choice(np.arange(len(atlases)), n_atlas, replace=False)
+            atlases = np.array(atlases)
+            landmarks = np.array(landmarks)
+            atlases = atlases[indices].tolist()
+            landmarks = landmarks[indices].tolist()
+            print("Total {} atlases remained...".format(len(atlases)))
+
         self.atlases = atlases
         self.landmarks = landmarks
         if param_path is None:
