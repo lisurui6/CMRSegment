@@ -11,6 +11,7 @@ import os
 from matplotlib import pyplot as plt
 from CMRSegment.common.resource import Segmentation, PhaseImage, Phase
 from CMRSegment.common.data_table import DataTable
+import nibabel as nib
 
 
 class SegmentationRefiner:
@@ -123,11 +124,12 @@ class SegmentationRefiner:
                     target=str(subject_image),
                     interp="NN",
                 )
-            label = sitk.GetArrayFromImage(
-                sitk.ReadImage(str(label_path), imageIO="NiftiImageIO", outputPixelType=sitk.sitkUInt8)
-            )
+            nim = nib.load(str(label_path))
+            label = nim.get_data()
             label[label == 4] = 3
-            sitk.WriteImage(label, str(label_path), imageIO="NiftiImageIO")
+            nim2 = nib.Nifti1Image(label, nim.affine)
+            nim2.header['pixdim'] = nim.header['pixdim']
+            nib.save(nim2, str(label_path))
             atlas_labels.append(label_path)
 
         # apply label fusion
