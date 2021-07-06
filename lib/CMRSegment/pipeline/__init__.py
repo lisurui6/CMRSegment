@@ -69,6 +69,7 @@ class CMRPipeline:
                 ]
 
             meshes = []
+            segmentations = []
             for phase_image in [ed_image, es_image]:
                 if self.config.segment:
                     print("Segmenting {} image...".format(phase_image.phase))
@@ -98,6 +99,7 @@ class CMRPipeline:
                         n_top=self.config.refine_config.n_top_atlas,
                         force=True,
                     )
+                segmentations.append(segmentation)
                 if self.config.coregister:
                     print("Coregistering")
                     coregister.run(
@@ -109,7 +111,7 @@ class CMRPipeline:
                 print("Tracking motion")
                 motion_tracker.run(
                     cine=cine,
-                    cine_segmentations=cine_segmentations,
+                    ed_segmentation=segmentations[0],
                     landmark_path=landmark_path,
                     ED_mesh=meshes[0],
                     output_dir=output_dir.joinpath("motion"),

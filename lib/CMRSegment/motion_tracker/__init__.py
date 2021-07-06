@@ -12,7 +12,7 @@ class MotionTracker:
         self.ffd_refine_cfg = self.param_dir.joinpath("ffd_refine.cfg")
         self.template = Template(dir=template_dir)
 
-    def run(self, cine: CineImages, cine_segmentations: List[Segmentation], landmark_path: Path, ED_mesh: PhaseMesh,
+    def run(self, cine: CineImages, ed_segmentation: Segmentation, landmark_path: Path, ED_mesh: PhaseMesh,
             output_dir: Path, overwrite: bool = False):
         # Forward image registration
         forward_dofs = {}
@@ -135,7 +135,7 @@ class MotionTracker:
             #           '-invert -interp NN'
             #           .format(seg_slice_path, fr, pred_path, dof_path))
             mirtk.transform_image(
-                str(cine_segmentations[fr]),
+                str(ed_segmentation),
                 str(output_dir.joinpath("seg").joinpath(f"lvsa_{fr}.nii.gz")),
                 "-invert", "-v",
                 interp="NN",
