@@ -8,7 +8,7 @@ from typing import List
 class MotionTracker:
     def __init__(self, param_dir: Path, template_dir: Path):
         self.param_dir = param_dir
-        self.ffd_motion_cfg = self.param_dir.joinpath("ffd_motion.cfg")
+        self.ffd_motion_cfg = self.param_dir.joinpath("ffd_motion_2.cfg")
         self.ffd_refine_cfg = self.param_dir.joinpath("ffd_refine.cfg")
         self.template = Template(dir=template_dir)
 
