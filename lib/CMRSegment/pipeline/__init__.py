@@ -17,7 +17,7 @@ class CMRPipeline:
         self.config = config
 
     def run(self, data_dir: Path):
-        preprocessor = DataPreprocessor(overwrite=self.config.overwrite, use_irtk=self.config.use_irtk)
+        preprocessor = DataPreprocessor()
         if self.config.extract:
             mesh_extractor = MeshExtractor(
                 iso_value=self.config.extract_config.iso_value,
@@ -56,7 +56,12 @@ class CMRPipeline:
                 template_dir=self.config.motion_tracker_config.template_dir,
                 param_dir=self.config.motion_tracker_config.param_dir
             )
-        subjects = preprocessor.run(data_dir=data_dir, output_dir=self.config.output_dir)
+        subjects = preprocessor.run(
+            data_dir=data_dir,
+            output_dir=self.config.output_dir,
+            overwrite=self.config.overwrite,
+            use_irtk=self.config.use_irtk,
+        )
         for ed_image, es_image, cine, output_dir in subjects:
             if self.config.segment and self.config.segment_config.segment_cine:
                 print("Segmenting all {} cine images...".format(len(cine)))

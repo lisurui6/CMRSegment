@@ -13,8 +13,8 @@ def parse_args():
 
 def main():
     args = parse_args()
-    preprocessor = DataPreprocessor(overwrite=args.overwrite)
-    subjects = list(preprocessor.run(data_dir=Path(args.data_dir), output_dir=args.output_dir))
+    preprocessor = DataPreprocessor()
+    subjects = list(preprocessor.run(data_dir=Path(args.data_dir), output_dir=args.output_dir, overwrite=args.overwrite))
 
 
 if __name__ == '__main__':
