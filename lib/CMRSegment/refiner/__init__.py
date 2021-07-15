@@ -115,6 +115,17 @@ class SegmentationRefiner:
                     dofin=str(dof),
                     dofout=tmp_dir.joinpath(f"shapeffd_{i}_{phase}.dof.gz")
                 )
+
+            label_path = tmp_dir.joinpath(f"seg_affine_{i}_{phase}.nii.gz")
+            if not label_path.exists() or force:
+                mirtk.transform_image(
+                    str(atlas),
+                    str(label_path),
+                    dofin=str(dof),
+                    target=str(subject_image),
+                    interp="NN",
+                )
+
             label_path = tmp_dir.joinpath(f"seg_{i}_{phase}.nii.gz")
             if not label_path.exists() or force:
                 mirtk.transform_image(
@@ -133,13 +144,14 @@ class SegmentationRefiner:
             atlas_labels.append(label_path)
 
         # apply label fusion
-        labels = []
+        labels = sitk.VectorOfImage()
+
         for label_path in atlas_labels:
             label = sitk.ReadImage(str(label_path), imageIO="NiftiImageIO", outputPixelType=sitk.sitkUInt8)
-            labels.append(label)
+            labels.push_back(label)
         voter = sitk.LabelVotingImageFilter()
         voter.SetLabelForUndecidedPixels(0)
-        fused_label = voter.Execute(*labels)
+        fused_label = voter.Execute(labels)
         output_path = output_dir.joinpath(subject_seg.path.stem + "_refined.nii.gz")
         sitk.WriteImage(
             fused_label, str(output_path), imageIO="NiftiImageIO"
