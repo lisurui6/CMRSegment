@@ -57,28 +57,31 @@ class SegmentationRefiner:
         output_dofs = []
         top_atlas_dofs = []
         for i in range(n_atlases):
-            if not output_dir.joinpath(f"shapelandmarks_{i}.dof.gz").exists() or force:
-                mirtk.register(
-                    str(subject_landmarks),
-                    str(self.landmarks[i]),
-                    model="Affine",
-                    dofout=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
-                )
-            output_dofs.append(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz"))
-            if not output_dir.joinpath(f"shapenmi_{i}.txt").exists() or force:
-                mirtk.evaluate_similarity(
-                    str(subject_seg),
-                    str(self.atlases[i]),
-                    Tbins=64,
-                    Sbins=64,
-                    dofin=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
-                    table=str(output_dir.joinpath(f"shapenmi_{i}.txt")),
-                )
+            try:
+                if not output_dir.joinpath(f"shapelandmarks_{i}.dof.gz").exists() or force:
+                    mirtk.register(
+                        str(subject_landmarks),
+                        str(self.landmarks[i]),
+                        model="Affine",
+                        dofout=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
+                    )
+                output_dofs.append(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz"))
+                if not output_dir.joinpath(f"shapenmi_{i}.txt").exists() or force:
+                    mirtk.evaluate_similarity(
+                        str(subject_seg),
+                        str(self.atlases[i]),
+                        Tbins=64,
+                        Sbins=64,
+                        dofin=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
+                        table=str(output_dir.joinpath(f"shapenmi_{i}.txt")),
+                    )
 
-            if output_dir.joinpath(f"shapenmi_{i}.txt").exists():
-                similarities = np.genfromtxt('{0}/shapenmi_{1}.txt'.format(str(output_dir), i), delimiter=",")
-                nmi += [similarities[1, 5]]
-            else:
+                if output_dir.joinpath(f"shapenmi_{i}.txt").exists():
+                    similarities = np.genfromtxt('{0}/shapenmi_{1}.txt'.format(str(output_dir), i), delimiter=",")
+                    nmi += [similarities[1, 5]]
+                else:
+                    nmi += [0]
+            except:
                 nmi += [0]
 
         if n_top < n_atlases:

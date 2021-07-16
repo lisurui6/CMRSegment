@@ -176,7 +176,6 @@ class PipelineConfig:
             help="Number of atlases in total for for refinement"
         )
 
-
         extract_parser = parser.add_argument_group("extract")
         extract_parser.add_argument("--iso-value", dest="iso_value", default=120, type=int)
         extract_parser.add_argument("--blur", dest="blur", default=2, type=int)
