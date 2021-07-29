@@ -16,10 +16,10 @@ def main():
     assert input_dir.is_dir()
     for subdir in os.listdir(str(input_dir)):
         subdir = input_dir.joinpath(subdir)
-        ed_path = subdir.joinpath("refine", "seg_lvsa_SR_ED.nii._refined.nii.gz")
-        es_path = subdir.joinpath("refine", "seg_lvsa_SR_ES.nii._refined.nii.gz")
-        shutil.copy(str(ed_path), str(subdir.joinpath("seg_lvsa_SR_ED.nii._refined.nii.gz")))
-        shutil.copy(str(es_path), str(subdir.joinpath("seg_lvsa_SR_ES.nii._refined.nii.gz")))
+        ed_path = subdir.joinpath("refine", "seg_lvsa_SR_ED.nii_refined.nii.gz")
+        es_path = subdir.joinpath("refine", "seg_lvsa_SR_ES.nii_refined.nii.gz")
+        shutil.copy(str(ed_path), str(subdir.joinpath("seg_lvsa_SR_ED.nii_refined.nii.gz")))
+        shutil.copy(str(es_path), str(subdir.joinpath("seg_lvsa_SR_ES.nii_refined.nii.gz")))
 
 
 if __name__ == '__main__':
