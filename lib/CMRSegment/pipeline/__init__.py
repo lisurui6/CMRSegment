@@ -89,9 +89,12 @@ class CMRPipeline:
                 if self.config.extract:
                     print("Extracting {} segmentation...".format(phase_image.phase))
                     if not output_dir.joinpath("landmark.vtk").exists() or self.config.overwrite:
-                        landmark_path = extract_landmarks(
-                            segmentation.path, output_path=output_dir.joinpath("landmark.vtk"), labels=[2, 3]
-                        )
+                        try:
+                            landmark_path = extract_landmarks(
+                                segmentation.path, output_path=output_dir.joinpath("landmark.vtk"), labels=[2, 3]
+                            )
+                        except ValueError:
+                            continue
                     mesh = mesh_extractor.run(segmentation, output_dir.joinpath("mesh"))
                 else:
                     mesh = PhaseMesh.from_dir(output_dir.joinpath("mesh"), phase=phase_image.phase)

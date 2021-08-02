@@ -18,7 +18,8 @@ class DataPreprocessor:
                 shutil.rmtree(str(subject_output_dir), ignore_errors=True)
             subject_output_dir.mkdir(exist_ok=True, parents=True)
             print(subject_dir)
-            shutil.copy(str(nii_data), str(subject_output_dir))
+            if overwrite or not nii_data.exists():
+                shutil.copy(str(nii_data), str(subject_output_dir))
             ed_image = PhaseImage.from_dir(subject_output_dir, phase=Phase.ED)
             es_image = PhaseImage.from_dir(subject_output_dir, phase=Phase.ES)
             print("ED ES image:\n\t{}\n\t{}".format(repr(ed_image), repr(es_image)))

@@ -72,4 +72,5 @@ def extract_landmarks(segmentation_path: Path, output_path: Path, labels: List =
         writer.Write()
     else:
         print("\n ... Error in labels")
+        raise ValueError("Check labels failed when extracting landmarks.")
     return output_path
