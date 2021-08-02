@@ -111,7 +111,7 @@ class CMRPipeline:
                         subject_landmarks=landmark_path,
                         output_dir=output_dir.joinpath("refine"),
                         n_top=self.config.refine_config.n_top_atlas,
-                        force=True,
+                        force=self.config.overwrite,
                     )
                 segmentations.append(segmentation)
                 if self.config.coregister:

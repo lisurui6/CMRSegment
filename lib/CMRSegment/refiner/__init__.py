@@ -81,7 +81,9 @@ class SegmentationRefiner:
                     nmi += [similarities[1, 5]]
                 else:
                     nmi += [0]
-            except:
+            except KeyboardInterrupt:
+                raise
+            except Exception:
                 nmi += [0]
 
         if n_top < n_atlases:
