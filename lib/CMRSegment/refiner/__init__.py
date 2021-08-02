@@ -97,68 +97,73 @@ class SegmentationRefiner:
 
     def run(self, subject_image: PhaseImage, subject_seg: Segmentation, subject_landmarks: Path, output_dir: Path,
             n_top: int, force: bool) -> Segmentation:
-        tmp_dir = output_dir.joinpath("tmp", str(subject_seg.phase))
-        tmp_dir.mkdir(exist_ok=True, parents=True)
-
-        top_atlases, top_dofs = self.select_altases(
-            subject_seg=subject_seg.path,
-            subject_landmarks=subject_landmarks,
-            output_dir=tmp_dir,
-            n_top=n_top,
-            force=force,
-        )
-        atlas_labels = []
-        phase = str(subject_seg.phase)
-        for i, (atlas, dof) in enumerate(zip(top_atlases, top_dofs)):
-            if not tmp_dir.joinpath(f"shapeffd_{i}_{str(phase)}.dof.gz").exists() or force:
-                mirtk.register(
-                    str(subject_seg),
-                    str(atlas),
-                    parin=str(self.param_path),
-                    dofin=str(dof),
-                    dofout=tmp_dir.joinpath(f"shapeffd_{i}_{phase}.dof.gz")
-                )
-
-            label_path = tmp_dir.joinpath(f"seg_affine_{i}_{phase}.nii.gz")
-            if not label_path.exists() or force:
-                mirtk.transform_image(
-                    str(atlas),
-                    str(label_path),
-                    dofin=str(dof),
-                    target=str(subject_image),
-                    interp="NN",
-                )
-
-            label_path = tmp_dir.joinpath(f"seg_{i}_{phase}.nii.gz")
-            if not label_path.exists() or force:
-                mirtk.transform_image(
-                    str(atlas),
-                    str(label_path),
-                    dofin=str(tmp_dir.joinpath(f"shapeffd_{i}_{phase}.dof.gz")),
-                    target=str(subject_image),
-                    interp="NN",
-                )
-            nim = nib.load(str(label_path))
-            label = nim.get_data()
-            label[label == 4] = 3
-            nim2 = nib.Nifti1Image(label, nim.affine)
-            nim2.header['pixdim'] = nim.header['pixdim']
-            nib.save(nim2, str(label_path))
-            atlas_labels.append(label_path)
-
-        # apply label fusion
-        labels = sitk.VectorOfImage()
-
-        for label_path in atlas_labels:
-            label = sitk.ReadImage(str(label_path), imageIO="NiftiImageIO", outputPixelType=sitk.sitkUInt8)
-            labels.push_back(label)
-        voter = sitk.LabelVotingImageFilter()
-        voter.SetLabelForUndecidedPixels(0)
-        fused_label = voter.Execute(labels)
         output_path = output_dir.joinpath(subject_seg.path.stem + "_refined.nii.gz")
-        sitk.WriteImage(
-            fused_label, str(output_path), imageIO="NiftiImageIO"
-        )
+
+        if force or not Segmentation(
+            path=output_path,
+            phase=subject_seg.phase
+        ).exists():
+            tmp_dir = output_dir.joinpath("tmp", str(subject_seg.phase))
+            tmp_dir.mkdir(exist_ok=True, parents=True)
+
+            top_atlases, top_dofs = self.select_altases(
+                subject_seg=subject_seg.path,
+                subject_landmarks=subject_landmarks,
+                output_dir=tmp_dir,
+                n_top=n_top,
+                force=force,
+            )
+            atlas_labels = []
+            phase = str(subject_seg.phase)
+            for i, (atlas, dof) in enumerate(zip(top_atlases, top_dofs)):
+                if not tmp_dir.joinpath(f"shapeffd_{i}_{str(phase)}.dof.gz").exists() or force:
+                    mirtk.register(
+                        str(subject_seg),
+                        str(atlas),
+                        parin=str(self.param_path),
+                        dofin=str(dof),
+                        dofout=tmp_dir.joinpath(f"shapeffd_{i}_{phase}.dof.gz")
+                    )
+
+                label_path = tmp_dir.joinpath(f"seg_affine_{i}_{phase}.nii.gz")
+                if not label_path.exists() or force:
+                    mirtk.transform_image(
+                        str(atlas),
+                        str(label_path),
+                        dofin=str(dof),
+                        target=str(subject_image),
+                        interp="NN",
+                    )
+
+                label_path = tmp_dir.joinpath(f"seg_{i}_{phase}.nii.gz")
+                if not label_path.exists() or force:
+                    mirtk.transform_image(
+                        str(atlas),
+                        str(label_path),
+                        dofin=str(tmp_dir.joinpath(f"shapeffd_{i}_{phase}.dof.gz")),
+                        target=str(subject_image),
+                        interp="NN",
+                    )
+                nim = nib.load(str(label_path))
+                label = nim.get_data()
+                label[label == 4] = 3
+                nim2 = nib.Nifti1Image(label, nim.affine)
+                nim2.header['pixdim'] = nim.header['pixdim']
+                nib.save(nim2, str(label_path))
+                atlas_labels.append(label_path)
+
+            # apply label fusion
+            labels = sitk.VectorOfImage()
+
+            for label_path in atlas_labels:
+                label = sitk.ReadImage(str(label_path), imageIO="NiftiImageIO", outputPixelType=sitk.sitkUInt8)
+                labels.push_back(label)
+            voter = sitk.LabelVotingImageFilter()
+            voter.SetLabelForUndecidedPixels(0)
+            fused_label = voter.Execute(labels)
+            sitk.WriteImage(
+                fused_label, str(output_path), imageIO="NiftiImageIO"
+            )
 
         return Segmentation(
             path=output_path,

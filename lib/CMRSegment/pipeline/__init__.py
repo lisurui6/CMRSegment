@@ -65,7 +65,7 @@ class CMRPipeline:
         for ed_image, es_image, cine, output_dir in subjects:
             if self.config.segment and self.config.segment_config.segment_cine:
                 print("Segmenting all {} cine images...".format(len(cine)))
-                cine_segmentations = cine_segmentor.apply(cine, output_dir=output_dir)
+                cine_segmentations = cine_segmentor.apply(cine, output_dir=output_dir, overwrite=self.config.overwrite)
             else:
                 cine_segmentations = [
                     Segmentation(
@@ -78,8 +78,13 @@ class CMRPipeline:
             for phase_image in [ed_image, es_image]:
                 if self.config.segment:
                     print("Segmenting {} image...".format(phase_image.phase))
-                    segmentation = hr_segmentor.apply(
-                        phase_image, output_path=output_dir.joinpath(f"seg_lvsa_SR_{phase_image.phase}.nii.gz")
+                    if self.config.overwrite or not output_dir.joinpath(f"seg_lvsa_SR_{phase_image.phase}.nii.gz").exists():
+                        segmentation = hr_segmentor.apply(
+                            phase_image, output_path=output_dir.joinpath(f"seg_lvsa_SR_{phase_image.phase}.nii.gz")
+                        )
+                    else:
+                        segmentation = Segmentation(
+                        phase=phase_image.phase, path=output_dir.joinpath(f"seg_lvsa_SR_{phase_image.phase}.nii.gz")
                     )
                 else:
                     segmentation = Segmentation(
