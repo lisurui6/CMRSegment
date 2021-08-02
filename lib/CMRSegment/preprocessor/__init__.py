@@ -51,26 +51,26 @@ class DataPreprocessor:
             # resample and enlarge ED/ES image
             ed_image = self.resample_image(
                 ed_image,
-                output_path=subject_output_dir.joinpath(f"lvsa_SR_ED.nii.gz"),
-                overwrite=True,
+                output_path=subject_output_dir.joinpath(f"lvsa_SR_ED_resampled.nii.gz"),
+                overwrite=overwrite,
                 use_irtk=use_irtk
             )
             enlarged_ed_image = self.enlarge_image(
                 ed_image,
                 output_path=subject_output_dir.joinpath(f"lvsa_SR_ED.nii.gz"),
-                overwrite=True,
+                overwrite=overwrite,
                 use_irtk=use_irtk,
             )
             es_image = self.resample_image(
                 es_image,
-                output_path=subject_output_dir.joinpath(f"lvsa_SR_ES.nii.gz"),
-                overwrite=True,
+                output_path=subject_output_dir.joinpath(f"lvsa_SR_ES_resampled.nii.gz"),
+                overwrite=overwrite,
                 use_irtk=use_irtk,
             )
             enlarged_es_image = self.enlarge_image(
                 es_image,
                 output_path=subject_output_dir.joinpath(f"lvsa_SR_ES.nii.gz"),
-                overwrite=True,
+                overwrite=overwrite,
                 use_irtk=use_irtk,
             )
 
