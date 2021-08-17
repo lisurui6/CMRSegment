@@ -65,7 +65,6 @@ class SegmentationRefiner:
                         model="Affine",
                         dofout=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
                     )
-                output_dofs.append(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz"))
                 if not output_dir.joinpath(f"shapenmi_{i}.txt").exists() or force:
                     mirtk.evaluate_similarity(
                         str(subject_seg),
@@ -75,6 +74,7 @@ class SegmentationRefiner:
                         dofin=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
                         table=str(output_dir.joinpath(f"shapenmi_{i}.txt")),
                     )
+                output_dofs.append(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz"))
 
                 if output_dir.joinpath(f"shapenmi_{i}.txt").exists():
                     similarities = np.genfromtxt('{0}/shapenmi_{1}.txt'.format(str(output_dir), i), delimiter=",")
@@ -84,7 +84,7 @@ class SegmentationRefiner:
             except KeyboardInterrupt:
                 raise
             except Exception:
-                nmi += [0]
+                continue
 
         if n_top < n_atlases:
             sortedIndexes = np.array(nmi).argsort()[::-1]
