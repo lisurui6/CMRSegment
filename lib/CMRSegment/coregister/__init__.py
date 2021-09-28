@@ -60,9 +60,10 @@ class Coregister:
             segmentation_path=segmentation.path,
             output_path=temp_dir.joinpath(f"vtk_RV_{segmentation.phase}.nii.gz")
         )
+
         lv_label = extract_lv_label(
             segmentation_path=segmentation.path,
-            output_path=temp_dir.joinpath(f"vtk_LV_{segmentation.phase}.nii.gz")
+            output_path=temp_dir.joinpath(f"vtk_LV_{segmentation.phase}.nii.gz"),
         )
         self.logger.info("\n ... Mesh Generation - step [2] -")
         nonrigid_transformed_mesh = self.register(

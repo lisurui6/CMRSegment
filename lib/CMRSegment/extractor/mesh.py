@@ -65,10 +65,10 @@ class MeshExtractor:
 
             temp_dir = output_path.parent.joinpath("temp")
             temp_dir.mkdir(exist_ok=True, parents=True)
-            extract_lv_label(
-                segmentation_path=segmentation.path,
-                output_path=temp_dir.joinpath("vtk_LV_{}.nii.gz".format(segmentation.phase))
-            )
+            # extract_lv_label(
+            #     segmentation_path=segmentation.path,
+            #     output_path=temp_dir.joinpath("vtk_LV_{}.nii.gz".format(segmentation.phase))
+            # )
             mirtk.calculate_element_wise(
                 str(segmentation.path),
                 "-label", 1, set=255, pad=0,
