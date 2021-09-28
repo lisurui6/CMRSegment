@@ -176,14 +176,12 @@ class Coregister:
             mirtk.transform_image(
                 str(lv_label),
                 str(lv_label_transformed),
-                "-invert",
                 dofin=str(lv_rigid_transform),
             )
         if not rv_label_transformed.exists() or self.overwrite:
             mirtk.transform_image(
                 str(rv_label),
                 str(rv_label_transformed),
-                "-invert",
                 dofin=str(lv_rigid_transform),
             )
         return lv_label_transformed, rv_label_transformed
