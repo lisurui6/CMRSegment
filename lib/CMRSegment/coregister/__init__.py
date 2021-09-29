@@ -381,23 +381,44 @@ class Coregister:
             dir=output_dir.joinpath("debug", "affine")
         )
         output_dir.joinpath("debug", "affine").mkdir(exist_ok=True, parents=True)
+        # mirtk.transform_points(
+        #     str(rigid_transformed_mesh.lv.endocardium),
+        #     str(transformed_mesh.lv.endocardium),
+        #     dofin=str(lv_affine_transform),
+        # )
+        # mirtk.transform_points(
+        #     str(rigid_transformed_mesh.lv.epicardium),
+        #     str(transformed_mesh.lv.epicardium),
+        #     dofin=str(lv_affine_transform),
+        # )
+        # mirtk.transform_points(
+        #     str(rigid_transformed_mesh.lv.myocardium),
+        #     str(transformed_mesh.lv.myocardium),
+        #     dofin=str(lv_affine_transform),
+        # )
+        # mirtk.transform_points(
+        #     str(rigid_transformed_mesh.rv.rv),
+        #     str(transformed_mesh.rv.rv),
+        #     dofin=str(rv_affine_transform),
+        # )
+
         mirtk.transform_points(
-            str(rigid_transformed_mesh.lv.endocardium),
+            str(self.template.lv_endo(fr)),
             str(transformed_mesh.lv.endocardium),
             dofin=str(lv_affine_transform),
         )
         mirtk.transform_points(
-            str(rigid_transformed_mesh.lv.epicardium),
+            str(self.template.lv_epi(fr)),
             str(transformed_mesh.lv.epicardium),
             dofin=str(lv_affine_transform),
         )
         mirtk.transform_points(
-            str(rigid_transformed_mesh.lv.myocardium),
+            str(self.template.lv_myo(fr)),
             str(transformed_mesh.lv.myocardium),
             dofin=str(lv_affine_transform),
         )
         mirtk.transform_points(
-            str(rigid_transformed_mesh.rv.rv),
+            str(self.template.rv(fr)),
             str(transformed_mesh.rv.rv),
             dofin=str(rv_affine_transform),
         )
