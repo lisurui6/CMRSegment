@@ -236,48 +236,48 @@ class Coregister:
         temp_dir.mkdir(exist_ok=True, parents=True)
         rv_transform = temp_dir.joinpath("rv_{}_nreg.dof.gz".format(fr))
         lv_transform = temp_dir.joinpath("lv_{}_nreg.dof.gz".format(fr))
+        # if not rv_transform.exists() or self.overwrite:
+        #     mirtk.register(
+        #         str(self.template.vtk_rv(fr)),
+        #         str(rv_label_transformed),
+        #         model="FFD",
+        #         dofin=str(rv_affine_transform),
+        #         dofout=str(rv_transform),
+        #         parin=str(self.segreg_path),
+        #     )
         if not rv_transform.exists() or self.overwrite:
             mirtk.register(
-                str(self.template.vtk_rv(fr)),
-                str(rv_label_transformed),
+                str(self.template.rv(fr)),
+                str(mesh.rv.rv),
+                # "-symmetric",
+                "-par", "Point set distance correspondence", "CP",
+                ds=8,
                 model="FFD",
                 dofin=str(rv_affine_transform),
                 dofout=str(rv_transform),
-                parin=str(self.segreg_path),
             )
-        # if not temp_dir.joinpath("rv{}ds8.dof.gz".format(fr)).exists() or self.overwrite:
+        # if not lv_transform.exists() or self.overwrite:
         #     mirtk.register(
-        #         str(self.template.rv(fr)),
-        #         str(mesh.rv.rv),
-        #         # "-symmetric",
-        #         "-par", "Point set distance correspondence", "CP",
-        #         ds=8,
+        #         str(self.template.vtk_lv(fr)),
+        #         str(lv_label_transformed),
         #         model="FFD",
-        #         dofin=str(temp_dir.joinpath("rv_{}_nreg.dof.gz".format(fr))),
-        #         dofout=str(temp_dir.joinpath("rv{}ds8.dof.gz".format(fr))),
+        #         dofin=str(lv_affine_transform),
+        #         dofout=str(lv_transform),
+        #         parin=str(self.segreg_path),
         #     )
         if not lv_transform.exists() or self.overwrite:
             mirtk.register(
-                str(self.template.vtk_lv(fr)),
-                str(lv_label_transformed),
+                str(self.template.lv_endo(fr)),
+                str(mesh.lv.endocardium),
+                str(self.template.lv_epi(fr)),
+                str(mesh.lv.epicardium),
+                # "-symmetric",
+                "-par", "Energy function", "PCD(T o P(1:2:end), P(2:2:end))",
                 model="FFD",
                 dofin=str(lv_affine_transform),
                 dofout=str(lv_transform),
-                parin=str(self.segreg_path),
+                ds=4,
             )
-        # if not temp_dir.joinpath("lv{}final.dof.gz".format(fr)).exists() or self.overwrite:
-        #     mirtk.register(
-        #         str(self.template.lv_endo(fr)),
-        #         str(mesh.lv.endocardium),
-        #         str(self.template.lv_epi(fr)),
-        #         str(mesh.lv.epicardium),
-        #         # "-symmetric",
-        #         "-par", "Energy function", "PCD(T o P(1:2:end), P(2:2:end))",
-        #         model="FFD",
-        #         dofin=str(temp_dir.joinpath("lv_{}_nreg.dof.gz".format(fr))),
-        #         dofout=str(temp_dir.joinpath("lv{}final.dof.gz".format(fr))),
-        #         ds=4,
-        #     )
         return lv_transform, rv_transform
 
     def nonrigid_transform(self, mesh: PhaseMesh, lv_nonrigid_transform: Path, rv_nonrigid_transform: Path, fr: Phase,
@@ -424,12 +424,12 @@ class Coregister:
         )
         # non-rigid
         lv_nonrigid_transform, rv_nonrigid_transform = self.nonrigid_registration(
-            rigid_transformed_mesh, lv_label_transformed, rv_label_transformed,
+            transformed_mesh, lv_label_transformed, rv_label_transformed,
             lv_affine_transform, rv_affine_transform, fr, output_dir
         )
         # same number of points
         nonrigid_transformed_mesh = self.nonrigid_transform(
-            rigid_transformed_mesh, lv_nonrigid_transform, rv_nonrigid_transform, fr, output_dir
+            transformed_mesh, lv_nonrigid_transform, rv_nonrigid_transform, fr, output_dir
         )
         return nonrigid_transformed_mesh
 
