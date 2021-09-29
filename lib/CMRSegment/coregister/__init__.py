@@ -272,18 +272,30 @@ class Coregister:
         )
         if not transformed_mesh.exists() or self.overwrite:
             output_dir.joinpath("nonrigid").mkdir(parents=True, exist_ok=True)
-            mirtk.match_points(
+            # mirtk.match_points(
+            #     str(self.template.lv_endo(fr)),
+            #     str(mesh.lv.endocardium),
+            #     dofin=str(lv_nonrigid_transform),
+            #     output=str(transformed_mesh.lv.endocardium),
+            # )
+
+            mirtk.transform_points(
                 str(self.template.lv_endo(fr)),
-                str(mesh.lv.endocardium),
+                str(transformed_mesh.lv.endocardium),
                 dofin=str(lv_nonrigid_transform),
-                output=str(transformed_mesh.lv.endocardium),
             )
 
-            mirtk.match_points(
+            # mirtk.match_points(
+            #     str(self.template.lv_epi(fr)),
+            #     str(mesh.lv.epicardium),
+            #     dofin=str(lv_nonrigid_transform),
+            #     output=str(transformed_mesh.lv.epicardium),
+            # )
+
+            mirtk.transform_points(
                 str(self.template.lv_epi(fr)),
-                str(mesh.lv.epicardium),
+                str(transformed_mesh.lv.epicardium),
                 dofin=str(lv_nonrigid_transform),
-                output=str(transformed_mesh.lv.epicardium),
             )
 
             mirtk.transform_points(
@@ -292,13 +304,19 @@ class Coregister:
                 dofin=str(lv_nonrigid_transform),
             )
 
-            mirtk.match_points(
+            # mirtk.match_points(
+            #     str(self.template.rv(fr)),
+            #     str(mesh.rv.rv),
+            #     dofin=str(rv_nonrigid_transform),
+            #     output=str(transformed_mesh.rv.rv),
+            # )
+
+            mirtk.transform_points(
                 str(self.template.rv(fr)),
-                str(mesh.rv.rv),
+                str(transformed_mesh.rv.rv),
                 dofin=str(rv_nonrigid_transform),
-                output=str(transformed_mesh.rv.rv),
             )
-            shutil.copy(str(mesh.rv.epicardium), str(transformed_mesh.rv.epicardium))
+            # shutil.copy(str(mesh.rv.epicardium), str(transformed_mesh.rv.epicardium))
         return transformed_mesh
 
     def register(self, mesh: PhaseMesh, landmark_dofs: Path, rv_label: Path, lv_label: Path, output_dir: Path):
