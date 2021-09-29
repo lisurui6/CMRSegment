@@ -374,7 +374,7 @@ class Coregister:
 
         # affine
         lv_affine_transform, rv_affine_transform = self.affine_registration(
-            lv_label_transformed, rv_label_transformed, fr, output_dir
+            lv_label_transformed, rv_label_transformed, fr, output_dir, rigid_transformed_mesh
         )
         transformed_mesh = PhaseMesh.from_dir(
             phase=mesh.phase,
