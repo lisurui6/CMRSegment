@@ -73,9 +73,10 @@ class Coregister:
             lv_label=lv_label,
             output_dir=output_dir,
         )
-        self.logger.info("\n ... Mesh Generation - step [3] -")
-        self.compute_wall_thickness(nonrigid_transformed_mesh, output_dir)
-        self.compute_curvature(nonrigid_transformed_mesh, output_dir)
+        # self.logger.info("\n ... Mesh Generation - step [3] -")
+        # self.compute_wall_thickness(nonrigid_transformed_mesh, output_dir)
+        # self.compute_curvature(nonrigid_transformed_mesh, output_dir)
+        return nonrigid_transformed_mesh
 
     def initialize_registration(self, landmark_path: Path, output_dir: Path):
         """Use landmark to initialise the registration"""
@@ -433,63 +434,63 @@ class Coregister:
         )
         return nonrigid_transformed_mesh
 
-    def compute_wall_thickness(self, mesh: PhaseMesh, output_dir: Path):
-        fr = mesh.phase
-        output_lv_thickness = output_dir.joinpath("wt", f"LVmyo_{fr}.vtk")
-        output_rv_thickness = output_dir.joinpath("wt", f"RV_{fr}.vtk")
-        output_lv_thickness.parent.mkdir(parents=True, exist_ok=True)
+    # def compute_wall_thickness(self, mesh: PhaseMesh, output_dir: Path):
+    #     fr = mesh.phase
+    #     output_lv_thickness = output_dir.joinpath("wt", f"LVmyo_{fr}.vtk")
+    #     output_rv_thickness = output_dir.joinpath("wt", f"RV_{fr}.vtk")
+    #     output_lv_thickness.parent.mkdir(parents=True, exist_ok=True)
+    #
+    #     if not output_lv_thickness.exists() or self.overwrite:
+    #         mirtk.evaluate_distance(
+    #             str(mesh.lv.endocardium),
+    #             str(mesh.lv.epicardium),
+    #             str(output_lv_thickness),
+    #             name="WallThickness",
+    #         )
+    #     if not output_rv_thickness.exists() or self.overwrite:
+    #         mirtk.evaluate_distance(
+    #             str(mesh.rv.rv),
+    #             str(mesh.rv.epicardium),
+    #             str(output_rv_thickness),
+    #             name="WallThickness",
+    #         )
+    #     if not output_dir.joinpath("rv_{}_wallthickness.txt".format(fr)).exists() or self.overwrite:
+    #         mirtk.convert_pointset(
+    #             str(output_rv_thickness),
+    #             str(output_dir.joinpath("rv_{}_wallthickness.txt".format(fr))),
+    #         )
+    #     if not output_dir.joinpath("lv_myo{}_wallthickness.txt".format(fr)).exists() or self.overwrite:
+    #         mirtk.convert_pointset(
+    #             str(output_lv_thickness),
+    #             str(output_dir.joinpath("lv_myo{}_wallthickness.txt".format(fr))),
+    #         )
 
-        if not output_lv_thickness.exists() or self.overwrite:
-            mirtk.evaluate_distance(
-                str(mesh.lv.endocardium),
-                str(mesh.lv.epicardium),
-                str(output_lv_thickness),
-                name="WallThickness",
-            )
-        if not output_rv_thickness.exists() or self.overwrite:
-            mirtk.evaluate_distance(
-                str(mesh.rv.rv),
-                str(mesh.rv.epicardium),
-                str(output_rv_thickness),
-                name="WallThickness",
-            )
-        if not output_dir.joinpath("rv_{}_wallthickness.txt".format(fr)).exists() or self.overwrite:
-            mirtk.convert_pointset(
-                str(output_rv_thickness),
-                str(output_dir.joinpath("rv_{}_wallthickness.txt".format(fr))),
-            )
-        if not output_dir.joinpath("lv_myo{}_wallthickness.txt".format(fr)).exists() or self.overwrite:
-            mirtk.convert_pointset(
-                str(output_lv_thickness),
-                str(output_dir.joinpath("lv_myo{}_wallthickness.txt".format(fr))),
-            )
-
-    def compute_curvature(self, mesh: PhaseMesh, output_dir: Path):
-        fr = mesh.phase
-        output_lv_curv = output_dir.joinpath("curv", f"LVmyo_{fr}.vtk")
-        output_rv_curv = output_dir.joinpath("curv", f"RV_{fr}.vtk")
-        output_rv_curv.parent.mkdir(parents=True, exist_ok=True)
-
-        if not output_lv_curv.exists() or self.overwrite:
-            mirtk.calculate_surface_attributes(
-                str(mesh.lv.myocardium),
-                str(output_lv_curv),
-                smooth_iterations=64,
-            )
-
-        if not output_rv_curv.exists() or self.overwrite:
-            mirtk.calculate_surface_attributes(
-                str(mesh.rv.rv),
-                str(output_rv_curv),
-                smooth_iterations=64,
-            )
-        if not output_dir.joinpath("rv_{}_curvature.txt".format(fr)).exists() or self.overwrite:
-            mirtk.convert_pointset(
-                str(output_rv_curv),
-                str(output_dir.joinpath("rv_{}_curvature.txt".format(fr))),
-            )
-        if not output_dir.joinpath("lv_myo{}_curvature.txt".format(fr)).exists() or self.overwrite:
-            mirtk.convert_pointset(
-                str(output_lv_curv),
-                str(output_dir.joinpath("lv_myo{}_curvature.txt".format(fr))),
-            )
+    # def compute_curvature(self, mesh: PhaseMesh, output_dir: Path):
+    #     fr = mesh.phase
+    #     output_lv_curv = output_dir.joinpath("curv", f"LVmyo_{fr}.vtk")
+    #     output_rv_curv = output_dir.joinpath("curv", f"RV_{fr}.vtk")
+    #     output_rv_curv.parent.mkdir(parents=True, exist_ok=True)
+    #
+    #     if not output_lv_curv.exists() or self.overwrite:
+    #         mirtk.calculate_surface_attributes(
+    #             str(mesh.lv.myocardium),
+    #             str(output_lv_curv),
+    #             smooth_iterations=64,
+    #         )
+    #
+    #     if not output_rv_curv.exists() or self.overwrite:
+    #         mirtk.calculate_surface_attributes(
+    #             str(mesh.rv.rv),
+    #             str(output_rv_curv),
+    #             smooth_iterations=64,
+    #         )
+    #     if not output_dir.joinpath("rv_{}_curvature.txt".format(fr)).exists() or self.overwrite:
+    #         mirtk.convert_pointset(
+    #             str(output_rv_curv),
+    #             str(output_dir.joinpath("rv_{}_curvature.txt".format(fr))),
+    #         )
+    #     if not output_dir.joinpath("lv_myo{}_curvature.txt".format(fr)).exists() or self.overwrite:
+    #         mirtk.convert_pointset(
+    #             str(output_lv_curv),
+    #             str(output_dir.joinpath("lv_myo{}_curvature.txt".format(fr))),
+    #         )
