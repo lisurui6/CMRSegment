@@ -186,7 +186,7 @@ class Coregister:
             )
         return lv_label_transformed, rv_label_transformed
 
-    def affine_registration(self, lv_label_transformed: Path, rv_label_transformed: Path, fr: Phase, output_dir: Path):
+    def affine_registration(self, lv_label_transformed: Path, rv_label_transformed: Path, fr: Phase, output_dir: Path, mesh):
         temp_dir = output_dir.joinpath("temp")
         temp_dir.mkdir(exist_ok=True, parents=True)
         if not temp_dir.joinpath("smoothed_template_vtk_RV_{}.nii.gz".format(fr)).exists() or self.overwrite:
@@ -198,20 +198,36 @@ class Coregister:
             )
         if not temp_dir.joinpath("rv_{}_areg.dof.gz".format(fr)).exists() or self.overwrite:
             mirtk.register(
-                str(temp_dir.joinpath("smoothed_template_vtk_RV_{}.nii.gz".format(fr))),
-                str(rv_label_transformed),
+                str(self.template.rv(fr)),
+                str(mesh.rv.rv),
+                "-par", "Point set distance correspondence", "CP",
                 model="Affine",
                 dofout=str(temp_dir.joinpath("rv_{}_areg.dof.gz".format(fr))),
                 parin=str(self.segareg_path),
             )
+            # mirtk.register(
+            #     str(temp_dir.joinpath("smoothed_template_vtk_RV_{}.nii.gz".format(fr))),
+            #     str(rv_label_transformed),
+            #     model="Affine",
+            #     dofout=str(temp_dir.joinpath("rv_{}_areg.dof.gz".format(fr))),
+            #     parin=str(self.segareg_path),
+            # )
         if not temp_dir.joinpath("lv_{}_areg.dof.gz".format(fr)).exists() or self.overwrite:
             mirtk.register(
-                str(self.template.vtk_lv(fr)),
-                str(lv_label_transformed),
+                str(self.template.lv_epi(fr)),
+                str(mesh.lv.epicardium),
+                "-par", "Point set distance correspondence", "CP",
                 model="Affine",
                 dofout=str(temp_dir.joinpath("lv_{}_areg.dof.gz".format(fr))),
                 parin=str(self.segareg_path),
             )
+            # mirtk.register(
+            #     str(self.template.vtk_lv(fr)),
+            #     str(lv_label_transformed),
+            #     model="Affine",
+            #     dofout=str(temp_dir.joinpath("lv_{}_areg.dof.gz".format(fr))),
+            #     parin=str(self.segareg_path),
+            # )
         return temp_dir.joinpath("lv_{}_areg.dof.gz".format(fr)), temp_dir.joinpath("rv_{}_areg.dof.gz".format(fr))
 
     def nonrigid_registration(self, mesh: PhaseMesh, lv_label_transformed: Path, rv_label_transformed: Path,
