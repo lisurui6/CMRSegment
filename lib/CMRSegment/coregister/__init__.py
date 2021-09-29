@@ -322,6 +322,31 @@ class Coregister:
     def register(self, mesh: PhaseMesh, landmark_dofs: Path, rv_label: Path, lv_label: Path, output_dir: Path):
         fr = mesh.phase
         lv_rigid_transform, rv_rigid_transform = self.rigid_registration(mesh, landmark_dofs, output_dir)
+        transformed_mesh = PhaseMesh.from_dir(
+            phase=mesh.phase,
+            dir=output_dir.joinpath("debug", "rigid")
+        )
+        output_dir.joinpath("debug", "rigid").mkdir(exist_ok=True, parents=True)
+        mirtk.transform_points(
+            str(mesh.lv.endocardium),
+            str(transformed_mesh.lv.endocardium),
+            dofin=str(lv_rigid_transform),
+        )
+        mirtk.transform_points(
+            str(mesh.lv.epicardium),
+            str(transformed_mesh.lv.epicardium),
+            dofin=str(lv_rigid_transform),
+        )
+        mirtk.transform_points(
+            str(mesh.lv.myocardium),
+            str(transformed_mesh.lv.myocardium),
+            dofin=str(lv_rigid_transform),
+        )
+        mirtk.transform_points(
+            str(mesh.rv.rv),
+            str(transformed_mesh.rv.rv),
+            dofin=str(rv_rigid_transform),
+        )
         rigid_transformed_mesh = self.rigid_transform(mesh, lv_rigid_transform, rv_rigid_transform, output_dir)
         lv_label_transformed, rv_label_transformed = self.label_rigid_transform(
             lv_label=lv_label,
@@ -335,7 +360,31 @@ class Coregister:
         lv_affine_transform, rv_affine_transform = self.affine_registration(
             lv_label_transformed, rv_label_transformed, fr, output_dir
         )
-
+        transformed_mesh = PhaseMesh.from_dir(
+            phase=mesh.phase,
+            dir=output_dir.joinpath("debug", "affine")
+        )
+        output_dir.joinpath("debug", "affine").mkdir(exist_ok=True, parents=True)
+        mirtk.transform_points(
+            str(self.template.lv_endo(fr)),
+            str(transformed_mesh.lv.endocardium),
+            dofin=str(lv_affine_transform),
+        )
+        mirtk.transform_points(
+            str(self.template.lv_epi(fr)),
+            str(transformed_mesh.lv.epicardium),
+            dofin=str(lv_affine_transform),
+        )
+        mirtk.transform_points(
+            str(self.template.lv_myo(fr)),
+            str(transformed_mesh.lv.myocardium),
+            dofin=str(lv_affine_transform),
+        )
+        mirtk.transform_points(
+            str(self.template.rv(fr)),
+            str(transformed_mesh.rv.rv),
+            dofin=str(rv_affine_transform),
+        )
         # non-rigid
         lv_nonrigid_transform, rv_nonrigid_transform = self.nonrigid_registration(
             rigid_transformed_mesh, lv_label_transformed, rv_label_transformed,
