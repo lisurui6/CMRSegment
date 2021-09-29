@@ -218,49 +218,51 @@ class Coregister:
                               lv_affine_transform: Path, rv_affine_transform: Path, fr: Phase, output_dir: Path):
         temp_dir = output_dir.joinpath("temp")
         temp_dir.mkdir(exist_ok=True, parents=True)
-        if not temp_dir.joinpath("rv_{}_nreg.dof.gz".format(fr)).exists() or self.overwrite:
+        rv_transform = temp_dir.joinpath("rv_{}_nreg.dof.gz".format(fr))
+        lv_transform = temp_dir.joinpath("lv_{}_nreg.dof.gz".format(fr))
+        if not rv_transform.exists() or self.overwrite:
             mirtk.register(
                 str(self.template.vtk_rv(fr)),
                 str(rv_label_transformed),
                 model="FFD",
                 dofin=str(rv_affine_transform),
-                dofout=str(temp_dir.joinpath("rv_{}_nreg.dof.gz".format(fr))),
+                dofout=str(rv_transform),
                 parin=str(self.segreg_path),
             )
-        if not temp_dir.joinpath("rv{}ds8.dof.gz".format(fr)).exists() or self.overwrite:
-            mirtk.register(
-                str(self.template.rv(fr)),
-                str(mesh.rv.rv),
-                # "-symmetric",
-                "-par", "Point set distance correspondence", "CP",
-                ds=8,
-                model="FFD",
-                dofin=str(temp_dir.joinpath("rv_{}_nreg.dof.gz".format(fr))),
-                dofout=str(temp_dir.joinpath("rv{}ds8.dof.gz".format(fr))),
-            )
-        if not temp_dir.joinpath("lv_{}_nreg.dof.gz".format(fr)).exists() or self.overwrite:
+        # if not temp_dir.joinpath("rv{}ds8.dof.gz".format(fr)).exists() or self.overwrite:
+        #     mirtk.register(
+        #         str(self.template.rv(fr)),
+        #         str(mesh.rv.rv),
+        #         # "-symmetric",
+        #         "-par", "Point set distance correspondence", "CP",
+        #         ds=8,
+        #         model="FFD",
+        #         dofin=str(temp_dir.joinpath("rv_{}_nreg.dof.gz".format(fr))),
+        #         dofout=str(temp_dir.joinpath("rv{}ds8.dof.gz".format(fr))),
+        #     )
+        if not lv_transform.exists() or self.overwrite:
             mirtk.register(
                 str(self.template.vtk_lv(fr)),
                 str(lv_label_transformed),
                 model="FFD",
                 dofin=str(lv_affine_transform),
-                dofout=str(temp_dir.joinpath("lv_{}_nreg.dof.gz".format(fr))),
+                dofout=str(lv_transform),
                 parin=str(self.segreg_path),
             )
-        if not temp_dir.joinpath("lv{}final.dof.gz".format(fr)).exists() or self.overwrite:
-            mirtk.register(
-                str(self.template.lv_endo(fr)),
-                str(mesh.lv.endocardium),
-                str(self.template.lv_epi(fr)),
-                str(mesh.lv.epicardium),
-                # "-symmetric",
-                "-par", "Energy function", "PCD(T o P(1:2:end), P(2:2:end))",
-                model="FFD",
-                dofin=str(temp_dir.joinpath("lv_{}_nreg.dof.gz".format(fr))),
-                dofout=str(temp_dir.joinpath("lv{}final.dof.gz".format(fr))),
-                ds=4,
-            )
-        return temp_dir.joinpath("lv{}final.dof.gz".format(fr)), temp_dir.joinpath("rv{}ds8.dof.gz".format(fr))
+        # if not temp_dir.joinpath("lv{}final.dof.gz".format(fr)).exists() or self.overwrite:
+        #     mirtk.register(
+        #         str(self.template.lv_endo(fr)),
+        #         str(mesh.lv.endocardium),
+        #         str(self.template.lv_epi(fr)),
+        #         str(mesh.lv.epicardium),
+        #         # "-symmetric",
+        #         "-par", "Energy function", "PCD(T o P(1:2:end), P(2:2:end))",
+        #         model="FFD",
+        #         dofin=str(temp_dir.joinpath("lv_{}_nreg.dof.gz".format(fr))),
+        #         dofout=str(temp_dir.joinpath("lv{}final.dof.gz".format(fr))),
+        #         ds=4,
+        #     )
+        return lv_transform, rv_transform
 
     def nonrigid_transform(self, mesh: PhaseMesh, lv_nonrigid_transform: Path, rv_nonrigid_transform: Path, fr: Phase,
                            output_dir: Path):
