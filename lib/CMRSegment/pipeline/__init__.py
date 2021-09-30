@@ -116,9 +116,10 @@ class CMRPipeline:
                 segmentations.append(segmentation)
                 if self.config.coregister:
                     print("Coregistering")
-                    mesh = coregister.run(
-                        mesh, segmentation, landmark_path, output_dir=output_dir.joinpath("registration")
-                    )
+                    if landmark_path.exists() and mesh.exists() and segmentation.exists():
+                        mesh = coregister.run(
+                            mesh, segmentation, landmark_path, output_dir=output_dir.joinpath("registration")
+                        )
                 meshes.append(mesh)
 
             if self.config.track_motion:
