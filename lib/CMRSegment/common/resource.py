@@ -94,7 +94,7 @@ class RVMesh:
         return cls(rv, epi)
 
     def exists(self):
-        return self.rv.exists() and self.epicardium.exists()
+        return self.rv.exists()
 
     def check_valid(self):
         if self.exists():
