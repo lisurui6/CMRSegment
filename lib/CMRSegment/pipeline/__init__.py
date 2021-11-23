@@ -100,19 +100,21 @@ class CMRPipeline:
                                 segmentation.path, output_path=landmark_path, labels=[2, 3]
                             )
                         except ValueError:
-                            continue
+                            pass
                     mesh = mesh_extractor.run(segmentation, output_dir.joinpath("mesh"))
                 else:
                     mesh = PhaseMesh.from_dir(output_dir.joinpath("mesh"), phase=phase_image.phase)
                 if self.config.refine:
-                    segmentation = segmentation_corrector.run(
-                        subject_image=phase_image,
-                        subject_seg=segmentation,
-                        subject_landmarks=landmark_path,
-                        output_dir=output_dir.joinpath("refine"),
-                        n_top=self.config.refine_config.n_top_atlas,
-                        force=self.config.overwrite,
-                    )
+                    print("Refining")
+                    if landmark_path.exists() and segmentation.exists():
+                        segmentation = segmentation_corrector.run(
+                            subject_image=phase_image,
+                            subject_seg=segmentation,
+                            subject_landmarks=landmark_path,
+                            output_dir=output_dir.joinpath("refine"),
+                            n_top=self.config.refine_config.n_top_atlas,
+                            force=self.config.overwrite,
+                        )
                 segmentations.append(segmentation)
                 if self.config.coregister:
                     print("Coregistering")
