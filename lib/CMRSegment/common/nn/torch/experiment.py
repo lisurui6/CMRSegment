@@ -158,7 +158,6 @@ class Experiment:
             inputs = prepare_tensors(inputs, self.config.gpu, self.config.device)
             preds = self.network(inputs)
             for metric in metrics:
-                preds = prepare_tensors(preds, self.config.gpu, self.config.device)
                 outputs = prepare_tensors(outputs, self.config.gpu, self.config.device)
                 metric.cumulate(preds, outputs)
         return metrics

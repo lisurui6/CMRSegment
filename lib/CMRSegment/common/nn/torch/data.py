@@ -191,13 +191,13 @@ class Torch2DSegmentationDataset(TorchDataset):
         if image.ndim == 4:
             image = np.squeeze(image, axis=-1).astype(np.int16)
         image = image.astype(np.float32)
+        # image = resize_image(image, (feature_size, feature_size, n_slices), 0)
         X, Y, Z = image.shape
         cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
         # if crop:
         #     image = Torch2DSegmentationDataset.crop_3D_image(image, cx, cy, feature_size, cz, n_slices)
         # else:
-        #     image = resize_image(image, (feature_size, feature_size, n_slices), 0)
-        image = np.transpose(image, (2, 0, 1))
+        image = np.transpose(image, (2, 0, 1))  # needed for FCN3D
         image = rescale_intensity(image, (1.0, 99.0))
         return image
 
@@ -209,12 +209,13 @@ class Torch2DSegmentationDataset(TorchDataset):
             label = np.squeeze(label, axis=-1).astype(np.int16)
         label = label.astype(np.float32)
         label[label == 4] = 3
+        # label = resize_image(label, (feature_size, feature_size, n_slices), 0)
+
         X, Y, Z = label.shape
         cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
         # if crop:
         #     label = Torch2DSegmentationDataset.crop_3D_image(label, cx, cy, feature_size, cz, n_slices)
         # else:
-        #     label = resize_image(label, (feature_size, feature_size, n_slices), 0)
 
         labels = []
         for i in range(1, 4):
@@ -224,7 +225,7 @@ class Torch2DSegmentationDataset(TorchDataset):
             blank_image[label == i] = 1
             labels.append(blank_image)
         label = np.array(labels)
-        label = np.transpose(label, (0, 3, 1, 2))
+        label = np.transpose(label, (0, 3, 1, 2))  # needed for FCN3D
         return label
 
     def get_image_tensor_from_index(self, index: int) -> torch.Tensor:
