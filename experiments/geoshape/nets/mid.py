@@ -3,8 +3,8 @@ import numpy as np
 from rasterizor.voxelize import Voxelize
 from experiments.geoshape.unet_3d import Encoder, Decoder
 import torch.nn as nn
-from geoshape.layers import SpatialTransformer, VecInt
-from geoshape.sample import sample_lv_rv_points
+from experiments.geoshape.layers import SpatialTransformer, VecInt
+from experiments.geoshape.sample import sample_lv_rv_points
 from torch.distributions.normal import Normal
 import torch.nn.functional as F
 import math
