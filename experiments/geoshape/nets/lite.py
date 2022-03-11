@@ -139,6 +139,7 @@ class LiteShapeDeformNet(torch.nn.Module):
     def forward(self, img, epoch=0):
         # x = (B, 1, H, W)
         x = norm_tensor(img)
+        x = torch.movedim(x, 2, -1)
         em = self.encoder(x)
         out = self.shape_regressor(em[-1])
         lv_par1 = self.shape_end_lv1(out)  # (B, 3), tanh

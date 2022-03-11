@@ -93,7 +93,7 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
     image = torch.from_numpy(image).float()
     image = torch.unsqueeze(image, 0)
     image = prepare_tensors(image, gpu, device)
-    print(image.shape)
+
     predicted = network(image)
     init_masks, affine_masks, deform_masks, nodes, flow, preint_flow = predicted
     init_mask = torch.cat(init_masks, dim=1).squeeze(0).detach().cpu().numpy()
