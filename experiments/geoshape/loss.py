@@ -34,8 +34,9 @@ class Grad3D(torch.nn.Module):
 
 
 class ShapeDeformLoss(TorchLoss):
-    def __init__(self):
+    def __init__(self, flow_lambda: int = 100):
         super().__init__()
+        self.flow_lambda = flow_lambda
         self.flow_grad_loss = Grad3D()
 
     def forward(self, predicted, label):
@@ -53,8 +54,14 @@ class ShapeDeformLoss(TorchLoss):
         loss += (label[:, 0] - deform_mask0).pow(2).mean()
         loss += (label[:, 1] - deform_mask1).pow(2).mean()
         loss += (label[:, 2] - deform_mask2).pow(2).mean()
-        loss += 10000 * self.flow_grad_loss(flow)
+        loss += self.flow_lambda * self.flow_grad_loss(flow)
         return loss
+
+    def new(self):
+        """Copy and reset obj"""
+        new_loss = self.__class__(flow_lambda=self.flow_lambda)
+        new_loss.reset()
+        return new_loss
 
 
 class DiceCoeff(TorchLoss):

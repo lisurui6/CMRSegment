@@ -3,7 +3,7 @@ from pathlib import Path
 from argparse import ArgumentParser
 from pyhocon import ConfigFactory
 from CMRSegment.common.config import get_conf
-from experiments.geoshape.models import ShapeDeformNet
+from experiments.geoshape.nets import ShapeDeformNet
 from CMRSegment.common.nn.torch.data import Torch2DSegmentationDataset, rescale_intensity
 from CMRSegment.common.config import DatasetConfig, DataConfig
 import numpy as np
