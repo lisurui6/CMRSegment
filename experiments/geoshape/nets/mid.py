@@ -14,7 +14,7 @@ kernel_size = 5
 
 
 class MidShapeDeformNet(torch.nn.Module):
-    def __init__(self, voxel_width, voxel_depth, voxel_height, num_lv_slices, num_extra_slices):
+    def __init__(self, voxel_width, voxel_depth, voxel_height, num_lv_slices, num_extra_slices, enc_dim):
         super().__init__()
         self.voxel_width = voxel_width
         self.voxel_depth = voxel_depth
@@ -24,8 +24,6 @@ class MidShapeDeformNet(torch.nn.Module):
 
         padding = int((kernel_size - 1) / 2)
 
-        n = 4
-        enc_dim = 512//n
         self.shape_encoder = Encoder(enc_dim, drop=False, kernel_size=kernel_size, in_channels=1)
 
         self.shape_regressor = nn.Sequential(

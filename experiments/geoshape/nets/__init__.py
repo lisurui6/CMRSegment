@@ -20,7 +20,7 @@ def norm_tensor(_x):
 
 
 class ShapeDeformNet(torch.nn.Module):
-    def __init__(self, voxel_width, voxel_depth, voxel_height, num_lv_slices, num_extra_slices):
+    def __init__(self, voxel_width, voxel_depth, voxel_height, num_lv_slices, num_extra_slices, enc_dim):
         super().__init__()
         self.voxel_width = voxel_width
         self.voxel_depth = voxel_depth
@@ -29,8 +29,7 @@ class ShapeDeformNet(torch.nn.Module):
         self.num_extra_slices = num_extra_slices
 
         padding = int((kernel_size - 1) / 2)
-        n = 4
-        enc_dim = 512
+
         self.shape_encoder = Encoder(enc_dim, drop=False, kernel_size=kernel_size, in_channels=1)
         self.shape_regressor = nn.Sequential(
             nn.Conv3d(

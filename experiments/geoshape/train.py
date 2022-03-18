@@ -60,6 +60,7 @@ def main():
             voxel_depth=get_conf(train_conf, group="network", key="voxel_depth"),
             num_lv_slices=get_conf(train_conf, group="network", key="num_lv_slices"),
             num_extra_slices=get_conf(train_conf, group="network", key="num_extra_slices"),
+            enc_dim=get_conf(train_conf, group="network", key="enc_dim"),
         )
     elif get_conf(train_conf, group="network", key="name") == "full":
         network = ShapeDeformNet(
@@ -68,6 +69,7 @@ def main():
             voxel_depth=get_conf(train_conf, group="network", key="voxel_depth"),
             num_lv_slices=get_conf(train_conf, group="network", key="num_lv_slices"),
             num_extra_slices=get_conf(train_conf, group="network", key="num_extra_slices"),
+            enc_dim=get_conf(train_conf, group="network", key="enc_dim"),
         )
     elif get_conf(train_conf, group="network", key="name") == "mid":
         network = MidShapeDeformNet(
@@ -76,6 +78,7 @@ def main():
             voxel_depth=get_conf(train_conf, group="network", key="voxel_depth"),
             num_lv_slices=get_conf(train_conf, group="network", key="num_lv_slices"),
             num_extra_slices=get_conf(train_conf, group="network", key="num_extra_slices"),
+            enc_dim=get_conf(train_conf, group="network", key="enc_dim"),
         )
     training_sets, validation_sets, extra_validation_sets = construct_training_validation_dataset(
         DataConfig.from_conf(conf_path), feature_size=get_conf(train_conf, group="network", key="voxel_width"),
