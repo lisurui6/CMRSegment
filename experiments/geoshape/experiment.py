@@ -51,11 +51,16 @@ class GeoShapeExperiment(Experiment):
             # train loop
             pbar = tqdm(enumerate(train_data_loader))
             n = 0
+            train_metrics = self.other_validation_metrics
+            for metric in train_metrics:
+                metric.reset()
             for idx, (inputs, outputs) in pbar:
                 inputs = prepare_tensors(inputs, self.config.gpu, self.config.device)
                 outputs = prepare_tensors(outputs, self.config.gpu, self.config.device)
                 predicted = self.network(inputs)
                 loss = self.loss.cumulate(predicted, outputs)
+                for metric in train_metrics:
+                    metric.cumulate(predicted, outputs)
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
@@ -65,9 +70,6 @@ class GeoShapeExperiment(Experiment):
                 n += inputs.shape[0]
             self.logger.info(f"{n} data processed.")
             self.logger.info("Epoch finished !")
-            val_metrics = self.eval(self.loss.new(), *self.other_validation_metrics, datasets=self.validation_sets)
-
-            train_metrics = self.eval(*self.other_validation_metrics, datasets=self.training_sets)
             if train_metrics[1:]:
                 self.logger.info("Other metrics on Training set.")
                 for metric in train_metrics[1:]:
@@ -76,6 +78,10 @@ class GeoShapeExperiment(Experiment):
                 self.tensor_board.add_scalar(
                     "other_metrics/training/{}".format(metric.document()), metric.avg(), epoch
                 )
+
+            val_metrics = self.eval(self.loss.new(), *self.other_validation_metrics, datasets=self.validation_sets)
+
+            # train_metrics = self.eval(*self.other_validation_metrics, datasets=self.training_sets)
 
             self.logger.info("Validation loss: {}".format(val_metrics[0].description()))
             if val_metrics[1:]:

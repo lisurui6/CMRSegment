@@ -5,6 +5,7 @@ from pyhocon import ConfigFactory
 from CMRSegment.common.config import get_conf
 from experiments.geoshape.nets import ShapeDeformNet
 from CMRSegment.common.nn.torch.data import Torch2DSegmentationDataset, rescale_intensity
+from CMRSegment.common.nn.torch.augmentation import central_crop_with_padding
 from CMRSegment.common.config import DatasetConfig, DataConfig
 import numpy as np
 import nibabel as nib
@@ -84,9 +85,12 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
     voxel_height = network.voxel_height
     Z, X, Y = image.shape  # (H, W, D)
     cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
-    image = np.transpose(image, [1, 2, 0])  # (W, D, H)
-    image = Torch2DSegmentationDataset.crop_3D_image(image, cx, cy, voxel_width, cz, voxel_height)
-    image = np.transpose(image, (2, 0, 1))  # (H, W, D)
+    image, __ = central_crop_with_padding(image, None, (voxel_height, voxel_width, voxel_width))
+
+    # image = np.transpose(image, [1, 2, 0])  # (W, D, H)
+    # image = Torch2DSegmentationDataset.crop_3D_image(image, cx, cy, voxel_width, cz, voxel_height)
+    # image = np.transpose(image, (2, 0, 1))  # (H, W, D)
+
     image = rescale_intensity(image, (1.0, 99.0))
 
     image = np.expand_dims(image, 0)
@@ -108,9 +112,14 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
     nim = nib.load(str(image_path))
     # Transpose and crop the segmentation to recover the original size
     for predicted, prefix in zip([init_mask, affine_mask, deform_mask], ["init", "affine", "deform"]):
-        # predicted: (1, 1, W, D, H)
+        # predicted: (3, W, D, H)
         # predicted = np.squeeze(predicted, axis=0)
-        predicted = np.pad(predicted, ((0, 0), (cx - voxel_width//2, X - cx - voxel_width//2), (cy - voxel_width//2, Y - cy - voxel_width//2), (cz - voxel_height//2, Z - cz - voxel_height//2)), "constant")
+
+        # predicted = np.pad(predicted, ((0, 0), (cx - voxel_width//2, X - cx - voxel_width//2), (cy - voxel_width//2, Y - cy - voxel_width//2), (cz - voxel_height//2, Z - cz - voxel_height//2)), "constant")
+        predicted = np.transpose(predicted, (0, 3, 1, 2))
+        __, predicted = central_crop_with_padding(None, predicted, (Z, X, Y))
+        predicted = np.transpose(predicted, (0, 2, 3, 1))
+
         # predicted = predicted[:, z1_ - z1:z1_ - z1 + Z, x_pre:x_pre + X, y_pre:y_pre + Y]
         # map back to original size
         final_predicted = np.zeros((original_image.shape[1], original_image.shape[2], original_image.shape[0]))
