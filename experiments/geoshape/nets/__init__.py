@@ -145,9 +145,9 @@ class ShapeDeformNet(torch.nn.Module):
         self.deform_transformer = SpatialTransformer(size=(self.voxel_width, self.voxel_depth, self.voxel_height), mode="bilinear")
 
     def forward(self, img, epoch=0):
-        # x = (B, 1, W, D, H)
+        # x = (B, 1, H (z), W (x), D (y))
         x = norm_tensor(img)
-        x = torch.movedim(x, 2, -1)
+        x = torch.movedim(x, 2, -1)  # x = (B, 1, W, D, H)
 
         out = self.shape_encoder(x)
         out = self.shape_regressor(out[-1])
@@ -312,7 +312,7 @@ def similarity_transform_points(points, affine_pars1, affine_pars2):
     affine_nodes0 = torch.cat((points, z), 2)
     # affine_nodes0 = affine_nodes0.squeeze(1)
 
-    theta_x = affine_pars1[:, 0] * math.pi
+    theta_x = affine_pars1[:, 0] * math.pi/180
     rotation_matrix_x = torch.stack([
         torch.stack(
             [torch.ones_like(theta_x), torch.zeros_like(theta_x), torch.zeros_like(theta_x), torch.zeros_like(theta_x)],
@@ -325,7 +325,7 @@ def similarity_transform_points(points, affine_pars1, affine_pars2):
                      torch.ones_like(theta_x),], dim=1),
     ], dim=2)
 
-    theta_y = affine_pars1[:, 1] * math.pi
+    theta_y = affine_pars1[:, 1] * math.pi/180
     rotation_matrix_y = torch.stack([
         torch.stack([torch.cos(theta_y), torch.zeros_like(theta_y), -torch.sin(theta_y), torch.zeros_like(theta_y)],
                     dim=1),

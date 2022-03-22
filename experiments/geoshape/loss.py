@@ -40,6 +40,7 @@ class ShapeDeformLoss(TorchLoss):
         self.flow_grad_loss = Grad3D()
 
     def forward(self, predicted, label):
+        # label: (B, 3, H(z), W(x), D(y))
         label = torch.movedim(label, 2, -1)
         [init_mask0, init_mask1, init_mask2], \
         [affine_mask0, affine_mask1, affine_mask2], \
