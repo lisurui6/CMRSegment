@@ -125,7 +125,7 @@ class GeoShapeExperiment(Experiment):
             output_path = checkpoint_dir.joinpath("CP_{}.pth".format(epoch))
             torch.save(self.network.state_dict(), str(output_path))
             self.logger.info("Checkpoint {} saved at {}!".format(epoch, str(output_path)))
-            if self.inference_func is not None and epoch % 5 == 0:
+            if self.inference_func is not None:
                 self.inference(epoch)
 
     def inference(self, epoch: int):

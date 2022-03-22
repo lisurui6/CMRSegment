@@ -167,9 +167,9 @@ class LiteShapeDeformNet(torch.nn.Module):
         affine_pars1 = self.affine_end1(affine_pars)
         affine_pars2 = self.affine_end2(affine_pars)
 
-        affine_node0 = similarity_transform_points(nodes0, affine_pars1, affine_pars2)
-        affine_node1 = similarity_transform_points(nodes1, affine_pars1, affine_pars2)
-        affine_node2 = similarity_transform_points(nodes2, affine_pars1, affine_pars2)
+        affine_node0 = similarity_transform_points(nodes0.detach(), affine_pars1, affine_pars2)
+        affine_node1 = similarity_transform_points(nodes1.detach(), affine_pars1, affine_pars2)
+        affine_node2 = similarity_transform_points(nodes2.detach(), affine_pars1, affine_pars2)
 
         affine_mask0 = self.voxelize_mask(affine_node0, tetras0)
         affine_mask1 = self.voxelize_mask(affine_node1, tetras1)
@@ -181,6 +181,10 @@ class LiteShapeDeformNet(torch.nn.Module):
         preint_flow = flow
         flow = self.integrate(preint_flow)
         # vertices: (B, D, 3)
+        affine_node0 = affine_node0.detach()
+        affine_node1 = affine_node1.detach()
+        affine_node2 = affine_node2.detach()
+
         affine_node0[..., 1] = affine_node0[..., 1] * -1
         Pxx = F.grid_sample(flow[:, 0:1], affine_node0.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)  # Pxx (B, D, 1)
         Pyy = F.grid_sample(flow[:, 1:2], affine_node0.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)
