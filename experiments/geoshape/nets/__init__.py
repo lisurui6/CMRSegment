@@ -42,8 +42,9 @@ class ShapeDeformNet(torch.nn.Module):
             nn.Conv3d(self.shape_encoder.dims[-2] // 2, self.shape_encoder.dims[-2] // 4, kernel_size=1, stride=1),
             nn.BatchNorm3d(self.shape_encoder.dims[-2] // 4),
             nn.ReLU(),
+            nn.MaxPool3d((2, 2, 2)),
             nn.Flatten(),
-            nn.Linear(1024, 400),
+            nn.Linear(1024*2, 400),
             nn.ReLU(),
             nn.Linear(400, 200),
             nn.ReLU(),
@@ -106,8 +107,9 @@ class ShapeDeformNet(torch.nn.Module):
             nn.Conv3d(self.affine_encoder.dims[-2] // 2, self.affine_encoder.dims[-2] // 4, kernel_size=1, stride=1),
             nn.BatchNorm3d(self.affine_encoder.dims[-2] // 4),
             nn.ReLU(),
+            nn.MaxPool3d((2, 2, 2)),
             nn.Flatten(),
-            nn.Linear(1024, 400),
+            nn.Linear(1024*2, 400),
             # nn.BatchNorm1d(400),
             nn.ReLU(),
             nn.Linear(400, 200),
@@ -148,7 +150,6 @@ class ShapeDeformNet(torch.nn.Module):
         x = torch.movedim(x, 2, -1)
 
         out = self.shape_encoder(x)
-        print(out[-1].shape)
         out = self.shape_regressor(out[-1])
         lv_par1 = self.shape_end_lv1(out)  # (B, 3), tanh
         lv_par2 = self.shape_end_lv2(out)  # (B, 5), sig
