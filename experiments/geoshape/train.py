@@ -102,6 +102,19 @@ def main():
             network.parameters(), lr=get_conf(train_conf, group="optimizer", key="learning_rate")
         )
 
+    if get_conf(train_conf, group="experiment", key="resume") is not None:
+        checkpoint = torch.load(get_conf(train_conf, group="experiment", key="resume"))
+
+        # if only model state dict is saved.
+        network.load_state_dict(checkpoint)
+        start_epoch = int(get_conf(train_conf, group="experiment", key="resume").split("_")[-1][0])
+
+        # if model, optimizer and epoch are saved.
+        # network.load_state_dict(checkpoint["model"])
+        # optimizer.load_state_dict(checkpoint["optimizer"])
+        # start_epoch = checkpoint["epoch"] + 1
+    else:
+        start_epoch = 0
     loss = ShapeDeformLoss(flow_lambda=get_conf(train_conf, group="loss", key="flow_lambda"))
     experiment = GeoShapeExperiment(
         config=config,
@@ -129,7 +142,7 @@ def main():
         ],
         inference_func=inference,
     )
-    experiment.train()
+    experiment.train(start_epoch=start_epoch)
 
 
 if __name__ == '__main__':

@@ -29,7 +29,7 @@ def read_image(dataset, idx):
 
 
 class GeoShapeExperiment(Experiment):
-    def train(self):
+    def train(self, start_epoch=0):
         self.network.train()
         train_data_loader = MultiDataLoader(
             *self.training_sets,
@@ -39,7 +39,7 @@ class GeoShapeExperiment(Experiment):
             pin_memory=self.config.pin_memory
         )
         set = False
-        for epoch in range(self.config.num_epochs):
+        for epoch in range(start_epoch, self.config.num_epochs):
             self.network.train()
             self.logger.info("{}: starting epoch {}/{}".format(datetime.now(), epoch, self.config.num_epochs))
             self.loss.reset()
@@ -70,11 +70,11 @@ class GeoShapeExperiment(Experiment):
                 n += inputs.shape[0]
             self.logger.info(f"{n} data processed.")
             self.logger.info("Epoch finished !")
-            if train_metrics[1:]:
+            if train_metrics:
                 self.logger.info("Other metrics on Training set.")
-                for metric in train_metrics[1:]:
+                for metric in train_metrics:
                     self.logger.info("{}".format(metric.description()))
-            for metric in train_metrics[1:]:
+            for metric in train_metrics:
                 self.tensor_board.add_scalar(
                     "other_metrics/training/{}".format(metric.document()), metric.avg(), epoch
                 )
@@ -123,7 +123,14 @@ class GeoShapeExperiment(Experiment):
             checkpoint_dir = self.config.experiment_dir.joinpath("checkpoints")
             checkpoint_dir.mkdir(parents=True, exist_ok=True)
             output_path = checkpoint_dir.joinpath("CP_{}.pth".format(epoch))
-            torch.save(self.network.state_dict(), str(output_path))
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "model": self.network.state_dict(),
+                    "optimizer": self.optimizer.state_dict(),
+                },
+                str(output_path)
+            )
             self.logger.info("Checkpoint {} saved at {}!".format(epoch, str(output_path)))
             if self.inference_func is not None:
                 self.inference(epoch)
