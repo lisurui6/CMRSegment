@@ -80,6 +80,7 @@ def main():
             num_extra_slices=get_conf(train_conf, group="network", key="num_extra_slices"),
             enc_dim=get_conf(train_conf, group="network", key="enc_dim"),
         )
+    network.cuda()
     training_sets, validation_sets, extra_validation_sets = construct_training_validation_dataset(
         DataConfig.from_conf(conf_path), feature_size=get_conf(train_conf, group="network", key="voxel_width"),
         n_slices=get_conf(train_conf, group="network", key="voxel_height"), is_3d=True, seed=config.seed,
