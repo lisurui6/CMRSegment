@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 from pyhocon import ConfigFactory
 from CMRSegment.common.config import get_conf
 from experiments.geoshape.nets import ShapeDeformNet
-from CMRSegment.common.nn.torch.data import Torch2DSegmentationDataset, rescale_intensity
+from CMRSegment.common.nn.torch.data import Torch2DSegmentationDataset, rescale_intensity, resize_image, resize_label
 from CMRSegment.common.nn.torch.augmentation import central_crop_with_padding
 from CMRSegment.common.config import DatasetConfig, DataConfig
 import numpy as np
@@ -78,22 +78,24 @@ def main():
 
 
 def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network: torch.nn.Module, output_dir: Path,
-              gpu, device):
+              gpu, device, crop_size, voxel_size):
+    # crop_size: (H, W, D)
     import math
     original_image = image
     voxel_width = network.voxel_width
     voxel_height = network.voxel_height
     Z, X, Y = image.shape  # (H, W, D)
     cx, cy, cz = int(X / 2), int(Y / 2), int(Z / 2)
-    image, __ = central_crop_with_padding(image, None, (voxel_height, voxel_width, voxel_width))
+    # image, __ = central_crop_with_padding(image, None, crop_size)
+    resized_image = resize_image(image, voxel_size, 0)
 
     # image = np.transpose(image, [1, 2, 0])  # (W, D, H)
     # image = Torch2DSegmentationDataset.crop_3D_image(image, cx, cy, voxel_width, cz, voxel_height)
     # image = np.transpose(image, (2, 0, 1))  # (H, W, D)
 
-    image = rescale_intensity(image, (1.0, 99.0))
+    resized_image = rescale_intensity(resized_image, (1.0, 99.0))
 
-    image = np.expand_dims(image, 0)
+    image = np.expand_dims(resized_image, 0)
     image = torch.from_numpy(image).float()
     image = torch.unsqueeze(image, 0)
     image = prepare_tensors(image, gpu, device)
@@ -117,12 +119,15 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
 
         # predicted = np.pad(predicted, ((0, 0), (cx - voxel_width//2, X - cx - voxel_width//2), (cy - voxel_width//2, Y - cy - voxel_width//2), (cz - voxel_height//2, Z - cz - voxel_height//2)), "constant")
         predicted = np.transpose(predicted, (0, 3, 1, 2))
-        __, predicted = central_crop_with_padding(None, predicted, (Z, X, Y))
+        # predicted = resize_label(predicted, crop_size, 0)
+        # predicted = resize_label(predicted, original_image.shape, 0)
+        # __, predicted = central_crop_with_padding(None, predicted, (Z, X, Y))
         predicted = np.transpose(predicted, (0, 2, 3, 1))
 
         # predicted = predicted[:, z1_ - z1:z1_ - z1 + Z, x_pre:x_pre + X, y_pre:y_pre + Y]
         # map back to original size
-        final_predicted = np.zeros((original_image.shape[1], original_image.shape[2], original_image.shape[0]))
+        # final_predicted = np.zeros((original_image.shape[1], original_image.shape[2], original_image.shape[0]))
+        final_predicted = np.zeros((resized_image.shape[1], resized_image.shape[2], resized_image.shape[0]))
         # print(predicted.shape, final_predicted.shape)
         final_predicted[predicted[2] > 0.5] = 3
         final_predicted[predicted[1] > 0.5] = 2
@@ -142,25 +147,36 @@ def inference(image: np.ndarray, label: torch.Tensor, image_path: Path, network:
         #     pred_segt = np.pad(pred_segt, ((0, 0), (0, 0), (z_pre, z_post)), 'constant')
 
         nim2 = nib.Nifti1Image(final_predicted, nim.affine)
-        nim2.header['pixdim'] = nim.header['pixdim']
+        # nim2.header['pixdim'] = nim.header['pixdim']
         output_dir.mkdir(parents=True, exist_ok=True)
         nib.save(nim2, '{0}/{1}_seg.nii.gz'.format(str(output_dir), prefix))
 
-    final_image = np.transpose(original_image, [1, 2, 0])
+    # final_image = np.transpose(original_image, [1, 2, 0])
+    final_image = np.transpose(resized_image, [1, 2, 0])
     # print(final_image.shape)
     nim2 = nib.Nifti1Image(final_image, nim.affine)
-    nim2.header['pixdim'] = nim.header['pixdim']
+    # nim2.header['pixdim'] = nim.header['pixdim']
     nib.save(nim2, '{0}/image.nii.gz'.format(str(output_dir)))
     # shutil.copy(str(input_path), str(output_dir.joinpath("image.nii.gz")))
-
-    final_label = np.zeros((label.shape[1], label.shape[2], label.shape[3]))
+    print(label.shape)
+    # label = torch.movedim(label, 1, -1)
     label = label.detach().cpu().numpy()
+    final_label = np.zeros(resized_image.shape)
+    print(final_label.shape)
+    label = resize_label(label, resized_image.shape, 0)
+    print(label.shape)
     for i in range(label.shape[0]):
         final_label[label[i, :, :, :] == 1.0] = i + 1
 
     final_label = np.transpose(final_label, [1, 2, 0])
     # print(final_label.shape)
     nim2 = nib.Nifti1Image(final_label, nim.affine)
-    nim2.header['pixdim'] = nim.header['pixdim']
+    # nim2.header['pixdim'] = nim.header['pixdim']
     output_dir.mkdir(parents=True, exist_ok=True)
     nib.save(nim2, '{0}/label.nii.gz'.format(str(output_dir)))
+    # from matplotlib import pyplot as plt
+    # plt.figure("label")
+    # plt.imshow(final_label[:, :, 16])
+    # plt.figure("predicted")
+    # plt.imshow(final_predicted[:, :, 16])
+    # plt.show()

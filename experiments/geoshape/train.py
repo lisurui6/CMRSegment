@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 from experiments.geoshape.nets import ShapeDeformNet
 from experiments.geoshape.nets.lite import LiteShapeDeformNet
 from experiments.geoshape.nets.mid import MidShapeDeformNet
+from experiments.geoshape.nets.ellipse import EllipseShapeDeformNet
 
 from CMRSegment.common.nn.torch.experiment import Experiment, ExperimentConfig
 from CMRSegment.common.nn.torch.data import construct_training_validation_dataset
@@ -80,10 +81,30 @@ def main():
             num_extra_slices=get_conf(train_conf, group="network", key="num_extra_slices"),
             enc_dim=get_conf(train_conf, group="network", key="enc_dim"),
         )
+    elif get_conf(train_conf, group="network", key="name") == "ellipse":
+        network = EllipseShapeDeformNet(
+            voxel_width=get_conf(train_conf, group="network", key="voxel_width"),
+            voxel_height=get_conf(train_conf, group="network", key="voxel_height"),
+            voxel_depth=get_conf(train_conf, group="network", key="voxel_depth"),
+            num_lv_slices=get_conf(train_conf, group="network", key="num_lv_slices"),
+            num_extra_slices=get_conf(train_conf, group="network", key="num_extra_slices"),
+            enc_dim=get_conf(train_conf, group="network", key="enc_dim"),
+            stages=get_conf(train_conf, group="network", key="stages"),
+        )
     network.cuda()
     training_sets, validation_sets, extra_validation_sets = construct_training_validation_dataset(
-        DataConfig.from_conf(conf_path), feature_size=get_conf(train_conf, group="network", key="voxel_width"),
-        n_slices=get_conf(train_conf, group="network", key="voxel_height"), is_3d=True, seed=config.seed,
+        DataConfig.from_conf(conf_path),
+        crop_size=(
+            get_conf(train_conf, group="network", key="crop_height"),
+            get_conf(train_conf, group="network", key="crop_width"),
+            get_conf(train_conf, group="network", key="crop_depth")
+        ),
+        voxel_size=(
+            get_conf(train_conf, group="network", key="voxel_height"),
+            get_conf(train_conf, group="network", key="voxel_width"),
+            get_conf(train_conf, group="network", key="voxel_depth")
+        ),
+        is_3d=True, seed=config.seed,
         augmentation_config=augmentation_config, output_dir=config.experiment_dir,
     )
     for train in training_sets:
@@ -116,7 +137,10 @@ def main():
         start_epoch = checkpoint["epoch"] + 1
     else:
         start_epoch = 0
-    loss = ShapeDeformLoss(flow_lambda=get_conf(train_conf, group="loss", key="flow_lambda"))
+    loss = ShapeDeformLoss(
+        flow_lambda=get_conf(train_conf, group="loss", key="flow_lambda"),
+        stages=get_conf(train_conf, group="network", key="stages"),
+    )
     experiment = GeoShapeExperiment(
         config=config,
         network=network,

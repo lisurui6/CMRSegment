@@ -34,33 +34,53 @@ class Grad3D(torch.nn.Module):
 
 
 class ShapeDeformLoss(TorchLoss):
-    def __init__(self, flow_lambda: int = 100):
+    def __init__(self, flow_lambda: int = 100, stages=None):
         super().__init__()
         self.flow_lambda = flow_lambda
         self.flow_grad_loss = Grad3D()
+        if stages is None:
+            stages = ["init", "affine", "deform"]
+        self.stages = stages
 
     def forward(self, predicted, label):
         # label: (B, 3, H(z), W(x), D(y))
+        label[:, 1][label[:, 0] == 1] = 1
         label = torch.movedim(label, 2, -1)
         [init_mask0, init_mask1, init_mask2], \
         [affine_mask0, affine_mask1, affine_mask2], \
         [deform_mask0, deform_mask1, deform_mask2], \
         [nodes0, nodes1, nodes2], flow, preint_flow = predicted
-        loss = (label[:, 0] - init_mask0).pow(2).mean()
-        loss += (label[:, 1] - init_mask1).pow(2).mean()
-        loss += (label[:, 2] - init_mask2).pow(2).mean()
-        loss += (label[:, 0] - affine_mask0).pow(2).mean()
-        loss += (label[:, 1] - affine_mask1).pow(2).mean()
-        loss += (label[:, 2] - affine_mask2).pow(2).mean()
-        loss += (label[:, 0] - deform_mask0).pow(2).mean()
-        loss += (label[:, 1] - deform_mask1).pow(2).mean()
-        loss += (label[:, 2] - deform_mask2).pow(2).mean()
-        loss += self.flow_lambda * self.flow_grad_loss(flow)
-        return loss
+        # from matplotlib import pyplot as plt
+        # plt.figure("0 label")
+        # plt.imshow(label[0, 0, :, :, 16].detach().cpu().numpy())
+        # plt.figure("0 mask")
+        # plt.imshow(init_mask0[0, 0, :, :, 16].detach().cpu().numpy())
+        # plt.figure("1 label")
+        # plt.imshow(label[0, 1, :, :, 16].detach().cpu().numpy())
+        # plt.figure("1 mask")
+        # plt.imshow(init_mask1[0, 0, :, :, 16].detach().cpu().numpy())
+        # plt.figure("2 label")
+        # plt.imshow(label[0, 2, :, :, 16].detach().cpu().numpy())
+        # plt.figure("2 mask")
+        # plt.imshow(init_mask2[0, 0, :, :, 16].detach().cpu().numpy())
+        # plt.show()
+        loss = (label[:, 0] - init_mask0).pow(2).mean(dim=(2, 3, 4))
+        loss += (label[:, 1] - init_mask1).pow(2).mean(dim=(2, 3, 4))
+        loss += (label[:, 2] - init_mask2).pow(2).mean(dim=(2, 3, 4))
+        if "affine" in self.stages:
+            loss += (label[:, 0] - affine_mask0).pow(2).mean(dim=(2, 3, 4))
+            loss += (label[:, 1] - affine_mask1).pow(2).mean(dim=(2, 3, 4))
+            loss += (label[:, 2] - affine_mask2).pow(2).mean(dim=(2, 3, 4))
+        if "deform" in self.stages:
+            loss += (label[:, 0] - deform_mask0).pow(2).mean(dim=(2, 3, 4))
+            loss += (label[:, 1] - deform_mask1).pow(2).mean(dim=(2, 3, 4))
+            loss += (label[:, 2] - deform_mask2).pow(2).mean(dim=(2, 3, 4))
+            loss += self.flow_lambda * self.flow_grad_loss(flow)
+        return loss.mean()
 
     def new(self):
         """Copy and reset obj"""
-        new_loss = self.__class__(flow_lambda=self.flow_lambda)
+        new_loss = self.__class__(flow_lambda=self.flow_lambda, stages=self.stages)
         new_loss.reset()
         return new_loss
 
@@ -68,7 +88,11 @@ class ShapeDeformLoss(TorchLoss):
 class DiceCoeff(TorchLoss):
     def forward(self, predicted, target):
         # predicted: (B, 1, W, D, H), target: (B, H, W, D)
-        target = torch.movedim(target, 1, -1)
+        # or predicted: (B, 3, W, D, H), target: (B, 3, H, W, D)
+        if len(target.shape) == 4:
+            target = torch.movedim(target, 1, -1)
+        elif len(target.shape) == 5:
+            target = torch.movedim(target, 2, -1)
         eps = 0.0001
         m1 = predicted.view(predicted.shape[0], -1).float()
         m2 = target.reshape(target.shape[0], -1).float()

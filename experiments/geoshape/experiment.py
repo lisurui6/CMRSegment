@@ -11,7 +11,6 @@ import numpy as np
 import torch
 
 
-
 def read_image(dataset, idx):
     import math
     image = dataset.read_image(dataset.image_paths[idx], dataset.feature_size, dataset.n_slices)
@@ -57,7 +56,7 @@ class GeoShapeExperiment(Experiment):
             for idx, (inputs, outputs) in pbar:
                 inputs = prepare_tensors(inputs, self.config.gpu, self.config.device)
                 outputs = prepare_tensors(outputs, self.config.gpu, self.config.device)
-                predicted = self.network(inputs)
+                predicted = self.network(inputs, epoch, outputs)
                 loss = self.loss.cumulate(predicted, outputs)
                 for metric in train_metrics:
                     metric.cumulate(predicted, outputs)
@@ -132,7 +131,7 @@ class GeoShapeExperiment(Experiment):
                 str(output_path)
             )
             self.logger.info("Checkpoint {} saved at {}!".format(epoch, str(output_path)))
-            if self.inference_func is not None:
+            if self.inference_func is not None and epoch % 100 == 0:
                 self.inference(epoch)
 
     def inference(self, epoch: int):
@@ -143,13 +142,13 @@ class GeoShapeExperiment(Experiment):
                 image_path = tr.image_paths[idx]
                 label_path = tr.label_paths[idx]
 
-                image = tr.read_image(tr.image_paths[idx], tr.feature_size, tr.n_slices)
+                image = tr.read_image(tr.image_paths[idx])
                 label = tr.get_label_tensor_from_index(idx)
 
                 self.logger.info("Inferencing for {} dataset, image {}.".format(tr.name, idx))
                 self.inference_func(
                     image, label, image_path, self.network, output_dir.joinpath(tr.name, "training", image_path.parent.stem),
-                    self.config.gpu, self.config.device,
+                    self.config.gpu, self.config.device, tr.crop_size, tr.voxel_size
                 )
 
         for val in self.validation_sets:
@@ -158,14 +157,14 @@ class GeoShapeExperiment(Experiment):
                 image_path = val.image_paths[idx]
                 label_path = val.label_paths[idx]
 
-                image = val.read_image(val.image_paths[idx], val.feature_size, val.n_slices)
+                image = val.read_image(val.image_paths[idx])
                 label = val.get_label_tensor_from_index(idx)
                 # image = prepare_tensors(image, self.config.gpu, self.config.device)
                 self.logger.info("Inferencing for {} dataset, image {}.".format(val.name, idx))
 
                 self.inference_func(
                     image, label, image_path, self.network, output_dir.joinpath(val.name, "validation", image_path.parent.stem),
-                    self.config.gpu, self.config.device,
+                    self.config.gpu, self.config.device, val.crop_size, val.voxel_size
                 )
         for val in self.extra_validation_sets:
             indices = np.random.choice(len(val.image_paths), self.config.n_inference)
@@ -173,12 +172,12 @@ class GeoShapeExperiment(Experiment):
                 image_path = val.image_paths[idx]
                 label_path = val.label_paths[idx]
 
-                image = val.read_image(val.image_paths[idx], val.feature_size, val.n_slices)
+                image = val.read_image(val.image_paths[idx])
                 label = val.get_label_tensor_from_index(idx)
                 # image = prepare_tensors(image, self.config.gpu, self.config.device)
                 self.logger.info("Inferencing for {} dataset, image {}.".format(val.name, idx))
 
                 self.inference_func(
                     image, label, image_path, self.network, output_dir.joinpath(val.name, "extra_val", image_path.parent.stem),
-                    self.config.gpu, self.config.device
+                    self.config.gpu, self.config.device, val.crop_size, val.voxel_size
                 )
