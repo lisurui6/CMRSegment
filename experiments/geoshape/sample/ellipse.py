@@ -274,7 +274,7 @@ def batch_sample_lv_myo_points(
     c0y = c0y.repeat(1, num_lv_slices)
 
     r1 = r1.unsqueeze(1) * voxel_width  # (B, 1)
-    r0 = r0_r1_ratio.unsqueeze(1) * r1 * 0.9
+    r0 = (r0_r1_ratio.unsqueeze(1) * 0.4 + 0.5) * r1
     # r0 = r0_r1_ratio.unsqueeze(1) * r1  # (B, 1)
     # dr0_max = r0 / (num_lv_slices - 1)  # (B, 1)
     # dr0 = torch.mul(dr0, dr0_max)  # (B, n_lv - 1)

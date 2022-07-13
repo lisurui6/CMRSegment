@@ -149,10 +149,10 @@ class EllipseShapeDeformNet(torch.nn.Module):
         init_mask1 = self.voxelize_mask(nodes1, tetras1)
         init_mask2 = self.voxelize_mask(nodes2, tetras2)
 
-        # if epoch % 100 == 0 and self.training:
-        #     print("Shape params, LV", lv_par2)
-        #     print("Shape params, RV", rv_par_sig)
-        #     display(init_mask0, init_mask1, init_mask2, label)
+        if epoch % 500 == 0 and not self.training and epoch != 0:
+            print("Shape params, LV", lv_par2)
+            print("Shape params, RV", rv_par_sig)
+            display(init_mask0, init_mask1, init_mask2, label)
 
 
         # mlab_plot([init_mask0, init_mask1, init_mask2])

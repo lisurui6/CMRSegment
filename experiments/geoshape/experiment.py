@@ -136,11 +136,13 @@ class GeoShapeExperiment(Experiment):
 
     def inference(self, epoch: int):
         output_dir = self.config.experiment_dir.joinpath("inference").joinpath("CP_{}".format(epoch))
+        self.network.eval()
         for tr in self.training_sets:
-            indices = np.random.choice(len(tr.image_paths), self.config.n_inference)
+            indices = np.random.choice(len(tr.image_paths), self.config.n_inference, replace=False)
             for idx in indices:
                 image_path = tr.image_paths[idx]
                 label_path = tr.label_paths[idx]
+                print("image path", image_path)
 
                 image = tr.read_image(tr.image_paths[idx])
                 label = tr.get_label_tensor_from_index(idx)
@@ -148,7 +150,7 @@ class GeoShapeExperiment(Experiment):
                 self.logger.info("Inferencing for {} dataset, image {}.".format(tr.name, idx))
                 self.inference_func(
                     image, label, image_path, self.network, output_dir.joinpath(tr.name, "training", image_path.parent.stem),
-                    self.config.gpu, self.config.device, tr.crop_size, tr.voxel_size
+                    self.config.gpu, self.config.device, tr.crop_size, tr.voxel_size, epoch
                 )
 
         for val in self.validation_sets:

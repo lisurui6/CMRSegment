@@ -122,6 +122,7 @@ class InitLVMyoDiceCoeff(DiceCoeff):
         [affine_mask0, affine_mask1, affine_mask2], \
         [deform_mask0, deform_mask1, deform_mask2], \
         [nodes0, nodes1, nodes2], flow, preint_flow = predicts
+        target[:, 1][target[:, 0] == 1] = 1
 
         return super().forward(init_mask1, target[:, 1])
 
@@ -150,6 +151,8 @@ class InitAllDiceCoeff(DiceCoeff):
         [affine_mask0, affine_mask1, affine_mask2], \
         [deform_mask0, deform_mask1, deform_mask2], \
         [nodes0, nodes1, nodes2], flow, preint_flow = predicts
+        target[:, 1][target[:, 0] == 1] = 1
+
         init_mask = torch.cat([init_mask0, init_mask1, init_mask2], dim=1)
         return super().forward(init_mask, target)
 
@@ -178,6 +181,7 @@ class AffineLVMyoDiceCoeff(DiceCoeff):
         [affine_mask0, affine_mask1, affine_mask2], \
         [deform_mask0, deform_mask1, deform_mask2], \
         [nodes0, nodes1, nodes2], flow, preint_flow = predicts
+        target[:, 1][target[:, 0] == 1] = 1
 
         return super().forward(affine_mask1, target[:, 1])
 
@@ -202,6 +206,8 @@ class AffineRVDiceCoeff(DiceCoeff):
 class AffineAllDiceCoeff(DiceCoeff):
     def forward(self, predicts, target):
         # target: (B, 3, H, W, D)
+        target[:, 1][target[:, 0] == 1] = 1
+
         [init_mask0, init_mask1, init_mask2], \
         [affine_mask0, affine_mask1, affine_mask2], \
         [deform_mask0, deform_mask1, deform_mask2], \
@@ -230,6 +236,8 @@ class DeformLVDiceCoeff(DiceCoeff):
 class DeformLVMyoDiceCoeff(DiceCoeff):
     def forward(self, predicts, target):
         # target: (B, 3, H, W, D)
+        target[:, 1][target[:, 0] == 1] = 1
+
         [init_mask0, init_mask1, init_mask2], \
         [affine_mask0, affine_mask1, affine_mask2], \
         [deform_mask0, deform_mask1, deform_mask2], \
@@ -258,6 +266,8 @@ class DeformRVDiceCoeff(DiceCoeff):
 class DeformAllDiceCoeff(DiceCoeff):
     def forward(self, predicts, target):
         # target: (B, 3, H, W, D)
+        target[:, 1][target[:, 0] == 1] = 1
+
         [init_mask0, init_mask1, init_mask2], \
         [affine_mask0, affine_mask1, affine_mask2], \
         [deform_mask0, deform_mask1, deform_mask2], \

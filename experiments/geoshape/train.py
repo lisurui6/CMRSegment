@@ -14,7 +14,7 @@ from experiments.geoshape.loss import AffineLVDiceCoeff, AffineLVMyoDiceCoeff, A
 from experiments.geoshape.loss import DeformLVDiceCoeff, DeformLVMyoDiceCoeff, DeformRVDiceCoeff, DeformAllDiceCoeff
 from CMRSegment.common.config import DataConfig, get_conf, AugmentationConfig
 from pyhocon import ConfigFactory
-from experiments.geoshape.inference.inference import inference
+from experiments.geoshape.inference.central_crop import inference
 from experiments.geoshape.experiment import GeoShapeExperiment
 from experiments.geoshape.loss import ShapeDeformLoss
 
