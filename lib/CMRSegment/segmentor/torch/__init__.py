@@ -14,7 +14,7 @@ class TorchSegmentor(Segmentor):
     def __init__(self, model_path: Path, overwrite: bool = False, resize_size: Tuple = None, device: int = 0,
                  use_irtk: bool = False):
         super().__init__(model_path, overwrite)
-        self.model = torch.load(str(model_path))
+        self.model = torch.load(str(model_path)).cuda(device)
         self.model.eval()
         if resize_size is None:
             resize_size = (128, 128, 64)

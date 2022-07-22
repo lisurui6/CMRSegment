@@ -14,6 +14,7 @@ class SegmentorConfig(PipelineModuleConfig):
     model_path: Path = None
     segment_cine: bool = True
     torch: bool = True
+    device: int = 0
 
     def __post_init__(self):
         if self.model_path is None:
@@ -74,6 +75,7 @@ class PipelineConfig:
         model_path: Path = None,
         segment_cine: bool = None,
         torch: bool = True,
+        device: int = 0,
         refine_csv_path: Path = None,
         refine_n_top: int = 7,
         refine_n_atlas: int = 500,
@@ -91,7 +93,7 @@ class PipelineConfig:
                 segment_cine=segment_cine,
                 overwrite=overwrite,
                 torch=torch,
-
+                device=device,
             )
             self.segment = True
         else:
@@ -161,6 +163,7 @@ class PipelineConfig:
         segment_parser.add_argument("--model-path", dest="model_path", default=None, type=str)
         segment_parser.add_argument("--segment-cine", action="store_true")
         segment_parser.add_argument("--torch", dest="torch", action="store_true")
+        segment_parser.add_argument("--device", dest="device", default=0, type=int)
 
         segment_parser = parser.add_argument_group("refine")
         segment_parser.add_argument(
@@ -199,6 +202,7 @@ class PipelineConfig:
             model_path=Path(args.model_path) if args.model_path is not None else None,
             segment_cine=args.segment_cine,
             torch=args.torch,
+            device=args.device,
             refine_csv_path=Path(args.refine_csv_path) if args.refine_csv_path is not None else None,
             refine_n_top=args.refine_n_top,
             refine_n_atlas=args.refine_n_atlas,
