@@ -59,9 +59,9 @@ class SegmentationRefiner:
         for i in range(n_atlases):
             try:
                 if not output_dir.joinpath(f"shapelandmarks_{i}.dof.gz").exists() or force:
-                    mirtk.register(
-                        str(subject_landmarks),
-                        str(self.landmarks[i]),
+                    mirtk.register_points(
+                        t=str(subject_landmarks),
+                        s=str(self.landmarks[i]),
                         model="Affine",
                         dofout=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
                     )
