@@ -12,6 +12,8 @@ from matplotlib import pyplot as plt
 from CMRSegment.common.resource import Segmentation, PhaseImage, Phase
 from CMRSegment.common.data_table import DataTable
 import nibabel as nib
+from trimesh.registration import procrustes
+import vtk
 
 
 class SegmentationRefiner:
@@ -42,6 +44,7 @@ class SegmentationRefiner:
         if param_path is None:
             param_path = RESOURCE_DIR.joinpath("ffd_label_1.cfg")
         self.param_path = param_path
+        self.affine_param_path = RESOURCE_DIR.joinpath("segareg.txt")
 
     def select_altases(self, subject_seg: Path, subject_landmarks: Path, output_dir: Path, n_top: int, force: bool):
         """Select top similar atlases, according to subject segmentation and landmark"""
@@ -56,34 +59,74 @@ class SegmentationRefiner:
         #         f.unlink()
         output_dofs = []
         top_atlas_dofs = []
+        top_atlas_landmarks = []
         for i in range(n_atlases):
             try:
                 if not output_dir.joinpath(f"shapelandmarks_{i}.dof.gz").exists() or force:
-                    mirtk.register_points(
-                        t=str(subject_landmarks),
-                        s=str(self.landmarks[i]),
-                        model="Affine",
-                        dofout=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
+
+                    # Rigid registration with landmarks
+                    poly = vtk.vtkPolyData()
+                    reader = vtk.vtkPolyDataReader()
+                    reader.SetFileName(str(self.landmarks[i]))
+                    reader.Update()
+                    atlas_landmark_polydata = reader.GetOutput()
+                    atlas_landmark = np.array(atlas_landmark_polydata.GetPoints().GetData())
+
+                    poly = vtk.vtkPolyData()
+                    reader = vtk.vtkPolyDataReader()
+                    reader.SetFileName(str(subject_landmarks))
+                    reader.Update()
+                    subject_landmark_polydata = reader.GetOutput()
+                    subject_landmark = np.array(subject_landmark_polydata.GetPoints().GetData())
+
+                    matrix, transform, cost = procrustes(
+                        a=subject_landmark, b=atlas_landmark, reflection=True, translation=True, scale=False,
+                        return_cost=True
+                    )  # matrix transform a to b
+                    # save matrix to dofs
+                    matrix = matrix.tolist()
+
+                    with open(str(output_dir.joinpath(f"shapelandmarks_{i}.txt")), "w") as file:
+                        for array in matrix:
+                            array = [str(a) for a in array]
+                            file.write(" ".join(array) + "\n")
+                    mirtk.convert_dof(
+                        output_dir.joinpath(f"shapelandmarks_{i}.txt"),
+                        output_dir.joinpath(f"shapelandmarks_{i}.dof.gz"),
+                        input_format="aladin",
+                        output_format="mirtk",
                     )
+
+                    # Affine registration using landmark as initialisation
+                    mirtk.register(
+                        str(self.atlases[i]),  # source
+                        str(subject_seg),  # target
+                        dofin=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
+                        dofout=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
+                        parin=str(self.affine_param_path),
+                        model="Affine"
+                    )
+
                 if not output_dir.joinpath(f"shapenmi_{i}.txt").exists() or force:
                     mirtk.evaluate_similarity(
-                        str(subject_seg),
-                        str(self.atlases[i]),
+                        str(subject_seg),  # target
+                        str(self.atlases[i]),  # source
                         Tbins=64,
                         Sbins=64,
-                        dofin=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
+                        dofin=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),  # source image transformation
                         table=str(output_dir.joinpath(f"shapenmi_{i}.txt")),
                     )
                 output_dofs.append(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz"))
 
                 if output_dir.joinpath(f"shapenmi_{i}.txt").exists():
                     similarities = np.genfromtxt('{0}/shapenmi_{1}.txt'.format(str(output_dir), i), delimiter=",")
-                    nmi += [similarities[1, 5]]
+                    nmi += [similarities[1, 8]]
                 else:
                     nmi += [0]
             except KeyboardInterrupt:
                 raise
-            except Exception:
+            except Exception as e:
+                raise e
                 continue
 
         if n_top < n_atlases:
@@ -91,24 +134,23 @@ class SegmentationRefiner:
             for i in range(n_top):
                 top_similar_atlases += [self.atlases[sortedIndexes[i]]]
                 top_atlas_dofs += [output_dofs[sortedIndexes[i]]]
+                top_atlas_landmarks += [self.landmarks[sortedIndexes[i]]]
         else:
             top_similar_atlases = self.atlases
             top_atlas_dofs = output_dofs
+            top_atlas_landmarks = self.landmarks
 
-        return top_similar_atlases, top_atlas_dofs
+        return top_similar_atlases, top_atlas_dofs, top_atlas_landmarks
 
     def run(self, subject_image: PhaseImage, subject_seg: Segmentation, subject_landmarks: Path, output_dir: Path,
             n_top: int, force: bool) -> Segmentation:
         output_path = output_dir.joinpath(subject_seg.path.stem + "_refined.nii.gz")
 
-        if force or not Segmentation(
-            path=output_path,
-            phase=subject_seg.phase
-        ).exists():
+        if force or not Segmentation(path=output_path, phase=subject_seg.phase).exists():
             tmp_dir = output_dir.joinpath("tmp", str(subject_seg.phase))
             tmp_dir.mkdir(exist_ok=True, parents=True)
 
-            top_atlases, top_dofs = self.select_altases(
+            top_atlases, top_dofs, top_lm = self.select_altases(
                 subject_seg=subject_seg.path,
                 subject_landmarks=subject_landmarks,
                 output_dir=tmp_dir,
@@ -118,23 +160,38 @@ class SegmentationRefiner:
             atlas_labels = []
             phase = str(subject_seg.phase)
             for i, (atlas, dof) in enumerate(zip(top_atlases, top_dofs)):
-                if not tmp_dir.joinpath(f"shapeffd_{i}_{str(phase)}.dof.gz").exists() or force:
-                    mirtk.register(
-                        str(subject_seg),
-                        str(atlas),
-                        parin=str(self.param_path),
-                        dofin=str(dof),
-                        dofout=tmp_dir.joinpath(f"shapeffd_{i}_{phase}.dof.gz")
-                    )
 
                 label_path = tmp_dir.joinpath(f"seg_affine_{i}_{phase}.nii.gz")
                 if not label_path.exists() or force:
                     mirtk.transform_image(
                         str(atlas),
                         str(label_path),
-                        dofin=str(dof),
+                        dofin=str(dof),  # Transformation that maps atlas to subject
                         target=str(subject_image),
                         interp="NN",
+                    )
+                    nim = nib.load(str(label_path))
+                    label = nim.get_data()
+                    label[label == 4] = 3
+                    nim2 = nib.Nifti1Image(label, nim.affine)
+                    nim2.header['pixdim'] = nim.header['pixdim']
+                    nib.save(nim2, str(label_path))
+
+                    # Transform points for debugging
+                    mirtk.transform_points(
+                        str(top_lm[i]),
+                        str(tmp_dir.joinpath(f"lm_affine_{i}_{phase}.vtk")),
+                        "-invert",
+                        dofin=str(dof),
+                    )
+
+                if not tmp_dir.joinpath(f"shapeffd_{i}_{str(phase)}.dof.gz").exists() or force:
+                    mirtk.register(
+                        str(subject_seg),  # target
+                        str(atlas),  # source
+                        parin=str(self.param_path),
+                        dofin=str(dof),
+                        dofout=tmp_dir.joinpath(f"shapeffd_{i}_{phase}.dof.gz")
                     )
 
                 label_path = tmp_dir.joinpath(f"seg_{i}_{phase}.nii.gz")
@@ -146,6 +203,15 @@ class SegmentationRefiner:
                         target=str(subject_image),
                         interp="NN",
                     )
+                dof = tmp_dir.joinpath(f"shapeffd_{i}_{phase}.dof.gz")
+                # Transform points for debugging
+                mirtk.transform_points(
+                    str(top_lm[i]),
+                    str(tmp_dir.joinpath(f"lm_ffd_{i}_{phase}.vtk")),
+                    "-invert",
+                    dofin=str(dof),
+                )
+
                 nim = nib.load(str(label_path))
                 label = nim.get_data()
                 label[label == 4] = 3
