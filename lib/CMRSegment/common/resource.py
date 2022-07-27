@@ -230,7 +230,7 @@ class Template:
 
     @property
     def landmark(self):
-        return self.dir.joinpath("landmarks2.vtk")
+        return self.dir.joinpath("landmarks2_old.vtk")
 
     def rv(self, phase: Phase):
         return self.dir.joinpath(f"RV_{phase}.vtk")
