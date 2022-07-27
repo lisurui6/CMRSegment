@@ -117,7 +117,10 @@ class CMRPipeline:
                             n_top=self.config.refine_config.n_top_atlas,
                             force=self.config.overwrite,
                         )
-                mesh = mesh_extractor.run(segmentation, output_dir.joinpath("mesh"))
+                if self.config.extract:
+                    mesh = mesh_extractor.run(segmentation, output_dir.joinpath("mesh"))
+                else:
+                    mesh = PhaseMesh.from_dir(output_dir.joinpath("mesh"), phase=phase_image.phase)
 
                 segmentations.append(segmentation)
                 if self.config.coregister:

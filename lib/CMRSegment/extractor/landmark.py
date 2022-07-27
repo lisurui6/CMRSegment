@@ -194,7 +194,7 @@ def extract_landmarks(seg, affine, output_path: Path, is_atlas: bool, debug: boo
 
     RV_label = 3
     LV_label = 1
-    z = np.nonzero(seg == RV_label)[2]
+    z = np.nonzero(seg == LV_label)[2]
 
     z_min, z_max = z.min(), z.max()
     if not is_atlas:
