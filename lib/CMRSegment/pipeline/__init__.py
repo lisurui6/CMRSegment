@@ -95,7 +95,7 @@ class CMRPipeline:
                     )
 
                 if self.config.extract:
-                    print("Extracting {} segmentation...".format(phase_image.phase))
+                    print("Extracting landmarks from {} segmentation...".format(phase_image.phase))
                     if (not landmark_path.exists() or self.config.overwrite) and phase_image.phase == Phase.ED:
                         try:
                             landmark_path = extract_landmarks(
@@ -106,9 +106,6 @@ class CMRPipeline:
                             # )
                         except ValueError:
                             pass
-                    mesh = mesh_extractor.run(segmentation, output_dir.joinpath("mesh"))
-                else:
-                    mesh = PhaseMesh.from_dir(output_dir.joinpath("mesh"), phase=phase_image.phase)
                 if self.config.refine:
                     print("Refining")
                     if landmark_path.exists() and segmentation.exists():
@@ -120,6 +117,8 @@ class CMRPipeline:
                             n_top=self.config.refine_config.n_top_atlas,
                             force=self.config.overwrite,
                         )
+                mesh = mesh_extractor.run(segmentation, output_dir.joinpath("mesh"))
+
                 segmentations.append(segmentation)
                 if self.config.coregister:
                     print("Coregistering")
