@@ -13,12 +13,15 @@ class DataPreprocessor:
             -> Iterable[Tuple[PhaseImage, PhaseImage, CineImages, Path]]:
         for idx, subject_dir in enumerate(sorted(os.listdir(str(data_dir)))):
             subject_output_dir = output_dir.joinpath(subject_dir)
+            if not data_dir.joinpath(subject_dir).is_dir():
+                continue
             nii_data = NiiData.from_dir(dir=data_dir.joinpath(subject_dir))
-            if overwrite:
-                shutil.rmtree(str(subject_output_dir), ignore_errors=True)
+            if not nii_data.exists():
+                continue
+
             subject_output_dir.mkdir(exist_ok=True, parents=True)
             print(subject_dir)
-            if overwrite or not nii_data.exists():
+            if overwrite or not NiiData.from_dir(dir=subject_output_dir).exists():
                 shutil.copy(str(nii_data), str(subject_output_dir))
             ed_image = PhaseImage.from_dir(subject_output_dir, phase=Phase.ED)
             es_image = PhaseImage.from_dir(subject_output_dir, phase=Phase.ES)
