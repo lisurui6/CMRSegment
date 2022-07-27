@@ -5,9 +5,10 @@ from CMRSegment.segmentor import CineSegmentor
 from CMRSegment.coregister import Coregister
 from CMRSegment.extractor.mesh import MeshExtractor
 
-from CMRSegment.extractor.landmark import extract_landmarks
+from CMRSegment.extractor.landmark import extract_subject_landmarks
+from CMRSegment.extractor.landmark_old import extract_landmarks
 from CMRSegment.pipeline.config import PipelineConfig
-from CMRSegment.common.resource import Segmentation, PhaseMesh
+from CMRSegment.common.resource import Segmentation, PhaseMesh, Phase
 from CMRSegment.motion_tracker import MotionTracker
 from CMRSegment.refiner import SegmentationRefiner
 
@@ -42,7 +43,7 @@ class CMRPipeline:
                 from CMRSegment.segmentor.torch import TorchSegmentor
                 hr_segmentor = TorchSegmentor(
                     model_path=self.config.segment_config.model_path, overwrite=self.config.overwrite,
-                    use_irtk=self.config.use_irtk,
+                    use_irtk=self.config.use_irtk, device=self.config.segment_config.device
                 )
             if self.config.segment_config.segment_cine:
                 cine_segmentor = CineSegmentor(phase_segmentor=hr_segmentor)
@@ -75,6 +76,8 @@ class CMRPipeline:
 
             meshes = []
             segmentations = []
+            landmark_path = output_dir.joinpath("landmarks.vtk".format(str(ed_image.phase)))
+
             for phase_image in [ed_image, es_image]:
                 if self.config.segment:
                     print("Segmenting {} image...".format(phase_image.phase))
@@ -84,21 +87,23 @@ class CMRPipeline:
                         )
                     else:
                         segmentation = Segmentation(
-                        phase=phase_image.phase, path=output_dir.joinpath(f"seg_lvsa_SR_{phase_image.phase}.nii.gz")
-                    )
+                            phase=phase_image.phase, path=output_dir.joinpath(f"seg_lvsa_SR_{phase_image.phase}.nii.gz")
+                        )
                 else:
                     segmentation = Segmentation(
                         phase=phase_image.phase, path=output_dir.joinpath(f"seg_lvsa_SR_{phase_image.phase}.nii.gz")
                     )
 
-                landmark_path = output_dir.joinpath("landmark_{}.vtk".format(str(phase_image.phase)))
                 if self.config.extract:
                     print("Extracting {} segmentation...".format(phase_image.phase))
-                    if not landmark_path.exists() or self.config.overwrite:
+                    if (not landmark_path.exists() or self.config.overwrite) and phase_image.phase == Phase.ED:
                         try:
                             landmark_path = extract_landmarks(
                                 segmentation.path, output_path=landmark_path, labels=[2, 3]
                             )
+                            # landmark_path = extract_subject_landmarks(
+                            #     segmentation.path, output_path=landmark_path,
+                            # )
                         except ValueError:
                             pass
                     mesh = mesh_extractor.run(segmentation, output_dir.joinpath("mesh"))
