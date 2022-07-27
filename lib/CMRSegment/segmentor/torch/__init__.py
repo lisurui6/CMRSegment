@@ -72,6 +72,12 @@ class TorchSegmentor(Segmentor):
         # predicted = resize_image(predicted, image.shape, 0)
         # print("Predicted shape: {}".format(predicted.shape))
         predicted = predicted[x_pre:x_pre + X, y_pre:y_pre + Y, z1_ - z1:z1_ - z1 + Z]
+        if int(Z / 2) - int(n_slices / 2) > 0:
+            if Z % 2 == 1:
+                d = 1
+            else:
+                d = 0
+            predicted = np.pad(predicted, ((0, 0), (0, 0), (int(Z / 2) - int(n_slices / 2), int(Z / 2) - int(n_slices / 2) + d)), 'constant')
         predicted = refined_mask(predicted, phase_path, output_path.parent.joinpath("tmp"), self.use_irtk)
         # print("Predicted shape after cropping: {}".format(predicted.shape))
         nim2 = nib.Nifti1Image(predicted, nim.affine)
