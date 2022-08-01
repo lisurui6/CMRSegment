@@ -14,6 +14,7 @@ from CMRSegment.common.data_table import DataTable
 import nibabel as nib
 from trimesh.registration import procrustes
 import vtk
+from itertools import product
 
 
 class SegmentationRefiner:
@@ -42,9 +43,9 @@ class SegmentationRefiner:
         self.atlases = atlases
         self.landmarks = landmarks
         if param_path is None:
-            param_path = RESOURCE_DIR.joinpath("ffd_label_1.cfg")
+            param_path = RESOURCE_DIR.joinpath("ffd_label_2.cfg")
         self.param_path = param_path
-        self.affine_param_path = RESOURCE_DIR.joinpath("segareg.txt")
+        self.affine_param_path = RESOURCE_DIR.joinpath("segareg_2.txt")
 
     def select_altases(self, subject_seg: Path, subject_landmarks: Path, output_dir: Path, n_top: int, force: bool):
         """Select top similar atlases, according to subject segmentation and landmark"""
@@ -98,14 +99,44 @@ class SegmentationRefiner:
                     )
 
                     # Affine registration using landmark as initialisation
+                    # Split label maps into separate binary masks
+                    atlas_label_paths = []
+                    subject_label_paths = []
+                    output_dir.joinpath("temp_labels").mkdir(parents=True, exist_ok=True)
+
+                    for tag, path in zip(["atlas", "subject"], [self.atlases[i], subject_seg]):
+                        for label in [1, 2, 3]:
+                            path = output_dir.joinpath("temp_labels", path.stem + f"_{label}.nii.gz")
+                            # path = path.stem.joinpath(f"seg_lvsa_SR_ED_{label}.nii.gz")
+                            if tag == "atlas":
+                                atlas_label_paths.append(path)
+                            else:
+                                subject_label_paths.append(path)
+                            if not path.exists():
+                                mirtk.calculate_element_wise(
+                                    str(prefix.joinpath("seg_lvsa_SR_ED.nii.gz")),
+                                    opts=[
+                                        ("binarize", label, label),
+                                        ("out", str(path))
+                                    ],
+                                )
+
                     mirtk.register(
-                        str(self.atlases[i]),  # source
-                        str(subject_seg),  # target
+                        *[str(path) for path in subject_label_paths],  # target
+                        *[str(path) for path in atlas_label_paths],  # source
                         dofin=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
                         dofout=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
                         parin=str(self.affine_param_path),
-                        model="Affine"
+                        model="Affine",
                     )
+                    # mirtk.register(
+                    #     str(self.atlases[i]),  # source
+                    #     str(subject_seg),  # target
+                    #     dofin=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
+                    #     dofout=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
+                    #     parin=str(self.affine_param_path),
+                    #     model="Affine"
+                    # )
 
                 if not output_dir.joinpath(f"shapenmi_{i}.txt").exists() or force:
                     mirtk.evaluate_similarity(
