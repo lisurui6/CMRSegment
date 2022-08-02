@@ -5,12 +5,15 @@ from CMRSegment.segmentor import CineSegmentor
 from CMRSegment.coregister import Coregister
 from CMRSegment.extractor.mesh import MeshExtractor
 
-from CMRSegment.extractor.landmark import extract_subject_landmarks
+# from CMRSegment.extractor.landmark import extract_subject_landmarks
 from CMRSegment.extractor.landmark_old import extract_landmarks
 from CMRSegment.pipeline.config import PipelineConfig
 from CMRSegment.common.resource import Segmentation, PhaseMesh, Phase
 from CMRSegment.motion_tracker import MotionTracker
 from CMRSegment.refiner import SegmentationRefiner
+import mirtk
+import nibabel as nib
+from CMRSegment.common.utils import set_affine
 
 
 class CMRPipeline:
@@ -62,9 +65,10 @@ class CMRPipeline:
             output_dir=self.config.output_dir,
             overwrite=self.config.overwrite,
             use_irtk=self.config.use_irtk,
+            do_cine=self.config.do_cine,
         )
         for ed_image, es_image, cine, output_dir in subjects:
-            if self.config.segment and self.config.segment_config.segment_cine:
+            if self.config.segment and self.config.do_cine:
                 print("Segmenting all {} cine images...".format(len(cine)))
                 cine_segmentations = cine_segmentor.apply(cine, output_dir=output_dir, overwrite=self.config.overwrite)
             else:
@@ -93,6 +97,20 @@ class CMRPipeline:
                     segmentation = Segmentation(
                         phase=phase_image.phase, path=output_dir.joinpath(f"seg_lvsa_SR_{phase_image.phase}.nii.gz")
                     )
+
+                if self.config.refine and self.config.refine_config.is_lr_seg:
+                    mirtk.resample_image(
+                        str(segmentation.path),
+                        str(output_dir.joinpath(Path(segmentation.path.stem).stem + "_resampled.nii.gz")),
+                        '-size', 1.25, 1.25, 2
+                    )
+                    mirtk.enlarge_image(
+                        str(output_dir.joinpath(Path(segmentation.path.stem).stem + "_resampled.nii.gz")),
+                        str(output_dir.joinpath(Path(segmentation.path.stem).stem + "_enlarged.nii.gz")),
+                        z=20, value=0
+                    )
+                    segmentation.path = output_dir.joinpath(Path(segmentation.path.stem).stem + "_enlarged.nii.gz")
+                    set_affine(from_image=phase_image.path, to_image=segmentation.path)
 
                 if self.config.extract:
                     print("Extracting landmarks from {} segmentation...".format(phase_image.phase))

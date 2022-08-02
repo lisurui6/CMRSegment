@@ -5,6 +5,16 @@ import mirtk
 from pathlib import Path
 
 
+def set_affine(from_image: Path, to_image: Path):
+    nim = nib.load(str(from_image))
+    nim2 = nib.load(str(to_image))
+
+    image = nim2.get_data()
+    nim3 = nib.Nifti1Image(image, nim.affine)
+    nim3.header['pixdim'] = nim.header['pixdim']
+    nib.save(nim3, str(to_image))
+
+
 def extract_rv_label(segmentation_path: Path, output_path: Path, overwrite: bool = False):
     if not output_path.exists() or overwrite:
         mirtk.calculate_element_wise(

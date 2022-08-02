@@ -5,11 +5,12 @@ from typing import Iterable, Tuple
 import shutil
 import mirtk
 from CMRSegment.common.resource import NiiData, CineImages, PhaseImage, Phase
+import nibabel as nib
 
 
 class DataPreprocessor:
     """Find subjects in data_dir, find ED/ES phases, and split into a sequence of phases"""
-    def run(self, data_dir: Path, output_dir: Path, overwrite: bool = False, use_irtk: bool = True)\
+    def run(self, data_dir: Path, output_dir: Path, overwrite: bool = False, use_irtk: bool = True, do_cine: bool = False)\
             -> Iterable[Tuple[PhaseImage, PhaseImage, CineImages, Path]]:
         for idx, subject_dir in enumerate(sorted(os.listdir(str(data_dir)))):
             subject_output_dir = output_dir.joinpath(subject_dir)
@@ -22,7 +23,8 @@ class DataPreprocessor:
             subject_output_dir.mkdir(exist_ok=True, parents=True)
             print(subject_dir)
             if overwrite or not NiiData.from_dir(dir=subject_output_dir).exists():
-                shutil.copy(str(nii_data), str(subject_output_dir))
+                if nii_data != subject_output_dir:
+                    shutil.copy(str(nii_data), str(subject_output_dir))
             ed_image = PhaseImage.from_dir(subject_output_dir, phase=Phase.ED)
             es_image = PhaseImage.from_dir(subject_output_dir, phase=Phase.ES)
             print("ED ES image:\n\t{}\n\t{}".format(repr(ed_image), repr(es_image)))
@@ -77,39 +79,39 @@ class DataPreprocessor:
                 overwrite=overwrite,
                 use_irtk=use_irtk,
             )
-
-            gray_phase_dir = subject_output_dir.joinpath("gray_phases")
-            gray_phase_dir.mkdir(parents=True, exist_ok=True)
-            cine = CineImages.from_dir(gray_phase_dir)
-            if overwrite or len(cine) == 0:
-                print(" ... Split sequence")
-                if not use_irtk:
-                    mirtk.split_volume(
-                        str(contrasted_nii_path), "{}/lvsa_".format(str(gray_phase_dir)), "-sequence"
-                    )
-                else:
-                    command = f'splitvolume {str(contrasted_nii_path)} '\
-                              f'{str(gray_phase_dir)}/lvsa_ -sequence'
-                    print(command)
-                    subprocess.call(command, shell=True)
-                cine = CineImages.from_dir(gray_phase_dir)
-
-            # resample and enlarge gray phases
             enlarged_images = []
-            for idx, image in enumerate(cine):
-                image = self.resample_image(
-                    image,
-                    output_path=subject_output_dir.joinpath("resampled").joinpath(f"lvsa_{idx}.nii.gz"),
-                    overwrite=overwrite,
-                    use_irtk=use_irtk
-                )
-                image = self.enlarge_image(
-                    image,
-                    output_path=subject_output_dir.joinpath("enlarged").joinpath(f"lvsa_{idx}.nii.gz"),
-                    overwrite=overwrite,
-                    use_irtk=use_irtk,
-                )
-                enlarged_images.append(image)
+            if do_cine:
+                gray_phase_dir = subject_output_dir.joinpath("gray_phases")
+                gray_phase_dir.mkdir(parents=True, exist_ok=True)
+                cine = CineImages.from_dir(gray_phase_dir)
+                if overwrite or len(cine) == 0:
+                    print(" ... Split sequence")
+                    if not use_irtk:
+                        mirtk.split_volume(
+                            str(contrasted_nii_path), "{}/lvsa_".format(str(gray_phase_dir)), "-sequence"
+                        )
+                    else:
+                        command = f'splitvolume {str(contrasted_nii_path)} '\
+                                  f'{str(gray_phase_dir)}/lvsa_ -sequence'
+                        print(command)
+                        subprocess.call(command, shell=True)
+                    cine = CineImages.from_dir(gray_phase_dir)
+
+                # resample and enlarge gray phases
+                for idx, image in enumerate(cine):
+                    image = self.resample_image(
+                        image,
+                        output_path=subject_output_dir.joinpath("resampled").joinpath(f"lvsa_{idx}.nii.gz"),
+                        overwrite=overwrite,
+                        use_irtk=use_irtk
+                    )
+                    image = self.enlarge_image(
+                        image,
+                        output_path=subject_output_dir.joinpath("enlarged").joinpath(f"lvsa_{idx}.nii.gz"),
+                        overwrite=overwrite,
+                        use_irtk=use_irtk,
+                    )
+                    enlarged_images.append(image)
             enlarged_cine = CineImages(enlarged_images)
             yield enlarged_ed_image, enlarged_es_image, enlarged_cine, subject_output_dir
 

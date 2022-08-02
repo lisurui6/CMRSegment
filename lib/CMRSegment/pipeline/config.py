@@ -26,6 +26,7 @@ class RefinerConfig(PipelineModuleConfig):
     csv_path: Path = None
     n_top_atlas: int = 7
     n_atlas: int = 500
+    is_lr_seg: bool = False  # If the segmentation input for refiner is 2D low resolution
 
     def __post_init__(self):
         if self.csv_path is None:
@@ -72,25 +73,26 @@ class PipelineConfig:
         track_motion: bool,
         output_dir: Path,
         overwrite: bool = False,
+        do_cine: bool = False,
         model_path: Path = None,
-        segment_cine: bool = None,
         torch: bool = True,
         device: int = 0,
         refine_csv_path: Path = None,
         refine_n_top: int = 7,
         refine_n_atlas: int = 500,
+        refine_is_lr_seg: bool = False,
         iso_value: int = 120,
         blur: int = 2,
         param_dir: Path = None,
         template_dir: Path = None,
-        use_irtk: bool = False
+        use_irtk: bool = False,
     ):
         self.output_dir = output_dir
         self.overwrite = overwrite
+        self.do_cine = do_cine
         if segment:
             self.segment_config = SegmentorConfig(
                 model_path=model_path,
-                segment_cine=segment_cine,
                 overwrite=overwrite,
                 torch=torch,
                 device=device,
@@ -106,6 +108,7 @@ class PipelineConfig:
                 csv_path=refine_csv_path,
                 n_top_atlas=refine_n_top,
                 n_atlas=refine_n_atlas,
+                is_lr_seg=refine_is_lr_seg,
             )
         else:
             self.refine = False
@@ -143,6 +146,7 @@ class PipelineConfig:
         parser.add_argument("-o", "--output-dir", dest="output_dir", required=True, type=str)
         parser.add_argument("--overwrite", dest="overwrite", action="store_true")
         parser.add_argument("--irtk", dest="use_irtk", action="store_true")
+        parser.add_argument("--do-cine", action="store_true", help="Preprocess and segment cine")
 
         parser.add_argument(
             "--segment", dest="segment", action="store_true",
@@ -161,23 +165,23 @@ class PipelineConfig:
 
         segment_parser = parser.add_argument_group("segment")
         segment_parser.add_argument("--model-path", dest="model_path", default=None, type=str)
-        segment_parser.add_argument("--segment-cine", action="store_true")
         segment_parser.add_argument("--torch", dest="torch", action="store_true")
         segment_parser.add_argument("--device", dest="device", default=0, type=int)
 
-        segment_parser = parser.add_argument_group("refine")
-        segment_parser.add_argument(
+        refine_parser = parser.add_argument_group("refine")
+        refine_parser.add_argument(
             "--csv-path", dest="refine_csv_path", type=str, default=None,
             help="Path to a csv file where all the atlases will be used for refinement."
         )
-        segment_parser.add_argument(
+        refine_parser.add_argument(
             "--n-top", dest="refine_n_top", type=int, default=7,
             help="Number of top similar atlases, selected for refinement"
         )
-        segment_parser.add_argument(
+        refine_parser.add_argument(
             "--n-atlas", dest="refine_n_atlas", type=int, default=500,
             help="Number of atlases in total for for refinement"
         )
+        refine_parser.add_argument("--is-lr-seg", dest="is_lr_seg", action="store_true")
 
         extract_parser = parser.add_argument_group("extract")
         extract_parser.add_argument("--iso-value", dest="iso_value", default=120, type=int)
@@ -199,13 +203,14 @@ class PipelineConfig:
             track_motion=args.track_motion,
             output_dir=Path(args.output_dir),
             overwrite=args.overwrite,
+            do_cine=args.do_cine,
             model_path=Path(args.model_path) if args.model_path is not None else None,
-            segment_cine=args.segment_cine,
             torch=args.torch,
             device=args.device,
             refine_csv_path=Path(args.refine_csv_path) if args.refine_csv_path is not None else None,
             refine_n_top=args.refine_n_top,
             refine_n_atlas=args.refine_n_atlas,
+            refine_is_lr_seg=args.is_lr_seg,
             iso_value=args.iso_value,
             blur=args.blur,
             param_dir=Path(args.param_dir) if args.param_dir is not None else None,

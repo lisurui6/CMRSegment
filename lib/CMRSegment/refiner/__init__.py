@@ -1,20 +1,16 @@
 import mirtk
-import subprocess
-from pathlib import Path
-import numpy as np
-from typing import List
-import shutil
-from CMRSegment.common.constants import RESOURCE_DIR
 mirtk.subprocess.showcmd = True
-import SimpleITK as sitk
-import os
-from matplotlib import pyplot as plt
-from CMRSegment.common.resource import Segmentation, PhaseImage, Phase
-from CMRSegment.common.data_table import DataTable
-import nibabel as nib
-from trimesh.registration import procrustes
 import vtk
-from itertools import product
+import numpy as np
+import SimpleITK as sitk
+from pathlib import Path
+from trimesh.registration import procrustes
+
+from CMRSegment.common.constants import RESOURCE_DIR
+from CMRSegment.common.utils import set_affine
+
+from CMRSegment.common.resource import Segmentation, PhaseImage
+from CMRSegment.common.data_table import DataTable
 
 
 class SegmentationRefiner:
@@ -32,22 +28,24 @@ class SegmentationRefiner:
                     landmarks.append(Path(path).parent.joinpath("landmarks2.vtk"))
         print("Total {} atlases with landmarks...".format(len(atlases)))
         if n_atlas is not None:
-            print("Randomly choosing {} atlases...".format(n_atlas))
-            indices = np.random.choice(np.arange(len(atlases)), n_atlas, replace=False)
-            atlases = np.array(atlases)
-            landmarks = np.array(landmarks)
-            atlases = atlases[indices].tolist()
-            landmarks = landmarks[indices].tolist()
-            print("Total {} atlases remained...".format(len(atlases)))
+            if n_atlas < len(atlases):
+                print("Randomly choosing {} atlases...".format(n_atlas))
+                indices = np.random.choice(np.arange(len(atlases)), n_atlas, replace=False)
+                atlases = np.array(atlases)
+                landmarks = np.array(landmarks)
+                atlases = atlases[indices].tolist()
+                landmarks = landmarks[indices].tolist()
+                print("Total {} atlases remained...".format(len(atlases)))
 
         self.atlases = atlases
         self.landmarks = landmarks
         if param_path is None:
-            param_path = RESOURCE_DIR.joinpath("ffd_label_2.cfg")
+            param_path = RESOURCE_DIR.joinpath("ffd_label_1.cfg")
         self.param_path = param_path
         self.affine_param_path = RESOURCE_DIR.joinpath("segareg_2.txt")
 
-    def select_altases(self, subject_seg: Path, subject_landmarks: Path, output_dir: Path, n_top: int, force: bool):
+    def select_altases(self, subject_image_path, subject_seg: Path, subject_landmarks: Path, output_dir: Path,
+                       n_top: int, force: bool):
         """Select top similar atlases, according to subject segmentation and landmark"""
         nmi = []
 
@@ -61,6 +59,7 @@ class SegmentationRefiner:
         output_dofs = []
         top_atlas_dofs = []
         top_atlas_landmarks = []
+
         for i in range(n_atlases):
             try:
                 if not output_dir.joinpath(f"shapelandmarks_{i}.dof.gz").exists() or force:
@@ -104,9 +103,46 @@ class SegmentationRefiner:
                     subject_label_paths = []
                     output_dir.joinpath("temp_labels").mkdir(parents=True, exist_ok=True)
 
-                    for tag, path in zip(["atlas", "subject"], [self.atlases[i], subject_seg]):
+                    new_atlas_path = output_dir.joinpath("temp_labels", "atlas", f"{i}", self.atlases[i].name)
+                    output_dir.joinpath("temp_labels", "atlas", f"{i}").mkdir(parents=True, exist_ok=True)
+                    mirtk.calculate_element_wise(
+                        str(self.atlases[i]),
+                        "-label", 3, 4,
+                        set=3,
+                        output=str(new_atlas_path),
+                    )
+                    set_affine(self.atlases[i], new_atlas_path)
+
+                    mirtk.transform_image(
+                        str(new_atlas_path),
+                        str(new_atlas_path.parent.joinpath("atlas_label_init.nii.gz")),
+                        dofin=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
+                        target=str(subject_image_path),
+                        interp="NN",
+                    )
+                    mirtk.transform_points(
+                        str(self.landmarks[i]),
+                        str(new_atlas_path.parent.joinpath(f"atlas_lm_init.vtk")),
+                        "-invert",
+                        dofin=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
+                    )
+
+                    mirtk.transform_points(
+                        str(subject_landmarks),
+                        str(new_atlas_path.parent.joinpath(f"subject_lm_init.vtk")),
+                        dofin=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
+                    )
+                    new_atlas_path = new_atlas_path.parent.joinpath("atlas_label_init.nii.gz")
+                    for tag, label_path in zip(["atlas", "subject"], [new_atlas_path, subject_seg]):
                         for label in [1, 2, 3]:
-                            path = output_dir.joinpath("temp_labels", path.stem + f"_{label}.nii.gz")
+                            if tag == "atlas":
+                                path = output_dir.joinpath("temp_labels", "atlas", f"{i}",
+                                                           Path(label_path.stem).stem + f"_{label}.nii.gz")
+                            else:
+                                path = output_dir.joinpath(
+                                    "temp_labels", tag, Path(label_path.stem).stem + f"_{label}.nii.gz"
+                                )
+                            output_dir.joinpath("temp_labels", tag).mkdir(parents=True, exist_ok=True)
                             # path = path.stem.joinpath(f"seg_lvsa_SR_ED_{label}.nii.gz")
                             if tag == "atlas":
                                 atlas_label_paths.append(path)
@@ -114,29 +150,22 @@ class SegmentationRefiner:
                                 subject_label_paths.append(path)
                             if not path.exists():
                                 mirtk.calculate_element_wise(
-                                    str(prefix.joinpath("seg_lvsa_SR_ED.nii.gz")),
+                                    str(label_path),
                                     opts=[
                                         ("binarize", label, label),
                                         ("out", str(path))
                                     ],
                                 )
+                            set_affine(label_path, path)
 
                     mirtk.register(
                         *[str(path) for path in subject_label_paths],  # target
                         *[str(path) for path in atlas_label_paths],  # source
                         dofin=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
-                        dofout=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
+                        dofout=str(output_dir.joinpath(f"shapeaffine_{i}.dof.gz")),
                         parin=str(self.affine_param_path),
                         model="Affine",
                     )
-                    # mirtk.register(
-                    #     str(self.atlases[i]),  # source
-                    #     str(subject_seg),  # target
-                    #     dofin=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
-                    #     dofout=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),
-                    #     parin=str(self.affine_param_path),
-                    #     model="Affine"
-                    # )
 
                 if not output_dir.joinpath(f"shapenmi_{i}.txt").exists() or force:
                     mirtk.evaluate_similarity(
@@ -144,10 +173,10 @@ class SegmentationRefiner:
                         str(self.atlases[i]),  # source
                         Tbins=64,
                         Sbins=64,
-                        dofin=str(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz")),  # source image transformation
+                        dofin=str(output_dir.joinpath(f"shapeaffine_{i}.dof.gz")),  # source image transformation
                         table=str(output_dir.joinpath(f"shapenmi_{i}.txt")),
                     )
-                output_dofs.append(output_dir.joinpath(f"shapelandmarks_{i}.dof.gz"))
+                output_dofs.append(output_dir.joinpath(f"shapeaffine_{i}.dof.gz"))
 
                 if output_dir.joinpath(f"shapenmi_{i}.txt").exists():
                     similarities = np.genfromtxt('{0}/shapenmi_{1}.txt'.format(str(output_dir), i), delimiter=",")
@@ -176,12 +205,14 @@ class SegmentationRefiner:
     def run(self, subject_image: PhaseImage, subject_seg: Segmentation, subject_landmarks: Path, output_dir: Path,
             n_top: int, force: bool) -> Segmentation:
         output_path = output_dir.joinpath(subject_seg.path.stem + "_refined.nii.gz")
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
         if force or not Segmentation(path=output_path, phase=subject_seg.phase).exists():
             tmp_dir = output_dir.joinpath("tmp", str(subject_seg.phase))
             tmp_dir.mkdir(exist_ok=True, parents=True)
 
             top_atlases, top_dofs, top_lm = self.select_altases(
+                subject_image_path=subject_image.path,
                 subject_seg=subject_seg.path,
                 subject_landmarks=subject_landmarks,
                 output_dir=tmp_dir,
@@ -201,12 +232,7 @@ class SegmentationRefiner:
                         target=str(subject_image),
                         interp="NN",
                     )
-                    nim = nib.load(str(label_path))
-                    label = nim.get_data()
-                    label[label == 4] = 3
-                    nim2 = nib.Nifti1Image(label, nim.affine)
-                    nim2.header['pixdim'] = nim.header['pixdim']
-                    nib.save(nim2, str(label_path))
+                    set_affine(subject_image.path, label_path)
 
                     # Transform points for debugging
                     mirtk.transform_points(
@@ -242,13 +268,6 @@ class SegmentationRefiner:
                     "-invert",
                     dofin=str(dof),
                 )
-
-                nim = nib.load(str(label_path))
-                label = nim.get_data()
-                label[label == 4] = 3
-                nim2 = nib.Nifti1Image(label, nim.affine)
-                nim2.header['pixdim'] = nim.header['pixdim']
-                nib.save(nim2, str(label_path))
                 atlas_labels.append(label_path)
 
             # apply label fusion
