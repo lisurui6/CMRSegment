@@ -112,6 +112,7 @@ class SegmentationRefiner:
                         output=str(new_atlas_path),
                     )
                     set_affine(self.atlases[i], new_atlas_path)
+                    self.atlases[i] = new_atlas_path
 
                     mirtk.transform_image(
                         str(new_atlas_path),
