@@ -20,15 +20,21 @@ def norm_tensor(_x):
 
 
 class ShapeDeformNet(torch.nn.Module):
-    def __init__(self, voxel_width, voxel_depth, voxel_height, num_lv_slices, num_extra_slices, enc_dim):
+    def __init__(self, voxel_width, voxel_depth, voxel_height, num_lv_slices, num_extra_slices, enc_dim, stages=None, num_points=32, pretrain_steps=200):
         super().__init__()
         self.voxel_width = voxel_width
         self.voxel_depth = voxel_depth
         self.voxel_height = voxel_height
         self.num_lv_slices = num_lv_slices
         self.num_extra_slices = num_extra_slices
+        self.num_points = num_points
+        self.pretrain_steps = pretrain_steps
+        if stages is None:
+            stages = ["init", "affine", "deform"]
+        self.stages = stages
 
         padding = int((kernel_size - 1) / 2)
+        linear_dim = enc_dim // 4 * voxel_height // 32 * voxel_width // 32 * voxel_depth // 32
 
         self.shape_encoder = Encoder(enc_dim, drop=False, kernel_size=kernel_size, in_channels=1)
         self.shape_regressor = nn.Sequential(
@@ -44,7 +50,7 @@ class ShapeDeformNet(torch.nn.Module):
             nn.ReLU(),
             nn.MaxPool3d((2, 2, 2)),
             nn.Flatten(),
-            nn.Linear(1024*2, 400),
+            nn.Linear(linear_dim, 400),
             nn.ReLU(),
             nn.Linear(400, 200),
             nn.ReLU(),
@@ -94,63 +100,66 @@ class ShapeDeformNet(torch.nn.Module):
         self.tri2 = None
         self.voxeliser = Voxelize(voxel_width=self.voxel_width, voxel_depth=self.voxel_depth, voxel_height=self.voxel_height, eps=1e-4, eps_in=20)
 
-        # affine transformation
-        self.affine_encoder = Encoder(enc_dim, drop=False, kernel_size=kernel_size, in_channels=4)
-        self.affine_regressor = nn.Sequential(
-            nn.Conv3d(
-                self.affine_encoder.dims[-2], self.affine_encoder.dims[-2] // 2,
-                kernel_size=kernel_size, stride=1, padding=padding
-            ),
-            nn.BatchNorm3d(self.affine_encoder.dims[-2] // 2),
-            nn.ReLU(),
-            nn.MaxPool3d((2, 2, 2)),
-            nn.Conv3d(self.affine_encoder.dims[-2] // 2, self.affine_encoder.dims[-2] // 4, kernel_size=1, stride=1),
-            nn.BatchNorm3d(self.affine_encoder.dims[-2] // 4),
-            nn.ReLU(),
-            nn.MaxPool3d((2, 2, 2)),
-            nn.Flatten(),
-            nn.Linear(1024*2, 400),
-            # nn.BatchNorm1d(400),
-            nn.ReLU(),
-            nn.Linear(400, 200),
-            # nn.BatchNorm1d(200),
-            nn.ReLU(),
-        )
-        self.affine_end1 = nn.Sequential(nn.Linear(200, 6), nn.Tanh())  # rotation rx, ry, rz, translation x, y, z
-        bias = torch.from_numpy(np.array([0, 0, 0, 0, 0, 0])).float()
-        self.affine_end1[0].weight.data.zero_()
-        self.affine_end1[0].bias.data.copy_(bias)
+        if "affine" in self.stages:
+            # affine transformation
+            self.affine_encoder = Encoder(enc_dim, drop=False, kernel_size=kernel_size, in_channels=4)
+            self.affine_regressor = nn.Sequential(
+                nn.Conv3d(
+                    self.affine_encoder.dims[-2], self.affine_encoder.dims[-2] // 2,
+                    kernel_size=kernel_size, stride=1, padding=padding
+                ),
+                nn.BatchNorm3d(self.affine_encoder.dims[-2] // 2),
+                nn.ReLU(),
+                nn.MaxPool3d((2, 2, 2)),
+                nn.Conv3d(self.affine_encoder.dims[-2] // 2, self.affine_encoder.dims[-2] // 4, kernel_size=1, stride=1),
+                nn.BatchNorm3d(self.affine_encoder.dims[-2] // 4),
+                nn.ReLU(),
+                nn.MaxPool3d((2, 2, 2)),
+                nn.Flatten(),
+                nn.Linear(linear_dim, 400),
+                # nn.BatchNorm1d(400),
+                nn.ReLU(),
+                nn.Linear(400, 200),
+                # nn.BatchNorm1d(200),
+                nn.ReLU(),
+            )
+            self.affine_end1 = nn.Sequential(nn.Linear(200, 6), nn.Tanh())  # rotation rx, ry, rz, translation x, y, z
+            bias = torch.from_numpy(np.array([0, 0, 0, 0, 0, 0])).float()
+            self.affine_end1[0].weight.data.zero_()
+            self.affine_end1[0].bias.data.copy_(bias)
 
-        self.affine_end2 = nn.Sequential(nn.Linear(200, 3))  # scale x, y, z
-        bias = torch.from_numpy(np.array([1, 1, 1])).float()
-        self.affine_end2[0].weight.data.zero_()
-        self.affine_end2[0].bias.data.copy_(bias)
+            self.affine_end2 = nn.Sequential(nn.Linear(200, 3))  # scale x, y, z
+            bias = torch.from_numpy(np.array([1, 1, 1])).float()
+            self.affine_end2[0].weight.data.zero_()
+            self.affine_end2[0].bias.data.copy_(bias)
 
-        self.deform_backbone = Encoder(enc_dim, drop=False, kernel_size=kernel_size, in_channels=4)
-        self.decoder = Decoder(
-            self.deform_backbone.dims, drop=False, kernel_size=kernel_size, output_act=None,
-            output_dim=self.deform_backbone.dims[-4]
-        )
+        if "deform" in self.stages:
+            self.deform_backbone = Encoder(enc_dim, drop=False, kernel_size=kernel_size, in_channels=4)
+            self.decoder = Decoder(
+                self.deform_backbone.dims, drop=False, kernel_size=kernel_size, output_act=None,
+                output_dim=self.deform_backbone.dims[-4]
+            )
 
-        self.flow_conv = torch.nn.Conv3d(self.deform_backbone.dims[-4], 3, kernel_size=3, padding=1)
-        # # init flow layer with small weights and bias
-        self.flow_conv.weight = torch.nn.Parameter(Normal(0, 1e-5).sample(self.flow_conv.weight.shape))
-        self.flow_conv.bias = torch.nn.Parameter(torch.zeros(self.flow_conv.bias.shape))
+            self.flow_conv = torch.nn.Conv3d(self.deform_backbone.dims[-4], 3, kernel_size=3, padding=1)
+            # # init flow layer with small weights and bias
+            self.flow_conv.weight = torch.nn.Parameter(Normal(0, 1e-5).sample(self.flow_conv.weight.shape))
+            self.flow_conv.bias = torch.nn.Parameter(torch.zeros(self.flow_conv.bias.shape))
 
-        self.integrate = VecInt(
-            inshape=(self.voxel_width, self.voxel_depth, self.voxel_height),
-            nsteps=7,
-        )
+            self.integrate = VecInt(
+                inshape=(self.voxel_width, self.voxel_depth, self.voxel_height),
+                nsteps=7,
+            )
 
-        self.deform_transformer = SpatialTransformer(size=(self.voxel_width, self.voxel_depth, self.voxel_height), mode="bilinear")
+            self.deform_transformer = SpatialTransformer(size=(self.voxel_width, self.voxel_depth, self.voxel_height), mode="bilinear")
 
-    def forward(self, img, epoch=0):
+    def forward(self, img, epoch=0, label=None):
         # x = (B, 1, H (z), W (x), D (y))
         x = norm_tensor(img)
         x = torch.movedim(x, 2, -1)  # x = (B, 1, W, D, H)
 
         out = self.shape_encoder(x)
         out = self.shape_regressor(out[-1])
+
         lv_par1 = self.shape_end_lv1(out)  # (B, 3), tanh
         lv_par2 = self.shape_end_lv2(out)  # (B, 5), sig
         lv_par3 = self.shape_end_lv3(out)  # (B, 5), sig
@@ -163,7 +172,7 @@ class ShapeDeformNet(torch.nn.Module):
             lv_par1=lv_par1, lv_par2=lv_par2, lv_par3=lv_par3, lv_par4=lv_par4, rv_par1=rv_par_tanh, rv_par2=rv_par_sig,
             num_lv_slices=self.num_lv_slices, num_extra_lv_myo_slices=self.num_extra_slices,
             voxel_width=self.voxel_width, voxel_depth=self.voxel_depth, voxel_height=self.voxel_height,
-            num_points=32, batch_size=img.shape[0],
+            num_points=self.num_points, batch_size=img.shape[0],
             lv_tetras=self.tri0, lv_myo_tetras=self.tri1, rv_tetras=self.tri2, epoch=epoch,
         )
         init_mask0 = self.voxelize_mask(nodes0, tetras0)
@@ -171,60 +180,70 @@ class ShapeDeformNet(torch.nn.Module):
         init_mask2 = self.voxelize_mask(nodes2, tetras2)
 
         # mlab_plot([init_mask0, init_mask1, init_mask2])
-        # affine transform
-        affine_in = torch.cat([x, init_mask0, init_mask1, init_mask2], dim=1).detach()
-        out = self.affine_encoder(affine_in)
-        affine_pars = self.affine_regressor(out[-1])
+        if "affine" in self.stages:
+            # affine transform
+            affine_in = torch.cat([x, init_mask0, init_mask1, init_mask2], dim=1).detach()
+            out = self.affine_encoder(affine_in)
+            affine_pars = self.affine_regressor(out[-1])
 
-        affine_pars1 = self.affine_end1(affine_pars)
-        affine_pars2 = self.affine_end2(affine_pars)
+            affine_pars1 = self.affine_end1(affine_pars)
+            affine_pars2 = self.affine_end2(affine_pars)
 
-        affine_node0 = similarity_transform_points(nodes0.detach(), affine_pars1, affine_pars2)
-        affine_node1 = similarity_transform_points(nodes1.detach(), affine_pars1, affine_pars2)
-        affine_node2 = similarity_transform_points(nodes2.detach(), affine_pars1, affine_pars2)
+            affine_node0 = similarity_transform_points(nodes0.detach(), affine_pars1, affine_pars2)
+            affine_node1 = similarity_transform_points(nodes1.detach(), affine_pars1, affine_pars2)
+            affine_node2 = similarity_transform_points(nodes2.detach(), affine_pars1, affine_pars2)
 
-        affine_mask0 = self.voxelize_mask(affine_node0, tetras0)
-        affine_mask1 = self.voxelize_mask(affine_node1, tetras1)
-        affine_mask2 = self.voxelize_mask(affine_node2, tetras2)
+            affine_mask0 = self.voxelize_mask(affine_node0, tetras0)
+            affine_mask1 = self.voxelize_mask(affine_node1, tetras1)
+            affine_mask2 = self.voxelize_mask(affine_node2, tetras2)
+        else:
+            affine_mask0, affine_mask1, affine_mask2 = init_mask0, init_mask1, init_mask2
+            affine_node0, affine_node1, affine_node2 = nodes0, nodes1, nodes2
 
-        deform_in = torch.cat([x, affine_mask0, affine_mask1, affine_mask2], dim=1).detach()
-        features = self.deform_backbone(deform_in)
-        flow = self.flow_conv(self.decoder(features))  # (B, 3, W, H, D) (dx, dy, dz)
-        flow = flow / img.shape[2]
+        if "deform" in self.stages and epoch >= self.pretrain_steps:
+            deform_in = torch.cat([x, affine_mask0, affine_mask1, affine_mask2], dim=1).detach()
+            features = self.deform_backbone(deform_in)
+            flow = self.flow_conv(self.decoder(features))  # (B, 3, W, H, D) (dx, dy, dz)
+            flow = flow / img.shape[2]
 
-        preint_flow = flow
-        flow = self.integrate(preint_flow)
-        # vertices: (B, D, 3)
-        affine_node0 = affine_node0.detach()
-        affine_node1 = affine_node1.detach()
-        affine_node2 = affine_node2.detach()
-        affine_node0[..., 1] = affine_node0[..., 1] * -1
-        Pxx = F.grid_sample(flow[:, 0:1], affine_node0.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)  # Pxx (B, D, 1)
-        Pyy = F.grid_sample(flow[:, 1:2], affine_node0.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)
-        Pzz = F.grid_sample(flow[:, 2:3], affine_node0.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)
+            preint_flow = flow
+            flow = self.integrate(preint_flow)
+            # vertices: (B, D, 3)
+            affine_node0 = affine_node0.detach()
+            affine_node1 = affine_node1.detach()
+            affine_node2 = affine_node2.detach()
+            # affine_node0[..., 1] = affine_node0[..., 1] * -1
+            Pxx = F.grid_sample(flow[:, 0:1], affine_node0.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)  # Pxx (B, D, 1)
+            Pyy = F.grid_sample(flow[:, 1:2], affine_node0.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)
+            Pzz = F.grid_sample(flow[:, 2:3], affine_node0.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)
 
-        dP0 = torch.cat((Pxx, Pyy, Pzz), -1)
-        deform_node0 = affine_node0 + dP0
+            dP0 = torch.cat((Pxx, Pyy, Pzz), -1)
+            deform_node0 = affine_node0 + dP0
 
-        affine_node1[..., 1] = affine_node1[..., 1] * -1
-        Pxx = F.grid_sample(flow[:, 0:1], affine_node1.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)  # Pxx (B, D, 1)
-        Pyy = F.grid_sample(flow[:, 1:2], affine_node1.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)
-        Pzz = F.grid_sample(flow[:, 2:3], affine_node1.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)
+            # affine_node1[..., 1] = affine_node1[..., 1] * -1
+            Pxx = F.grid_sample(flow[:, 0:1], affine_node1.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)  # Pxx (B, D, 1)
+            Pyy = F.grid_sample(flow[:, 1:2], affine_node1.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)
+            Pzz = F.grid_sample(flow[:, 2:3], affine_node1.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)
 
-        dP0 = torch.cat((Pxx, Pyy, Pzz), -1)
-        deform_node1 = affine_node1 + dP0
+            dP0 = torch.cat((Pxx, Pyy, Pzz), -1)
+            deform_node1 = affine_node1 + dP0
 
-        affine_node2[..., 1] = affine_node2[..., 1] * -1
-        Pxx = F.grid_sample(flow[:, 0:1], affine_node2.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)  # Pxx (B, D, 1)
-        Pyy = F.grid_sample(flow[:, 1:2], affine_node2.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)
-        Pzz = F.grid_sample(flow[:, 2:3], affine_node2.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)
+            # affine_node2[..., 1] = affine_node2[..., 1] * -1
+            Pxx = F.grid_sample(flow[:, 0:1], affine_node2.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)  # Pxx (B, D, 1)
+            Pyy = F.grid_sample(flow[:, 1:2], affine_node2.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)
+            Pzz = F.grid_sample(flow[:, 2:3], affine_node2.unsqueeze(2).unsqueeze(2)).squeeze(-1).squeeze(-1).transpose(1, 2)
 
-        dP0 = torch.cat((Pxx, Pyy, Pzz), -1)
-        deform_node2 = affine_node2 + dP0
+            dP0 = torch.cat((Pxx, Pyy, Pzz), -1)
+            deform_node2 = affine_node2 + dP0
 
-        deform_mask0 = self.voxelize_mask(deform_node0, tetras0)
-        deform_mask1 = self.voxelize_mask(deform_node1, tetras1)
-        deform_mask2 = self.voxelize_mask(deform_node2, tetras2)
+            deform_mask0 = self.voxelize_mask(deform_node0, tetras0)
+            deform_mask1 = self.voxelize_mask(deform_node1, tetras1)
+            deform_mask2 = self.voxelize_mask(deform_node2, tetras2)
+        else:
+            deform_mask0, deform_mask1, deform_mask2 = affine_mask0, affine_mask1, affine_mask2
+            deform_node0, deform_node1, deform_node2 = affine_node0, affine_node1, affine_node2
+            flow = None
+            preint_flow = None
 
         return [init_mask0, init_mask1, init_mask2], \
                [affine_mask0, affine_mask1, affine_mask2], \
