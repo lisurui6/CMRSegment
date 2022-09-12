@@ -14,11 +14,11 @@ import cv2
 
 # 2D RV bezier curve
 img_dim = 342
-lv_center = torch.nn.Parameter(torch.from_numpy(np.array([img_dim/2, img_dim/2]) / img_dim).float().cuda())
+lv_center = torch.nn.Parameter(torch.from_numpy(np.array([img_dim / 2, img_dim / 2]) / img_dim).float().cuda())
 radius = torch.nn.Parameter(torch.tensor(0.3).float().cuda())
 
 theta0 = torch.nn.Parameter(torch.tensor(0).float().cuda())
-dtheta = torch.nn.Parameter(torch.tensor(1/3).float().cuda())
+dtheta = torch.nn.Parameter(torch.tensor(1 / 3).float().cuda())
 d_c2_c0 = torch.nn.Parameter(torch.tensor(0.3 + 5 / img_dim).float().cuda())
 
 # lv_center.requires_grad = True
@@ -33,20 +33,20 @@ def torch_basis_function_array(u: torch.Tensor, i, p, knots: torch.Tensor, value
     if p == 0:
         v_ip = torch.where(
             (u <= knots[i + 1]) & (knots[i] <= u),
-            1,
-            0
+            1.,
+            0.,
         )
         values[(i, p)] = v_ip
         return v_ip
     if (i, p) in values:
         return values[(i, p)]
     b_i_p_1 = torch_basis_function_array(u, i, p - 1, knots, values)
-    if (knots[i + p] - knots[i]) == 0:
+    if (knots[i + p] - knots[i]) == 0.:
         part1 = torch.zeros(b_i_p_1.shape).float().cuda()
     else:
         part1 = torch.mul((u - knots[i]) / (knots[i + p] - knots[i]), b_i_p_1)
     b_i_p_1 = torch_basis_function_array(u, i + 1, p - 1, knots, values)
-    if knots[i + p + 1] - knots[i + 1] == 0:
+    if knots[i + p + 1] - knots[i + 1] == 0.:
         part2 = torch.zeros(b_i_p_1.shape).float().cuda()
     else:
         part2 = torch.mul((knots[i + p + 1] - u) / (knots[i + p + 1] - knots[i + 1]), b_i_p_1)
@@ -72,10 +72,17 @@ def torch_nonuniform_b_spline_curve_interpolating_points(points: torch.Tensor, d
     p = degree
     pre_knots = torch.zeros(p + 1).float().cuda()
     post_knots = torch.ones(p + 1).float().cuda()
-    knots = torch.nn.AvgPool1d(kernel_size=p, stride=1)(u_hat[1:-1].float().unsqueeze(0).unsqueeze(0)).squeeze(0).squeeze(0)
+    knots = torch.nn.AvgPool1d(kernel_size=p, stride=1)(u_hat[1:-1].float().unsqueeze(0).unsqueeze(0)).squeeze(
+        0).squeeze(0)
     knots = torch.cat([pre_knots, knots, post_knots], dim=0)  # (n + p + 1)
     u = torch.linspace(0, 1, N).float().cuda()
-    basis_matrix = torch.stack([torch_basis_function_array(u_hat, i, p, knots) for i in range(n)], dim=1)
+    values = {}
+    basis_matrix = torch.stack([torch_basis_function_array(u_hat, i, p, knots, values) for i in range(n)], dim=1)
+    basis_matrix[-1, -1] = 1.
+    # print(values)
+    print(u_hat)
+    print(knots)
+    print(basis_matrix)
     inv = torch.linalg.inv(basis_matrix)
     control_points = torch.matmul(inv, points)  # (n, 2)
     basis_matrix = torch.stack([torch_basis_function_array(u, i, p, knots, {}) for i in range(n)], dim=1)  # (N, n)
@@ -99,6 +106,7 @@ def sample_lv(lv_center, radius):
     lv_xy = z_c0 + c0_angle * radius
     lv_xy = torch.view_as_real(lv_xy)
     return lv_xy
+
 
 # np_lv_xy = lv_xy.detach().cpu().numpy()
 
@@ -157,13 +165,14 @@ def init_rv(lv_center, radius, theta0, dtheta, d_c2_c0, param: bool = False):
     )
 
     arc_count = torch.arange(n_control_points).cuda()
-    arc_phase = theta_c2_p1 + torch.mul(theta_c2_p0 - theta_c2_p1, arc_count) / (n_control_points - 1)  # (B, n_lv, n_arc_points)
+    arc_phase = theta_c2_p1 + torch.mul(theta_c2_p0 - theta_c2_p1, arc_count) / (
+                n_control_points - 1)  # (B, n_lv, n_arc_points)
     arc_angle = torch.exp(
         torch.complex(real=torch.tensor(0).float().cuda(), imag=arc_phase)
     )  # (B, n_lv, n_arc_points)
     arc_2 = z_c2 + torch.mul(r2, arc_angle)  # (B, n_lv, n_arc_points)
     arc_2 = torch.view_as_real(arc_2)  # (B, n_lv, n_arc_points, 2)
-
+    arc_2 = arc_2[1:-1]
     if param:
         np_arc_2 = arc_2.detach().cpu().numpy().copy()
         arc_2 = torch.nn.Parameter(torch.from_numpy(np_arc_2 / img_dim).float().cuda())
@@ -211,17 +220,18 @@ def sample_rv(lv_center, radius, theta0, dtheta, arc_2, param: bool = False, wei
     arc_1 = z_c0 + torch.mul(radius, arc_angle)  # (B, n_lv, n_arc_points)
     # arc_1 = torch.flip(arc, dims=[0])  # p1 to p0 arc
     arc_1 = torch.view_as_real(arc_1)  # (B, n_lv, n_arc_points, 2)
-    b_arc = torch.cat([arc_1[-1].unsqueeze(0), arc_2, arc_1[0].unsqueeze(0)], dim=0)
+    arc_2 = torch.cat([arc_1[-1].unsqueeze(0), arc_2, arc_1[0].unsqueeze(0)], dim=0)
+
     if weights is None:
         if not param:
-            weights = torch.ones(1, b_arc.shape[0]).float().cuda()
+            weights = torch.ones(1, arc_2.shape[0]).float().cuda()
         else:
-            weights = torch.nn.Parameter(torch.ones(1, b_arc.shape[0]).float().cuda())
-
-    arc_2, control_points = torch_nonuniform_b_spline_curve_interpolating_points(points=b_arc, degree=4, N=n_points)
-    rv_xy = torch.cat([arc_1, arc_2])
-
-    return rv_xy, b_arc, weights
+            weights = torch.nn.Parameter(torch.ones(1, arc_2.shape[0]).float().cuda())
+    print(arc_2)
+    b_arc, control_points = torch_nonuniform_b_spline_curve_interpolating_points(points=arc_2, degree=4, N=n_points)
+    rv_xy = torch.cat([arc_1, b_arc])
+    int_arc = arc_2
+    return rv_xy, b_arc, int_arc, weights, control_points
 
 
 """
@@ -242,7 +252,7 @@ def triangulate_within(vert, faces):
         if triangle.within(polygon):
             output.append(face)
     if len(output) == 0:
-        vert = vert * img_dim//2 + img_dim//2
+        vert = vert * img_dim // 2 + img_dim // 2
         plt.imshow(np.zeros((img_dim, img_dim)))
         plt.plot(vert[:, 0], vert[:, 1], 'bx-')
         for f in range(faces.shape[0]):
@@ -279,13 +289,18 @@ label[:, :, 1][label_slice == 3] = 1
 
 lv_xy = sample_lv(lv_center, radius)
 arc_2 = init_rv(lv_center, radius, theta0, dtheta, d_c2_c0, False)
-rv_xy, b_arc, weights = sample_rv(lv_center, radius, theta0, dtheta, arc_2)
+# arc_2 = init_rv(lv_center, radius, theta0, dtheta, d_c2_c0, True)
+rv_xy, b_arc, int_arc, weights, control_points = sample_rv(lv_center, radius, theta0, dtheta, arc_2)
 
 np_rv_xy = rv_xy.detach().cpu().numpy()
 np_b_arc = b_arc.detach().cpu().numpy()
+np_cp = control_points.detach().cpu().numpy()
+np_int_arc = int_arc.detach().cpu().numpy()
 plt.figure()
 plt.plot(np_rv_xy[:, 0], np_rv_xy[:, 1], "r-")
-plt.plot(np_b_arc[:, 0], np_b_arc[:, 1], "bx")
+plt.plot(np_b_arc[:, 0], np_b_arc[:, 1], "b-")
+plt.plot(np_cp[:, 0], np_cp[:, 1], "bx")
+plt.plot(np_int_arc[:, 0], np_int_arc[:, 1], "bo")
 plt.plot([np_b_arc[0, 0]], [np_b_arc[0, 1]], "yo")
 plt.plot([np_b_arc[-1, 0]], [np_b_arc[-1, 1]], "go")
 plt.savefig(str(output_dir.joinpath(f"rv.png")))
@@ -300,12 +315,12 @@ rv_tri = rv_tri.copy()
 lv_tri = torch.from_numpy(lv_tri)
 rv_tri = torch.from_numpy(rv_tri)
 
-lv_xy = (lv_xy - img_dim//2) / img_dim * 2
-rv_xy = (rv_xy - img_dim//2) / img_dim * 2
+lv_xy = (lv_xy - img_dim // 2) / img_dim * 2
+rv_xy = (rv_xy - img_dim // 2) / img_dim * 2
 
 
 def plot(nodes0, face0, nodes2, face2):
-    half_dim = img_dim//2
+    half_dim = img_dim // 2
     nodes0[:, 1] = -nodes0[:, 1]
     nodes0 = nodes0 * half_dim + half_dim
 
@@ -355,11 +370,11 @@ def plot(nodes0, face0, nodes2, face2):
 # plot(lv_xy, lv_tri, rv_xy, rv_tri)
 
 renderer = nr.Renderer(
-            camera_mode='look_at',
-            image_size=img_dim,
-            light_intensity_ambient=1,
-            light_intensity_directional=1,
-            perspective=False
+    camera_mode='look_at',
+    image_size=img_dim,
+    light_intensity_ambient=1,
+    light_intensity_directional=1,
+    perspective=False
 )
 
 
@@ -375,6 +390,7 @@ def render_mask(renderer, nodes, faces):
 
 
 params = [lv_center, radius, theta0, dtheta, d_c2_c0]
+# params = [arc_2]
 
 for p in params:
     print(p.is_leaf)
@@ -385,9 +401,9 @@ optimizer = torch.optim.Adam(
 loss_criterion = torch.nn.MSELoss()
 label = torch.from_numpy(label).float().cuda()
 
-pretrain_step = 50
+pretrain_step = 300
 
-for i in range(1000):
+for i in range(2000):
 
     lv_mask = render_mask(renderer, nodes=lv_xy, faces=lv_tri)
     rv_mask = render_mask(renderer, nodes=rv_xy, faces=rv_tri)
@@ -410,12 +426,17 @@ for i in range(1000):
         plt.imshow(mask, alpha=0.5)
         plt.savefig(str(output_dir.joinpath(f"mask_{i}.png")))
         np_rv_xy = rv_xy.detach().cpu().numpy()
-        np_rv_xy = np_rv_xy * img_dim//2 + img_dim//2
+        np_rv_xy = np_rv_xy * img_dim // 2 + img_dim // 2
         np_b_arc = b_arc.detach().cpu().numpy()
+        np_cp = control_points.detach().cpu().numpy()
+        np_int_arc = int_arc.detach().cpu().numpy()
+
         # np_arc_2 = np_arc_2 * img_dim
         plt.figure()
         plt.plot(np_rv_xy[:, 0], np_rv_xy[:, 1], "r-")
-        plt.plot(np_b_arc[:, 0], np_b_arc[:, 1], "bx")
+        plt.plot(np_b_arc[:, 0], np_b_arc[:, 1], "b-")
+        plt.plot(np_cp[:, 0], np_cp[:, 1], "bx")
+        plt.plot(np_int_arc[:, 0], np_int_arc[:, 1], "bo")
         plt.plot([np_b_arc[0, 0]], [np_b_arc[0, 1]], "yo")
         plt.plot([np_b_arc[-1, 0]], [np_b_arc[-1, 1]], "go")
         plt.savefig(str(output_dir.joinpath(f"rv_{i}.png")))
@@ -428,17 +449,19 @@ for i in range(1000):
     lv_xy = sample_lv(lv_center, radius)
     if i < pretrain_step:
         arc_2 = init_rv(lv_center, radius, theta0, dtheta, d_c2_c0, False)
-        rv_xy, b_arc, weights = sample_rv(lv_center, radius, theta0, dtheta, arc_2, False)
+        rv_xy, b_arc, int_arc, weights, control_points = sample_rv(lv_center, radius, theta0, dtheta, arc_2, False)
     elif i == pretrain_step:
         arc_2 = init_rv(lv_center, radius, theta0, dtheta, d_c2_c0, True)
-        rv_xy, b_arc, weights = sample_rv(lv_center, radius, theta0, dtheta, arc_2, True)
-        params = [lv_center, radius, theta0, dtheta, d_c2_c0, arc_2, weights]
+        rv_xy, b_arc, int_arc, weights, control_points = sample_rv(lv_center, radius, theta0, dtheta, arc_2, True)
+        # params = [lv_center, radius, theta0, dtheta, d_c2_c0, arc_2, weights]
+        params = [arc_2]
         optimizer = torch.optim.Adam(
             params,
             lr=1e-4,
         )
     else:
-        rv_xy, b_arc, weights = sample_rv(lv_center, radius, theta0, dtheta, arc_2, weights=weights)
+        rv_xy, b_arc, int_arc, weights, control_points = sample_rv(lv_center, radius, theta0, dtheta, arc_2,
+                                                                   weights=weights)
 
     # if i > pretrain_step:
     #     rv_tri = Delaunay(rv_xy.detach().cpu().numpy()).simplices.copy()

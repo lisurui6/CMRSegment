@@ -447,8 +447,10 @@ def sample_rv_points(
 
     if cuda:
         arc_count = torch.arange(n_arc_points).unsqueeze(0).repeat(n_slices, 1).cuda()  # (n_rv, n_arc_points)
+        arc2_count = torch.arange(n_control_points).unsqueeze(0).repeat(n_slices, 1).cuda()  # (n_rv, n_arc_points)
     else:
         arc_count = torch.arange(n_arc_points).unsqueeze(0).repeat(n_slices, 1)  # (n_rv, n_arc_points)
+        arc2_count = torch.arange(n_control_points).unsqueeze(0).repeat(n_slices, 1)  # (n_rv, n_arc_points)
     arc_phase = theta_p0 + torch.mul(theta_p1 - theta_p0, arc_count) / (n_arc_points - 1)  # (n_rv, n_arc_points)
     if cuda:
         arc_angle = torch.exp(
@@ -462,7 +464,8 @@ def sample_rv_points(
     arc_1 = torch.flip(arc, dims=[1])  # p1 to p0 arc
 
     r2 = (torch.view_as_real(z_c2) - torch.view_as_real(arc_1[..., -1])).norm(dim=1)  # (n_lv, )
-    c0z = c0z.unsqueeze(1).repeat(1, n_arc_points).unsqueeze(2)  # (n_lv, n_arc_points, 1)
+    arc1_c0z = c0z.unsqueeze(1).repeat(1, n_arc_points).unsqueeze(2)  # (n_lv, n_arc_points, 1)
+    arc2_c0z = c0z.unsqueeze(1).repeat(1, n_control_points).unsqueeze(2)  # (n_lv, n_arc_points, 1)
 
     if surface2_arc_out_param is None:
         theta_c2_p0 = torch.log(arc_1[..., -1] - z_c2).imag  # theta_c2_p0 = (-pi, pi), (n_lv, )
@@ -485,20 +488,20 @@ def sample_rv_points(
             theta_c2_p1 + math.pi * 2,
             theta_c2_p1,
         )
-        theta_c2_p0 = theta_c2_p0.unsqueeze(1).repeat(1, n_arc_points)  # (n_lv, n_arc_points)
-        theta_c2_p1 = theta_c2_p1.unsqueeze(1).repeat(1, n_arc_points)  # (n_lv, n_arc_points)
+        theta_c2_p0 = theta_c2_p0.unsqueeze(1).repeat(1, n_control_points)  # (n_lv, n_control_points)
+        theta_c2_p1 = theta_c2_p1.unsqueeze(1).repeat(1, n_control_points)  # (n_lv, n_control_points)
 
-        arc_phase = theta_c2_p1 + torch.mul(theta_c2_p0 - theta_c2_p1, arc_count) / (n_arc_points - 1)  # (n_lv, n_arc_points)
+        arc_phase = theta_c2_p1 + torch.mul(theta_c2_p0 - theta_c2_p1, arc2_count) / (n_control_points - 1)  # (n_lv, n_control_points)
         if cuda:
             arc_angle = torch.exp(
-                torch.complex(real=torch.tensor(0).float().repeat(n_slices, n_arc_points).cuda(), imag=arc_phase)
+                torch.complex(real=torch.tensor(0).float().repeat(n_slices, n_control_points).cuda(), imag=arc_phase)
             )  # (B, n_lv, n_arc_points)
         else:
             arc_angle = torch.exp(
-                torch.complex(real=torch.tensor(0).float().repeat(n_slices, n_arc_points), imag=arc_phase)
+                torch.complex(real=torch.tensor(0).float().repeat(n_slices, n_control_points), imag=arc_phase)
             )  # (B, n_lv, n_arc_points)
-        arc_2 = z_c2.unsqueeze(1).repeat(1, n_arc_points) + torch.mul(r2.unsqueeze(1).repeat(1, n_arc_points), arc_angle)  # (n_lv, n_arc_points)
-        arc_2 = torch.view_as_real(arc_2)  # (n_lv, n_arc_points, 2)
+        arc_2 = z_c2.unsqueeze(1).repeat(1, n_control_points) + torch.mul(r2.unsqueeze(1).repeat(1, n_control_points), arc_angle)  # (n_lv, n_control_points)
+        arc_2 = torch.view_as_real(arc_2)  # (n_lv, n_control_points, 2)
         arc_2 = arc_2[:, 1:-1]
 
         # 3D params
@@ -529,29 +532,23 @@ def sample_rv_points(
         else:
             surface2_arc_out_param = surface2_arc_out / img_dim
     arc_1 = torch.view_as_real(arc_1)  # (n_lv, n_arc_points, 2)
-    arc_1_0 = torch.cat([arc_1[:, 0].unsqueeze(1), c0z[:, 0].unsqueeze(1)], dim=2)  # (n_lv, 1, 1)
-    arc_1_1 = torch.cat([arc_1[:, -1].unsqueeze(1), c0z[:, -1].unsqueeze(1)], dim=2)  # (n_lv, 1, 1)
+    arc_1_0 = torch.cat([arc_1[:, 0].unsqueeze(1), arc1_c0z[:, 0].unsqueeze(1)], dim=2)  # (n_lv, 1, 1)
+    arc_1_1 = torch.cat([arc_1[:, -1].unsqueeze(1), arc1_c0z[:, -1].unsqueeze(1)], dim=2)  # (n_lv, 1, 1)
     surface2_arc_out = surface2_arc_out_param * img_dim
 
     # 2D params
-    surface2_arc_out = torch.cat([surface2_arc_out, c0z[:, 1:-1]], dim=2)  # (n_lv, n_arc_points - 2, 1)
+    surface2_arc_out = torch.cat([surface2_arc_out, arc2_c0z[:, 1:-1]], dim=2)  # (n_lv, n_arc_points - 2, 1)
 
     surface2_arc_out = torch.cat([arc_1_0, surface2_arc_out, arc_1_1], dim=1)
-    surface2_arc_out, cps = torch_b_spline_surface_interpolating_points(surface2_arc_out, 4, 4, n_points // 2, cuda)
+    surface2_arc_out, cps = torch_b_spline_surface_interpolating_points(surface2_arc_out, 4, 4, n_arc_points, cuda)
 
     # surface2_arc_out = surface2_arc_out.transpose(0, 1)
     # assert 1 == 0
     arc_1 = arc_1.view(-1, arc_1.shape[-1])  # (n_lv * n_arc_points, 2)
     # arc_2 = arc_2.view(-1, arc_2.shape[-1])  # (n_lv * n_arc_points, 2)
-    c0z_flat = c0z.view(-1, c0z.shape[-1])  # (n_lv * n_arc_points, 1)
-    surface2_arc_in = torch.cat([arc_1, c0z_flat], dim=1)
-
-    surface2_arc_in[..., :2] = (surface2_arc_in[..., :2] - img_dim / 2) / img_dim * 2    # (n_lv * n_arc_points, 3)
-    surface2_arc_in[..., 2] = (surface2_arc_in[..., 2] - img_height / 2) / img_height * 2
-
-    surface2_arc_out[..., :2] = (surface2_arc_out[..., :2] - img_dim / 2) / img_dim * 2
-    surface2_arc_out[..., 2] = (surface2_arc_out[..., 2] - img_height / 2) / img_height * 2    # (n_lv * n_arc_points, 3)
-
+    arc1_c0z_flat = arc1_c0z.view(-1, arc1_c0z.shape[-1])  # (n_lv * n_arc_points, 1)
+    surface2_arc_in = torch.cat([arc_1, arc1_c0z_flat], dim=1)
+    print(surface2_arc_out.shape, surface2_arc_in.shape)
 
     if plot:
         pcd = o3d.geometry.PointCloud()
@@ -586,6 +583,11 @@ def sample_rv_points(
             voxel_size=0.02,
             fname="rv_tetra"
         )
+    surface2_arc_in[..., :2] = (surface2_arc_in[..., :2] - img_dim / 2) / img_dim * 2    # (n_lv * n_arc_points, 3)
+    surface2_arc_in[..., 2] = (surface2_arc_in[..., 2] - img_height / 2) / img_height * 2
+
+    surface2_arc_out[..., :2] = (surface2_arc_out[..., :2] - img_dim / 2) / img_dim * 2
+    surface2_arc_out[..., 2] = (surface2_arc_out[..., 2] - img_height / 2) / img_height * 2    # (n_lv * n_arc_points, 3)
     return surface2_arc_in, surface2_arc_out, surface2_arc_out_param
 
 
@@ -672,9 +674,9 @@ def save_resizes(image, label, affine, output_dir: Path):
 
 img_dim = 128
 img_height = 32
-n_slices = 25
-n_points = 50
-n_interpolation_points = 10
+n_slices = 50
+n_points = n_slices * 2
+n_control_points = 10
 cuda = True
 plot = False
 param = True
